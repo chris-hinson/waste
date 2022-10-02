@@ -9,9 +9,10 @@ struct SlideTimer{
     timer: Timer,
 }
 
-#[derive(Component, Deref, DerefMut)]
-struct Slide{
-    slide: usize,
+#[derive(Component)]
+struct SlideDeck{
+    total_slides: usize,
+    current_slide: usize,
 }
 
 fn main() {
@@ -38,6 +39,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         "2.png",
         "3.png",
         "4.png",
+        "dan_credit.png",
     ];
 
     for i in 0..slides.len() {
@@ -53,7 +55,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
 
     commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(2.0, true)});
-    commands.spawn().insert(Slide{slide: 0});
+    commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 0});
 	
 	
 }
@@ -63,31 +65,30 @@ fn show_slide(
     time: Res<Time>,
     mut slide_timer: Query<&mut SlideTimer>,
     mut visibility: Query<&mut Visibility>,
-    mut slide: Query<&mut Slide>,
+    mut slide_deck: Query<&mut SlideDeck>,
 ){
-    // let slide_to_show: usize= 0;
-    // for (mut timer, mut visibility) in change_slide.iter_mut() {
-    //     timer.tick(time.delta());
-    //     if timer.just_finished() {
-
-    //     }
-    // }
-    let max_slide_number = 4;
+    // Query gets all the components that match the type
+    // i.e. Query<&mut Visibility> gets all visibility components(length of slide deck)
+    // components without visibility are not queried(still needs to be verified)
+    // if there is only one, we can use .single() / .single_mut()
+    let max_slide_number = slide_deck.single().total_slides;
     for mut timer in slide_timer.iter_mut() {
         timer.tick(time.delta());
         if timer.just_finished() {
-            for mut slide in slide.iter_mut() {
-                if slide.slide < max_slide_number {
-                    slide.slide += 1;
-                } else {
-                    slide.slide = 0;
-                }
+            for mut slide in slide_deck.iter_mut() {
                 for (index, mut current_slide_visibility) in (visibility.iter_mut()).enumerate() {
-                    if index == slide.slide {
+                    // only the matching slide is visible
+                    if index == slide.current_slide {
                         current_slide_visibility.is_visible = true;
                     } else {
                         current_slide_visibility.is_visible = false;
                     }
+                }
+                // loop back to the first slide
+                if slide.current_slide < max_slide_number-1 {
+                    slide.current_slide += 1;
+                } else {
+                    slide.current_slide = 0;
                 }
             }
         }
