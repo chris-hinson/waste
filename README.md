@@ -1,3 +1,3 @@
 # cs1666
 
-Wow! A third commit!!
+Necessary usage information will go here.
