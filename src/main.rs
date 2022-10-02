@@ -18,7 +18,7 @@ struct SlideDeck{
 fn main() {
 	App::new()
 		.insert_resource(WindowDescriptor {
-			title: String::from("Hello World!"),
+			title: String::from("Waste"),
 			width: 1280.,
 			height: 720.,
 			present_mode: PresentMode::Fifo,
@@ -31,14 +31,11 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    info!("Printing credits");
+    info!("Printing credits...");
 	commands.spawn_bundle(Camera2dBundle::default());
 
     let slides = vec![
-        "1.png",
-        "2.png",
-        "3.png",
-        "4.png",
+        "gavin_credit.png",
         "dan_credit.png",
     ];
 
@@ -47,15 +44,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn_bundle(SpriteBundle {
             texture: asset_server.load(slides[i]),
             visibility: Visibility {
-                is_visible: false,
+                is_visible: if i == 0 { true } else { false },
             },
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         });
     }
 
-    commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(2.0, true)});
-    commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 0});
+    commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(5.0, true)});
+    commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 1});
 	
 	
 }
