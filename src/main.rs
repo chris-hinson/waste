@@ -37,7 +37,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let slides = vec![
         "gavin_credit.png",
         "dan_credit.png",
-	"camryn_credit.png",
+	    "camryn_credit.png",
+        "prateek_credit.png"
         "caela_credit.png",
     ];
 
