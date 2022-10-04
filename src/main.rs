@@ -11,6 +11,7 @@ struct SlideDeck {
     current_slide: usize,
 }
 
+//gavin is ugly
 fn main() {
     App::new()
         .insert_resource(WindowDescriptor {
