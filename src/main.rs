@@ -1,4 +1,3 @@
-
 use bevy::{
 	prelude::*,
 	window::PresentMode,
@@ -37,9 +36,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let slides = vec![
         "gavin_credit.png",
         "dan_credit.png",
-	    "camryn_credit.png",
+		"camryn_credit.png",
         "caela_credit.png",
         "prateek_credit.png",
+        "chase_credit.png",
     ];
 
     for i in 0..slides.len() {
@@ -56,8 +56,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(5.0, true)});
     commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 1});
-	
-	
 }
 
 
