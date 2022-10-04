@@ -56,8 +56,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(5.0, true)});
     commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 1});
-
-
 }
 
 
