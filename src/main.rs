@@ -40,6 +40,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         "caela_credit.png",
         "prateek_credit.png",
         "chase_credit.png",
+		"nathan_credit.png",
     ];
 
     for i in 0..slides.len() {
