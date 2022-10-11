@@ -5,6 +5,12 @@ use std::convert::From;
 
 
 // GAMEWIDE CONSTANTS
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub (crate) enum GameState{
+	Start,
+	Pause,
+	Playing,
+}
 pub(crate) const TITLE: &str = "Waste";
 pub(crate) const WIN_W: f32 = 1280.;
 pub(crate) const WIN_H: f32 = 720. ;
@@ -35,6 +41,8 @@ pub struct MainCamera;
 
 fn main() {
     App::new()
+		//Starts game at main menu
+		.add_state(GameState::Start)
         .insert_resource(WindowDescriptor {
             title: String::from(TITLE),
             width: WIN_W,
@@ -49,7 +57,6 @@ fn main() {
         .add_system(show_slide)
         .add_system(move_player)
         .add_system(move_camera)
-
         .run();
 }
 
