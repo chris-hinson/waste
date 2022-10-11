@@ -1,10 +1,10 @@
-use bevy::ui::FocusPolicy;
 #[warn(unused_imports)]
 use bevy::{prelude::*,
-			sprite::*,
-			text::*};
-use crate::{WIN_H, WIN_W};
+			ui::*};
+use crate::{WIN_H, WIN_W, GameState};
 //for now, text for buttons is black, but that can be changed here:
+
+
 const TEXT_COLOR: Color = Color::rgb(0.,0.,0.);
 
 pub struct MainMenuPlugin;
@@ -18,9 +18,57 @@ struct UiAssets{
 //Builds plugin called MainMenuPlugin
 impl Plugin for MainMenuPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_startup_system(setup_menu);
+		app.add_startup_system(setup_menu)
+		.add_system_set(SystemSet::on_exit(GameState::Start)
+			.with_system(despawn_start_menu))
+		.add_system(start_button_handler)
+		.add_system(credits_button_handler);
 	}
 }
+
+// Clears buttons from screen when ran
+// Should be run after START button is pressed
+fn despawn_start_menu(mut commands: Commands, button_query: Query<Entity, With<Button>>){
+	for b in button_query.iter() {
+		commands.entity(b).despawn_recursive();
+	}
+}
+
+
+fn start_button_handler(
+	mut commands: Commands,
+	interaction_query: Query<(&Children, &Interaction), Changed<Interaction>>,
+	mut image_query: Query<&mut UiImage>, 
+	ui_assets: Res<UiAssets>,
+	mut state: ResMut<bevy::prelude::State<GameState>>
+){
+	for(children, interaction) in interaction_query.iter() {
+		//grabs children of button
+		let child = children.iter().next().unwrap();
+		//gets image of buttons
+		let mut image = image_query.get_mut(*child).unwrap();
+
+		//What happens when a button is interacted with
+		match interaction {
+			Interaction::Clicked =>{
+				image.0 = ui_assets.button_pressed.clone();
+				state.set(GameState::Playing);
+			},
+			Interaction::Hovered=> {
+				image.0 = ui_assets.button_pressed.clone();
+			}
+			Interaction::None => {
+				image.0 = ui_assets.button.clone();
+			}
+		}
+	}
+
+}
+
+fn credits_button_handler() {
+
+}
+
 
 fn setup_menu(mut commands: Commands, assets: Res<AssetServer>){ 
 	//TODO:
