@@ -7,6 +7,7 @@ pub(crate) const WIN_W: f32 = 1280.;
 pub(crate) const WIN_H: f32 = 720. ;
 pub(crate) const PLAYER_SPEED: f32 = 500.;
 pub(crate) const ACCEL_RATE: f32 = 100.;
+pub(crate) const TILE_SIZE: f32 = 64.;
 
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
 
@@ -26,7 +27,13 @@ use player::*;
 mod camera;
 use camera::*;
 
+mod wfc;
+use wfc::*;
+
 // END CUSTOM MODULES
+
+#[derive(Component)]
+struct Tile;
 
 
 fn main() {
@@ -47,7 +54,11 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>,
+	mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
     // info!("Printing credits...");
     commands.spawn_bundle(Camera2dBundle::default());
 
@@ -84,33 +95,58 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // });
     
     // Draw a bunch of backgrounds
-    let mut x_offset = 0.;
-    // Don't worry about the misalignment, it isn't that this code is wrong
-    // it's that my drawing is a horrible mishapen creature.
-    while x_offset < LEVEL_LENGTH {
-        commands
-            .spawn_bundle(SpriteBundle {
-                texture: asset_server.load(GAME_BACKGROUND),
-                transform: Transform::from_xyz(x_offset, 0., 0.),
+    let starting_chuck = wfc(WIN_H as usize, WIN_W as usize);
+    // info!("{:?}", starting_chuck);
+
+    let map_handle = asset_server.load("overworld_tilesheet.png");
+	// let map_handle = asset_server.load("overworld_tilesheet.png");
+	let map_atlas = TextureAtlas::from_grid(map_handle, 
+		Vec2::splat(TILE_SIZE), 7, 6);
+
+	let map_atlas_len = map_atlas.textures.len();
+	let map_atlas_handle = texture_atlases.add(map_atlas.clone());
+
+	println!("Number of texture atlases: {}", map_atlas_len);
+
+	// from center of the screen to half a tile from edge
+	// so the tile will never be "cut in half" by edge of screen
+	let x_bound = WIN_W/2. - TILE_SIZE/2.;
+	let y_bound = WIN_H/2. - TILE_SIZE/2.;
+	let mut x = -x_bound;
+	let mut y = y_bound;
+
+	for i in 0..starting_chuck.len(){
+        for j in 0..starting_chuck[i].len(){
+            let t = Vec3::new(
+                x,
+                y,
+                0.,
+            );
+            commands
+            .spawn_bundle(SpriteSheetBundle {
+                texture_atlas: map_atlas_handle.clone(),
+                transform: Transform {
+                    translation: t,
+                    ..default()
+                },
+                sprite: TextureAtlasSprite {
+                    index: starting_chuck[i][j],
+                    ..default()
+                },
                 ..default()
             })
-            .insert(Background);
-
-            // Now do all the backgrounds above it.
-            let mut y_offset = WIN_H;
-            while y_offset < LEVEL_HEIGHT {
-                commands
-                    .spawn_bundle(SpriteBundle {
-                        texture: asset_server.load(GAME_BACKGROUND),
-                        transform: Transform::from_xyz(x_offset, y_offset, 0.),
-                        ..default()
-                    })
-                    .insert(Background);
-                y_offset += WIN_H;
+            .insert(Tile);
+                // break;
+            x += TILE_SIZE;
+            if x > x_bound {
+                x = -x_bound;
+                y -=  TILE_SIZE;
             }
-        x_offset += WIN_W;
+    
+        }
     }
-
+		
+    
     // Draw the player
     // He's so smol right now
     commands
