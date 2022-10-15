@@ -60,6 +60,7 @@ fn main() {
             .with_system(move_camera))
         .add_system_set(SystemSet::on_exit(GameState::Playing)
             .with_system(despawn_game))
+        .add_system(bevy::window::close_on_esc)
         // .add_system(move_player)
         // .add_system(move_camera)
         .run();
