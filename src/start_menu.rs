@@ -1,11 +1,13 @@
 #[warn(unused_imports)]
-use bevy::{prelude::*,
-			ui::*};
+use bevy::{prelude::*, ui::*};
 use crate::{WIN_H, WIN_W, GameState};
+use crate::camera::{MenuCamera};
+use crate::player::{Player};
+use crate::backgrounds::{Background};
+
 //for now, text for buttons is black, but that can be changed here:
-
-
 const TEXT_COLOR: Color = Color::rgb(0.,0.,0.);
+const MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
 
 pub struct MainMenuPlugin;
 //sets up Handlers for fonts and images for a button.
@@ -15,34 +17,61 @@ struct UiAssets{
 	button_pressed: Handle<Image>,
 }
 
+#[derive(Component)]
+pub(crate) struct MainMenuBackground;
+
+#[derive(Component)]
+pub(crate) struct StartButton;
+
+#[derive(Component)]
+pub(crate) struct CreditsButton;
+
 //Builds plugin called MainMenuPlugin
 impl Plugin for MainMenuPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_startup_system(setup_menu)
+		app
+		.add_system_set(SystemSet::on_enter(GameState::Start)
+			.with_system(setup_menu))
+		.add_system_set(SystemSet::on_update(GameState::Start)
+			.with_system(start_button_handler)
+			.with_system(credits_button_handler))
 		.add_system_set(SystemSet::on_exit(GameState::Start)
-			.with_system(despawn_start_menu))
-		.add_system(start_button_handler)
-		.add_system(credits_button_handler);
+			.with_system(despawn_start_menu)); // <-- note semi-colon here
+		// .add_system(start_button_handler)
+		// .add_system(credits_button_handler);
 	}
 }
 
 // Clears buttons from screen when ran
 // Should be run after START button is pressed
-fn despawn_start_menu(mut commands: Commands, button_query: Query<Entity, With<Button>>){
+fn despawn_start_menu(mut commands: Commands,
+	button_query: Query<Entity, With<Button>>,
+	camera_query: Query<Entity,  With<MenuCamera>>,
+	background_query: Query<Entity, With<MainMenuBackground>>
+){
+	// Despawn buttons
 	for b in button_query.iter() {
 		commands.entity(b).despawn_recursive();
+	}
+	// Despawn cameras
+	for c in camera_query.iter() {
+		commands.entity(c).despawn();
+	}
+	// Despawn Main Menu Background
+	for bckg in background_query.iter() {
+		commands.entity(bckg).despawn();
 	}
 }
 
 
 fn start_button_handler(
 	mut commands: Commands,
-	interaction_query: Query<(&Children, &Interaction), Changed<Interaction>>,
+	interaction_query: Query<(&Children, &Interaction, With<StartButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
 	mut state: ResMut<bevy::prelude::State<GameState>>
 ){
-	for(children, interaction) in interaction_query.iter() {
+	for(children, interaction, _) in interaction_query.iter() {
 		//grabs children of button
 		let child = children.iter().next().unwrap();
 		//gets image of buttons
@@ -52,6 +81,8 @@ fn start_button_handler(
 		match interaction {
 			Interaction::Clicked =>{
 				image.0 = ui_assets.button_pressed.clone();
+				// This could be an Err result, but is not checked.
+				// We assume this will never fail?
 				state.set(GameState::Playing);
 			},
 			Interaction::Hovered=> {
@@ -62,15 +93,48 @@ fn start_button_handler(
 			}
 		}
 	}
-
 }
 
-fn credits_button_handler() {
+fn credits_button_handler(
+	mut commands: Commands,
+	interaction_query: Query<(&Children, &Interaction, With<CreditsButton>), Changed<Interaction>>,
+	mut image_query: Query<&mut UiImage>, 
+	ui_assets: Res<UiAssets>,
+	mut state: ResMut<bevy::prelude::State<GameState>>
+) {
+	for(children, interaction, _) in interaction_query.iter() {
+		//grabs children of button
+		let child = children.iter().next().unwrap();
+		//gets image of buttons
+		let mut image = image_query.get_mut(*child).unwrap();
 
+		//What happens when a button is interacted with
+		match interaction {
+			Interaction::Clicked =>{
+				image.0 = ui_assets.button_pressed.clone();
+				// This could be an Err result, but is not checked.
+				// We assume this will never fail?
+				state.set(GameState::Credits);
+			},
+			Interaction::Hovered=> {
+				image.0 = ui_assets.button_pressed.clone();
+			}
+			Interaction::None => {
+				image.0 = ui_assets.button.clone();
+			}
+		}
+	}
 }
 
 
-fn setup_menu(mut commands: Commands, assets: Res<AssetServer>){ 
+fn setup_menu(mut commands: Commands,
+	assets: Res<AssetServer>,
+	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Background>)>
+){ 
+	cameras.for_each(|camera| {
+		commands.entity(camera).despawn();
+	});
+
 	//TODO:
 	//Choose actual font and button images
 	//gives font and images for start button:
@@ -81,7 +145,15 @@ fn setup_menu(mut commands: Commands, assets: Res<AssetServer>){
 	};
 
 	//creates camera for UI
-	commands.spawn_bundle(Camera2dBundle::default());
+	let camera = Camera2dBundle::default();
+    commands.spawn_bundle(camera).insert(MenuCamera);
+
+	commands.spawn_bundle(SpriteBundle {
+		texture: assets.load(MENU_BACKGROUND),
+		transform: Transform::from_xyz(0., 0., 0.),
+		..default()
+	})
+	.insert(MainMenuBackground);
 	
 	//START BUTTON:
 	//Note that the button comes in two parts: the clickable part and the image part.
@@ -138,7 +210,7 @@ fn setup_menu(mut commands: Commands, assets: Res<AssetServer>){
 				..Default::default()
 			});
 		});
-	});
+	}).insert(StartButton);
 
 
 	//CREDITS button:
@@ -197,7 +269,7 @@ fn setup_menu(mut commands: Commands, assets: Res<AssetServer>){
 				..Default::default()
 			});
 		});
-	});
+	}).insert(CreditsButton);
 	//END CREDITS BUTTON
 
 	//adds resources to the App

@@ -10,6 +10,7 @@ pub (crate) enum GameState{
 	Start,
 	Pause,
 	Playing,
+    Credits,
 }
 pub(crate) const TITLE: &str = "Waste";
 pub(crate) const WIN_W: f32 = 1280.;
@@ -36,9 +37,6 @@ use start_menu::*;
 // END CUSTOM MODULES
 
 
-#[derive(Component)]
-pub struct MainCamera;
-
 fn main() {
     App::new()
 		//Starts game at main menu
@@ -53,50 +51,32 @@ fn main() {
         .add_plugins(DefaultPlugins)
 		//adds MainMenu
 		.add_plugin(MainMenuPlugin)
-        .add_startup_system(setup)
-        .add_system(show_slide)
-        .add_system(move_player)
-        .add_system(move_camera)
+        .add_plugin(CreditsPlugin) // Must find a way to conditionally set up plugins
+        //.add_startup_system(setup)
+        .add_system_set(SystemSet::on_enter(GameState::Playing)
+            .with_system(setup_game))
+        .add_system_set(SystemSet::on_update(GameState::Playing)
+            .with_system(move_player)
+            .with_system(move_camera))
+        .add_system_set(SystemSet::on_exit(GameState::Playing)
+            .with_system(despawn_game))
+        // .add_system(move_player)
+        // .add_system(move_camera)
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub(crate) fn setup_game(mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Background>)>
+) {
+    // Despawn other cameras
+    cameras.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
+
     // done so that this camera doesn't mess with any UI cameras for start or pause menu
-	let mut camera = Camera2dBundle::default();
+	let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(MainCamera);
-
-
-    // TODO: What do we do to this so that it is only 
-    // displaying these slides when a menu button is pressed to go to credits?
-    // let slides = vec![
-    //     "credits/gavin_credit.png",
-    //     "credits/dan_credit.png",
-    //     "credits/camryn_credit.png",
-    //     "credits/caela_credit.png",
-    //     "credits/prateek_credit.png",
-    //     "credits/chase_credit.png",
-    //     "credits/nathan_credit.png",
-    //     "credits/chris_credit.png",
-    // ];
-
-    // for i in 0..slides.len() {
-    //     commands.spawn_bundle(SpriteBundle {
-    //         texture: asset_server.load(slides[i]),
-    //         visibility: Visibility {
-    //             is_visible: if i == 0 { true } else { false },
-    //         },
-    //         transform: Transform::from_xyz(0., 0., 0.),
-    //         ..default()
-    //     });
-    // }
-
-    // commands.spawn().insert(SlideTimer {
-    //     timer: Timer::from_seconds(5.0, true),
-    // });
-    // commands.spawn().insert(SlideDeck {
-    //     total_slides: slides.len(),
-    //     current_slide: 1,
-    // });
     
     // Draw a bunch of backgrounds
     let mut x_offset = 0.;
@@ -139,5 +119,27 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(Player);
+
+}
+
+pub(crate) fn despawn_game(mut commands: Commands,
+	camera_query: Query<Entity,  With<MainCamera>>,
+    background_query: Query<Entity, With<Background>>,
+    player_query: Query<Entity, With<Player>>,
+) {
+    // Despawn main camera
+    camera_query.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
+
+    // Despawn world
+    background_query.for_each(|background| {
+        commands.entity(background).despawn();
+    });
+
+    // Despawn player
+    player_query.for_each(|player| {
+        commands.entity(player).despawn();
+    });
 
 }

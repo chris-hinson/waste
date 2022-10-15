@@ -40,7 +40,6 @@ pub(crate) fn move_player(
         return;
     }
 
-
 	let (mut pt, mut pv) = player.single_mut();
 
 	let mut deltav = Vec2::splat(0.);
