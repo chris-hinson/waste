@@ -1,36 +1,48 @@
-use bevy::{prelude::*, window::PresentMode};
+use bevy::{prelude::*, 
+	window::PresentMode,
+};
 use std::convert::From;
 
+
 // GAMEWIDE CONSTANTS
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub (crate) enum GameState{
+	Start,
+	Pause,
+	Playing,
+}
 pub(crate) const TITLE: &str = "Waste";
 pub(crate) const WIN_W: f32 = 1280.;
 pub(crate) const WIN_H: f32 = 720. ;
 pub(crate) const PLAYER_SPEED: f32 = 500.;
 pub(crate) const ACCEL_RATE: f32 = 100.;
+// END GAMEWIDE CONSTANTS
 
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
-
-// Credit slides and systems
+//mod statements:
 mod credits;
-use credits::*;
-
-// Backgrounds and systems to scroll them
 mod backgrounds;
-use backgrounds::*;
-
-// Player and systems
 mod player;
-use player::*;
-
-// Camera related movement
 mod camera;
+mod start_menu;
+
+//use statements:
+use credits::*;
+use backgrounds::*;
+use player::*;
 use camera::*;
+use start_menu::*;
 
 // END CUSTOM MODULES
 
 
+#[derive(Component)]
+pub struct MainCamera;
+
 fn main() {
     App::new()
+		//Starts game at main menu
+		.add_state(GameState::Start)
         .insert_resource(WindowDescriptor {
             title: String::from(TITLE),
             width: WIN_W,
@@ -39,17 +51,20 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+		//adds MainMenu
+		.add_plugin(MainMenuPlugin)
         .add_startup_system(setup)
         .add_system(show_slide)
         .add_system(move_player)
         .add_system(move_camera)
-
         .run();
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // info!("Printing credits...");
-    commands.spawn_bundle(Camera2dBundle::default());
+    // done so that this camera doesn't mess with any UI cameras for start or pause menu
+	let mut camera = Camera2dBundle::default();
+    commands.spawn_bundle(camera).insert(MainCamera);
+
 
     // TODO: What do we do to this so that it is only 
     // displaying these slides when a menu button is pressed to go to credits?
