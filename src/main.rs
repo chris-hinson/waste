@@ -15,10 +15,6 @@ pub (crate) enum GameState{
 
 
 pub(crate) const TITLE: &str = "Waste";
-pub(crate) const WIN_W: f32 = 1280.;
-pub(crate) const WIN_H: f32 = 720. ;
-pub(crate) const PLAYER_SPEED: f32 = 500.;
-pub(crate) const ACCEL_RATE: f32 = 100.;
 // END GAMEWIDE CONSTANTS
 
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
@@ -36,6 +32,7 @@ use backgrounds::*;
 use player::*;
 use camera::*;
 use start_menu::*;
+use wfc::*;
 
 // END CUSTOM MODULES
 
@@ -57,8 +54,8 @@ fn main() {
         .add_plugin(CreditsPlugin) // Must find a way to conditionally set up plugins
         //.add_startup_system(setup)
         .add_system_set(SystemSet::on_enter(GameState::Playing)
-            .with_system(setup_game)
-            .with_system(init_background))
+            .with_system(init_background)
+            .with_system(setup_game))
         .add_system_set(SystemSet::on_update(GameState::Playing)
             .with_system(move_player)
             .with_system(move_camera))
@@ -91,8 +88,6 @@ pub(crate) fn setup_game(mut commands: Commands,
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         })
-        // Homie needs some velocity ong or he is not going ANYWHERE
-        .insert(Velocity::new())
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(Player);

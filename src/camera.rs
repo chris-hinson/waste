@@ -1,7 +1,12 @@
 use bevy::{prelude::*};
-use crate::player::{Player, Velocity};
-use crate::backgrounds::{Background, LEVEL_HEIGHT, LEVEL_WIDTH};
-use crate::{WIN_H, WIN_W};
+use crate::player::{Player};
+use crate::backgrounds::{
+    Background,
+    LEVEL_HEIGHT, LEVEL_WIDTH, 
+    WIN_H, WIN_W,
+    TILE_SIZE,
+    // CHUNK_HEIGHT, CHUNK_WIDTH
+};
 
 #[derive(Component)]
 pub(crate) struct MainCamera;
@@ -13,7 +18,7 @@ pub(crate) struct MenuCamera;
 pub(crate) struct SlidesCamera;
 
 pub(crate) fn move_camera(
-    player: Query<(&mut Transform, &mut Velocity), (With<Player>, Without<Background>)>,
+    player: Query<&mut Transform, (With<Player>, Without<Background>)>,
     mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Background>)>,
 ) {
     if camera.is_empty() {
@@ -25,13 +30,11 @@ pub(crate) fn move_camera(
         return;
     }
 
-    let (pt, _pv) = player.single();
+    let pt = player.single();
     let ct = camera.single();
 
     let x = if pt.translation.x < 0. {
         0.
-    } else if pt.translation.x > (LEVEL_WIDTH - WIN_W) {
-        LEVEL_WIDTH - WIN_W
     } else if pt.translation.x > (ct.translation.x + WIN_W/2.) {
         ct.translation.x + WIN_W
     } else if pt.translation.x < (ct.translation.x - WIN_W/2.) {
@@ -40,14 +43,15 @@ pub(crate) fn move_camera(
         ct.translation.x
     };
 
+    // I am not sure why the window top is slightly off balance
+    // and needing the +/- TILE_SIZE check, but it prevents halves of tiles
+    // compounding and resulting in mostly void screens.
     let y = if pt.translation.y < 0.{
         0.
-    } else if pt.translation.y > (LEVEL_HEIGHT - WIN_H) {
-        LEVEL_HEIGHT - WIN_H
-    } else if pt.translation.y > (ct.translation.y + WIN_H/2.) {
-        ct.translation.y + WIN_H
-    } else if pt.translation.y < (ct.translation.y - WIN_H/2.) {
-        ct.translation.y - WIN_H
+    } else if pt.translation.y > (ct.translation.y + WIN_H/2. + TILE_SIZE) {
+        ct.translation.y + WIN_H + TILE_SIZE
+    } else if pt.translation.y < (ct.translation.y - WIN_H/2. - TILE_SIZE) {
+        ct.translation.y - WIN_H - TILE_SIZE
     } else {
         ct.translation.y
     };
