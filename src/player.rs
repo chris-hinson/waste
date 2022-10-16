@@ -18,7 +18,10 @@ pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
 	mut player: Query<&mut Transform, (With<Player>, Without<Background>)>,
 ){
-	let mut pt = player.single_mut();
+	if player.is_empty() {
+		error!("Couldn't find a player to move...");
+		return;
+	}
 
 	let mut pt = player.single_mut();
 
