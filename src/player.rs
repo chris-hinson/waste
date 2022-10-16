@@ -25,74 +25,33 @@ impl From<Vec2> for Velocity {
 	}
 }
 
-// Taken from Dr. Farnan's examples at
-// https://github.com/nfarnan/cs1666_examples/blob/main/bevy/examples/bv07_side_scroll.rs
-//
-// This will need to be edited heavily, of course, in order to make it so that the movement
-// is actually appropriate for our game.
 pub(crate) fn move_player(
-	time: Res<Time>,
 	input: Res<Input<KeyCode>>,
-	mut player: Query<(&mut Transform, &mut Velocity), (With<Player>, Without<Background>)>,
+	mut player: Query<(&mut Transform), (With<Player>, Without<Background>)>,
 ){
-    // Bail if no player has been drawn.
-    if player.is_empty() {
-        return;
-    }
+	let mut pt = player.single_mut();
 
-	let (mut pt, mut pv) = player.single_mut();
-
-	let mut deltav = Vec2::splat(0.);
-
-	if input.pressed(KeyCode::A) {
-		deltav.x -= 1.;
-	}
-
-	if input.pressed(KeyCode::D) {
-		deltav.x += 1.;
-	}
+	let mut x_vel = 0.;
+	let mut y_vel = 0.;
 
 	if input.pressed(KeyCode::W) {
-		deltav.y += 1.;
+		y_vel += 4.;
 	}
 
 	if input.pressed(KeyCode::S) {
-		deltav.y -= 1.;
+		y_vel -= 4.;
 	}
 
-	let deltat = time.delta_seconds();
-	let acc = ACCEL_RATE * deltat;
-
-	pv.velocity = if deltav.length() > 0. {
-		(pv.velocity + (deltav.normalize_or_zero() * acc)).clamp_length_max(PLAYER_SPEED)
-	}
-	else if pv.velocity.length() > acc {
-		pv.velocity + (pv.velocity.normalize_or_zero() * -acc)
-	}
-	else {
-		Vec2::splat(0.)
-	};
-	let change = pv.velocity * deltat;
-
-	let new_pos = pt.translation + Vec3::new(
-		change.x,
-		0.,
-		0.,
-	);
-	if new_pos.x >= -(WIN_W/2.) + TILE_SIZE/2.
-		&& new_pos.x <= LEVEL_LENGTH - (WIN_W/2. + TILE_SIZE/2.)
-	{
-		pt.translation = new_pos;
+	if input.pressed(KeyCode::A) {
+		x_vel -= 4.;
+		y_vel = 0.;
 	}
 
-	let new_pos = pt.translation + Vec3::new(
-		0.,
-		change.y,
-		0.,
-	);
-	if new_pos.y >= -(WIN_H/2.) + (TILE_SIZE * 1.5)
-		&& new_pos.y <= LEVEL_HEIGHT - (WIN_H/2. + TILE_SIZE/2.)
-	{
-		pt.translation = new_pos;
+	if input.pressed(KeyCode::D) {
+		x_vel += 4.;
+		y_vel = 0.;
 	}
+
+	pt.translation.x += x_vel;
+	pt.translation.y += y_vel;
 }
