@@ -88,7 +88,7 @@ pub(crate) fn setup_game(mut commands: Commands,
     commands
         .spawn_bundle(SpriteBundle { 
             texture: asset_server.load(PLAYER_SPRITE),
-            transform: Transform::from_xyz(0., 0., 1.),
+            transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         })
         // Homie needs some velocity ong or he is not going ANYWHERE
