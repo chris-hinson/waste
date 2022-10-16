@@ -147,7 +147,9 @@ fn handle_exit_slides(
     mut state: ResMut<State<GameState>>
 ) {
     if input.pressed(KeyCode::Escape) {
-        // Hope this doesn't fail :)
-        state.set(GameState::Start);
+        match state.set(GameState::Start) {
+            Ok(_) => {},
+            Err(_) => { error!("Could not change game state from credits to start in escape key handler..."); }
+        };
     }
 }

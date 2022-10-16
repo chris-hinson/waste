@@ -1,9 +1,14 @@
 #[warn(unused_imports)]
 use bevy::{prelude::*, ui::*};
-use crate::{WIN_H, WIN_W, GameState};
+use crate::{
+	GameState
+};
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
-use crate::backgrounds::{Background};
+use crate::backgrounds::{
+	WIN_H, WIN_W, 
+	Background
+};
 
 //for now, text for buttons is black, but that can be changed here:
 const TEXT_COLOR: Color = Color::rgb(0.,0.,0.);
@@ -65,7 +70,6 @@ fn despawn_start_menu(mut commands: Commands,
 
 
 fn start_button_handler(
-	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<StartButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
@@ -83,7 +87,10 @@ fn start_button_handler(
 				image.0 = ui_assets.button_pressed.clone();
 				// This could be an Err result, but is not checked.
 				// We assume this will never fail?
-				state.set(GameState::Playing);
+				match state.set(GameState::Playing) {
+					Ok(_) => {},
+					Err(_) => { error!("Could not change game state to playing in start button handler..."); }
+				};
 			},
 			Interaction::Hovered=> {
 				image.0 = ui_assets.button_pressed.clone();
@@ -96,7 +103,6 @@ fn start_button_handler(
 }
 
 fn credits_button_handler(
-	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<CreditsButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
@@ -114,7 +120,10 @@ fn credits_button_handler(
 				image.0 = ui_assets.button_pressed.clone();
 				// This could be an Err result, but is not checked.
 				// We assume this will never fail?
-				state.set(GameState::Credits);
+				match state.set(GameState::Credits) {
+					Ok(_) => {},
+					Err(_) => { error!("Could not change game state to credits in credit button handler..."); }
+				};
 			},
 			Interaction::Hovered=> {
 				image.0 = ui_assets.button_pressed.clone();
