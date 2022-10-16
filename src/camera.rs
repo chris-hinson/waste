@@ -1,6 +1,6 @@
 use bevy::{prelude::*};
 use crate::player::{Player, Velocity};
-use crate::backgrounds::{Background, LEVEL_HEIGHT, LEVEL_LENGTH};
+use crate::backgrounds::{Background, LEVEL_HEIGHT, LEVEL_WIDTH};
 use crate::{WIN_H, WIN_W};
 
 #[derive(Component)]
@@ -30,8 +30,8 @@ pub(crate) fn move_camera(
 
     let x = if pt.translation.x < 0. {
         0.
-    } else if pt.translation.x > (LEVEL_LENGTH - WIN_W) {
-        LEVEL_LENGTH - WIN_W
+    } else if pt.translation.x > (LEVEL_WIDTH - WIN_W) {
+        LEVEL_WIDTH - WIN_W
     } else if pt.translation.x > (ct.translation.x + WIN_W/2.) {
         ct.translation.x + WIN_W
     } else if pt.translation.x < (ct.translation.x - WIN_W/2.) {
@@ -55,6 +55,6 @@ pub(crate) fn move_camera(
     // Move camera only when the player actually leaves a screen boundary
      
     for mut transform in camera.iter_mut() {
-        *transform = Transform::from_xyz(x, y, 0.);
+        *transform = Transform::from_xyz(x, y, 10.);
     }
 }
