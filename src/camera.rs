@@ -55,6 +55,6 @@ pub(crate) fn move_camera(
     // Move camera only when the player actually leaves a screen boundary
      
     for mut transform in camera.iter_mut() {
-        *transform = Transform::from_xyz(x, y, 10.);
+        *transform = Transform::from_xyz(x, y, 0.);
     }
 }
