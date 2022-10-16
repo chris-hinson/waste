@@ -19,7 +19,7 @@ pub(crate) fn init_background(mut commands: Commands,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>
 ) {
 
-    let starting_chuck = wfc();
+    let starting_chunk = wfc();
     // info!("{:?}", starting_chuck);
 
     let map_handle = asset_server.load("backgrounds/overworld_tilesheet.png");
