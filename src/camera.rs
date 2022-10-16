@@ -22,11 +22,11 @@ pub(crate) fn move_camera(
     mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Background>)>,
 ) {
     if camera.is_empty() {
-        info!("Found no camera...?");
+        error!("Found no camera...?");
         return;
     }
     if player.is_empty() {
-        info!("Found no player...?");
+        error!("Found no player...?");
         return;
     }
 
