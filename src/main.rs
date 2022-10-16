@@ -12,6 +12,8 @@ pub (crate) enum GameState{
 	Playing,
     Credits,
 }
+
+
 pub(crate) const TITLE: &str = "Waste";
 pub(crate) const WIN_W: f32 = 1280.;
 pub(crate) const WIN_H: f32 = 720. ;
@@ -26,6 +28,7 @@ mod backgrounds;
 mod player;
 mod camera;
 mod start_menu;
+mod wfc;
 
 //use statements:
 use credits::*;
@@ -54,7 +57,8 @@ fn main() {
         .add_plugin(CreditsPlugin) // Must find a way to conditionally set up plugins
         //.add_startup_system(setup)
         .add_system_set(SystemSet::on_enter(GameState::Playing)
-            .with_system(setup_game))
+            .with_system(setup_game)
+            .with_system(init_background))
         .add_system_set(SystemSet::on_update(GameState::Playing)
             .with_system(move_player)
             .with_system(move_camera))
@@ -68,7 +72,7 @@ fn main() {
 
 pub(crate) fn setup_game(mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Background>)>
+    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Background>)>,
 ) {
     // Despawn other cameras
     cameras.for_each(|camera| {
@@ -78,34 +82,6 @@ pub(crate) fn setup_game(mut commands: Commands,
     // done so that this camera doesn't mess with any UI cameras for start or pause menu
 	let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(MainCamera);
-    
-    // Draw a bunch of backgrounds
-    let mut x_offset = 0.;
-    // Don't worry about the misalignment, it isn't that this code is wrong
-    // it's that my drawing is a horrible mishapen creature.
-    while x_offset < LEVEL_LENGTH {
-        commands
-            .spawn_bundle(SpriteBundle {
-                texture: asset_server.load(GAME_BACKGROUND),
-                transform: Transform::from_xyz(x_offset, 0., 0.),
-                ..default()
-            })
-            .insert(Background);
-
-            // Now do all the backgrounds above it.
-            let mut y_offset = WIN_H;
-            while y_offset < LEVEL_HEIGHT {
-                commands
-                    .spawn_bundle(SpriteBundle {
-                        texture: asset_server.load(GAME_BACKGROUND),
-                        transform: Transform::from_xyz(x_offset, y_offset, 0.),
-                        ..default()
-                    })
-                    .insert(Background);
-                y_offset += WIN_H;
-            }
-        x_offset += WIN_W;
-    }
 
     // Draw the player
     // He's so smol right now
@@ -122,6 +98,8 @@ pub(crate) fn setup_game(mut commands: Commands,
         .insert(Player);
 
 }
+
+
 
 pub(crate) fn despawn_game(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,

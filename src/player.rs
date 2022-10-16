@@ -1,5 +1,5 @@
 use bevy::{prelude::*};
-use crate::backgrounds::{Background, TILE_SIZE, LEVEL_LENGTH, LEVEL_HEIGHT};
+use crate::backgrounds::{Background, TILE_SIZE};
 use crate::{ACCEL_RATE, PLAYER_SPEED, WIN_H, WIN_W};
 
 // We'll wanna replace these with animated sprite sheets later
