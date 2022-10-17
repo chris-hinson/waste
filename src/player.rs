@@ -4,10 +4,33 @@ pub(crate) const PLAYER_SPEED: f32 = 8.;
 
 
 // We'll wanna replace these with animated sprite sheets later
-pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
+// pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
+//pub(crate) const PLAYER_SPRITE: &str = "characters/sprite_movement.png";
 
 #[derive(Component)]
 pub(crate) struct Player;
+
+#[derive(Component, Deref, DerefMut)]
+pub(crate) struct AnimationTimer(Timer);
+
+
+pub(crate) fn animate_sprite(
+    time: Res<Time>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+        &Handle<TextureAtlas>,
+    )>,
+) {
+    for (mut timer, mut sprite, texture_atlas_handle) in &mut query {
+        timer.tick(time.delta());
+        if timer.just_finished() {
+            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+            sprite.index = (sprite.index + 1) % texture_atlas.textures.len();
+        }
+    }
+}
 
 // Taken from Dr. Farnan's examples at
 // https://github.com/nfarnan/cs1666_examples/blob/main/bevy/examples/bv07_side_scroll.rs

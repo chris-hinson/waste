@@ -58,7 +58,8 @@ fn main() {
             .with_system(setup_game))
         .add_system_set(SystemSet::on_update(GameState::Playing)
             .with_system(move_player)
-            .with_system(move_camera))
+            .with_system(move_camera)
+            .with_system(animate_sprite))
         .add_system_set(SystemSet::on_exit(GameState::Playing)
             .with_system(despawn_game))
         .add_system(bevy::window::close_on_esc)
@@ -69,6 +70,7 @@ fn main() {
 
 pub(crate) fn setup_game(mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Background>)>,
 ) {
     // Despawn other cameras
@@ -80,11 +82,16 @@ pub(crate) fn setup_game(mut commands: Commands,
 	let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(MainCamera);
 
+    let texture_handle = asset_server.load("characters/sprite_movement.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 4, 4);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
     // Draw the player
     // He's so smol right now
     commands
-        .spawn_bundle(SpriteBundle { 
-            texture: asset_server.load(PLAYER_SPRITE),
+        .spawn_bundle(SpriteSheetBundle { 
+            //texture: asset_server.load(PLAYER_SPRITE),
+            texture_atlas: texture_atlas_handle,
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         })
