@@ -257,18 +257,19 @@ impl Board {
         }
     }
 
-    //TODO: this has a fucking abysmal runtime, please figure out a way to make it better
-    //this will make sure no tiles on the board are breaking adjacency rules. it will NOT check if we have a completed board
+    // TODO: Very poor runtime, needs optimization.
+    /// This will make sure no tiles on the board are breaking adjacency rules. 
+    /// It will NOT check if we have a completed board.
     fn valid_position(&self) -> bool {
         for row in &self.map {
             for col in row {
-                //empty superpositions are not valid unless the tile has a concrete type
+                // Empty superpositions are invalid unless the tile has a concrete type
                 if col.position.len() == 0 && col.t.is_none() {
                     return false;
                 }
 
-                //only way we could be breaking adjacency rules is if this tile has a concrete position and one of its neighbors
-                //ALSO has a conrete position, which is not allowed beside it
+                // Only way we could be breaking adjacency rules is if this tile has a concrete position and one of its neighbors
+                // ALSO has a conrete position, which is not allowed beside it.
                 if col.t.is_some() {
                     for n in self.get_neighbors(col.coords) {
                         if n.tile.t.is_some() {
@@ -294,7 +295,7 @@ impl Board {
         return !self.map.iter().flatten().any(|t| t.t == None);
     }
 
-    //chose the tile on the board with the lowest entropy and return its coords within the map
+    /// Choose the tile on the board with the lowest entropy and return its coords within the map
     fn choose_tile_to_collapse(&self) -> (usize, usize) {
         return self
             .map
@@ -305,7 +306,7 @@ impl Board {
             .coords;
     }
 
-    //returns a neighbors struct, with inidces into the map of the neighboring tiles
+    /// Returns a neighbors struct, with inidces into the map of the neighboring tiles
     fn get_neighbors(&self, pos: (usize, usize)) -> Neighbors {
         let mut n = Neighbors::new();
 
