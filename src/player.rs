@@ -1,6 +1,7 @@
 use bevy::{prelude::*};
 use crate::backgrounds::{Background, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W};
 pub(crate) const PLAYER_SPEED: f32 = 8.;
+pub(crate) const ANIM_TIME: f32 = 0.2;
 
 
 // We'll wanna replace these with animated sprite sheets later
@@ -11,25 +12,25 @@ pub(crate) const PLAYER_SPEED: f32 = 8.;
 pub(crate) struct Player;
 
 #[derive(Component, Deref, DerefMut)]
-pub(crate) struct AnimationTimer(Timer);
+pub(crate) struct AnimationTimer(pub(crate) Timer);
 
 
 pub(crate) fn animate_sprite(
     time: Res<Time>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    mut query: Query<(
-        &mut AnimationTimer,
-        &mut TextureAtlasSprite,
-        &Handle<TextureAtlas>,
-    )>,
+	input: Res<Input<KeyCode>>,
+	mut player: Query<(&mut TextureAtlasSprite, &mut AnimationTimer), With<Player>>,
 ) {
-    for (mut timer, mut sprite, texture_atlas_handle) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-            sprite.index = (sprite.index + 1) % texture_atlas.textures.len();
-        }
-    }
+
+	if input.pressed(KeyCode::S){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				// let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+				// info!("what is in sprite: {}", sprite.len());
+				sprite.index = (sprite.index + 1) % 4;
+			}
+		}
+	}
 }
 
 // Taken from Dr. Farnan's examples at
