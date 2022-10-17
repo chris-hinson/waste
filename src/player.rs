@@ -1,7 +1,7 @@
 use bevy::{prelude::*};
 use crate::backgrounds::{Background, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W};
-pub(crate) const PLAYER_SPEED: f32 = 8.;
-pub(crate) const ANIM_TIME: f32 = 0.2;
+pub(crate) const PLAYER_SPEED: f32 = 3.;
+pub(crate) const ANIM_TIME: f32 = 0.15;
 
 
 // We'll wanna replace these with animated sprite sheets later
@@ -26,8 +26,31 @@ pub(crate) fn animate_sprite(
 			timer.tick(time.delta());
 			if timer.just_finished() {
 				// let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-				// info!("what is in sprite: {}", sprite.len());
 				sprite.index = (sprite.index + 1) % 4;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::D){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % 4) + 4;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::A){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % 4) + 8;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::W){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % 4) + 12;
 			}
 		}
 	}
