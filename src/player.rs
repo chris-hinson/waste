@@ -97,8 +97,10 @@ pub(crate) fn move_player(
     let player_movement = PLAYER_SPEED * time.delta_seconds();
 	let mut pt = player.single_mut();
 
-	let mut x_vel = 0.;
-	let mut y_vel = 0.;
+    if input.pressed(KeyCode::W) {
+        y_vel += player_movement;
+        x_vel = 0.;
+    }
 
 	if input.pressed(KeyCode::W) {
 		y_vel += player_movement;
