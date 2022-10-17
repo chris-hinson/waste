@@ -1,95 +1,123 @@
-use bevy::{
-	prelude::*,
-	window::PresentMode,
-};
+use bevy::{prelude::*, window::PresentMode};
+use std::convert::From;
 
-#[derive(Component, Deref, DerefMut)]
-struct SlideTimer{
-    timer: Timer,
+// GAMEWIDE CONSTANTS
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub(crate) enum GameState {
+    Start,
+    Pause,
+    Playing,
+    Credits,
 }
 
-#[derive(Component)]
-struct SlideDeck{
-    total_slides: usize,
-    current_slide: usize,
-}
+pub(crate) const TITLE: &str = "Waste";
+// END GAMEWIDE CONSTANTS
+
+// CUSTOM MODULE DEFINITIONS AND IMPORTS
+//mod statements:
+mod backgrounds;
+mod camera;
+mod credits;
+mod player;
+mod start_menu;
+mod wfc;
+
+//use statements:
+use backgrounds::*;
+use camera::*;
+use credits::*;
+use player::*;
+use start_menu::*;
+use wfc::*;
+
+// END CUSTOM MODULES
 
 fn main() {
-	App::new()
-		.insert_resource(WindowDescriptor {
-			title: String::from("Waste"),
-			width: 1280.,
-			height: 720.,
-			present_mode: PresentMode::Fifo,
-			..default()
-		})
-		.add_plugins(DefaultPlugins)
-		.add_startup_system(setup)
-		.add_system(show_slide)
-		.run();
+    App::new()
+        //Starts game at main menu
+        .add_state(GameState::Start)
+        .insert_resource(WindowDescriptor {
+            title: String::from(TITLE),
+            width: WIN_W,
+            height: WIN_H,
+            present_mode: PresentMode::Fifo,
+            ..default()
+        })
+        .add_plugins(DefaultPlugins)
+        //adds MainMenu
+        .add_plugin(MainMenuPlugin)
+        .add_plugin(CreditsPlugin) // Must find a way to conditionally set up plugins
+        //.add_startup_system(setup)
+        .add_system_set(
+            SystemSet::on_enter(GameState::Playing)
+                .with_system(init_background)
+                .with_system(setup_game),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing)
+                .with_system(move_player)
+                .with_system(move_camera),
+        )
+        .add_system_set(SystemSet::on_exit(GameState::Playing).with_system(despawn_game))
+        .add_system(bevy::window::close_on_esc)
+        // .add_system(move_player)
+        // .add_system(move_camera)
+        .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    info!("Printing credits...");
-	commands.spawn_bundle(Camera2dBundle::default());
+pub(crate) fn setup_game(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<
+        Entity,
+        (
+            With<Camera2d>,
+            Without<MainCamera>,
+            Without<Player>,
+            Without<Background>,
+        ),
+    >,
+) {
+    // Despawn other cameras
+    cameras.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
 
-    let slides = vec![
-        "gavin_credit.png",
-        "dan_credit.png",
-		"camryn_credit.png",
-        "caela_credit.png",
-        "prateek_credit.png",
-        "chase_credit.png",
-    ];
+    // done so that this camera doesn't mess with any UI cameras for start or pause menu
+    let camera = Camera2dBundle::default();
+    commands.spawn_bundle(camera).insert(MainCamera);
 
-    for i in 0..slides.len() {
-        commands
+    // Draw the player
+    // He's so smol right now
+    commands
         .spawn_bundle(SpriteBundle {
-            texture: asset_server.load(slides[i]),
-            visibility: Visibility {
-                is_visible: if i == 0 { true } else { false },
-            },
+            texture: asset_server.load(PLAYER_SPRITE),
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
-        });
-    }
-
-    commands.spawn().insert(SlideTimer{timer: Timer::from_seconds(5.0, true)});
-    commands.spawn().insert(SlideDeck{total_slides:slides.len(), current_slide: 1});
+        })
+        // Was considering giving player marker struct an xyz component
+        // til I realized transform handles that for us.
+        .insert(Player);
 }
 
+pub(crate) fn despawn_game(
+    mut commands: Commands,
+    camera_query: Query<Entity, With<MainCamera>>,
+    background_query: Query<Entity, With<Background>>,
+    player_query: Query<Entity, With<Player>>,
+) {
+    // Despawn main camera
+    camera_query.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
 
-fn show_slide(
-    time: Res<Time>,
-    mut slide_timer: Query<&mut SlideTimer>,
-    mut visibility: Query<&mut Visibility>,
-    mut slide_deck: Query<&mut SlideDeck>,
-){
-    // Query gets all the components that match the type
-    // i.e. Query<&mut Visibility> gets all visibility components(length of slide deck)
-    // components without visibility are not queried(still needs to be verified)
-    // if there is only one, we can use .single() / .single_mut()
-    let max_slide_number = slide_deck.single().total_slides;
-    for mut timer in slide_timer.iter_mut() {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            for mut slide in slide_deck.iter_mut() {
-                for (index, mut current_slide_visibility) in (visibility.iter_mut()).enumerate() {
-                    // only the matching slide is visible
-                    if index == slide.current_slide {
-                        current_slide_visibility.is_visible = true;
-                    } else {
-                        current_slide_visibility.is_visible = false;
-                    }
-                }
-                // loop back to the first slide
-                if slide.current_slide < max_slide_number-1 {
-                    slide.current_slide += 1;
-                } else {
-                    slide.current_slide = 0;
-                }
-            }
-        }
-    }
+    // Despawn world
+    background_query.for_each(|background| {
+        commands.entity(background).despawn();
+    });
 
+    // Despawn player
+    player_query.for_each(|player| {
+        commands.entity(player).despawn();
+    });
 }
