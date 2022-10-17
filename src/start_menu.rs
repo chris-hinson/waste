@@ -73,7 +73,6 @@ fn despawn_start_menu(mut commands: Commands,
 
 
 fn start_button_handler(
-	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<StartButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
@@ -88,7 +87,6 @@ fn start_button_handler(
 		match interaction {
 			Interaction::Clicked =>{
 				image.0 = ui_assets.button_pressed.clone();
-				// Change to the playing state
 				commands.insert_resource(NextState(GameState::Playing));
 			},
 			Interaction::Hovered=> {
@@ -102,7 +100,6 @@ fn start_button_handler(
 }
 
 fn credits_button_handler(
-	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<CreditsButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
