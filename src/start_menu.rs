@@ -1,5 +1,6 @@
 #[warn(unused_imports)]
 use bevy::{prelude::*, ui::*};
+use iyes_loopless::prelude::*;
 use crate::{
 	GameState
 };
@@ -35,15 +36,17 @@ pub(crate) struct CreditsButton;
 impl Plugin for MainMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app
-		.add_system_set(SystemSet::on_enter(GameState::Start)
-			.with_system(setup_menu))
-		.add_system_set(SystemSet::on_update(GameState::Start)
-			.with_system(start_button_handler)
-			.with_system(credits_button_handler))
-		.add_system_set(SystemSet::on_exit(GameState::Start)
-			.with_system(despawn_start_menu)); // <-- note semi-colon here
-		// .add_system(start_button_handler)
-		// .add_system(credits_button_handler);
+		.add_enter_system(GameState::Start, setup_menu)
+		.add_system_set(ConditionSet::new()
+			// Only run handlers on Start state
+			// TODO: This could be refactored to be cleaner following the
+			// example in iyes_loopless:
+			// https://github.com/IyesGames/iyes_loopless/blob/main/examples/menu.rs
+			.run_in_state(GameState::Start)
+				.with_system(start_button_handler)
+				.with_system(credits_button_handler)
+			.into())
+		.add_exit_system(GameState::Start, despawn_start_menu);
 	}
 }
 
@@ -70,10 +73,10 @@ fn despawn_start_menu(mut commands: Commands,
 
 
 fn start_button_handler(
+	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<StartButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
-	mut state: ResMut<bevy::prelude::State<GameState>>
 ){
 	for(children, interaction, _) in interaction_query.iter() {
 		//grabs children of button
@@ -85,12 +88,8 @@ fn start_button_handler(
 		match interaction {
 			Interaction::Clicked =>{
 				image.0 = ui_assets.button_pressed.clone();
-				// This could be an Err result, but is not checked.
-				// We assume this will never fail?
-				match state.set(GameState::Playing) {
-					Ok(_) => {},
-					Err(_) => { error!("Could not change game state to playing in start button handler..."); }
-				};
+				// Change to the playing state
+				commands.insert_resource(NextState(GameState::Playing));
 			},
 			Interaction::Hovered=> {
 				image.0 = ui_assets.button_pressed.clone();
@@ -103,10 +102,10 @@ fn start_button_handler(
 }
 
 fn credits_button_handler(
+	mut commands: Commands,
 	interaction_query: Query<(&Children, &Interaction, With<CreditsButton>), Changed<Interaction>>,
 	mut image_query: Query<&mut UiImage>, 
 	ui_assets: Res<UiAssets>,
-	mut state: ResMut<bevy::prelude::State<GameState>>
 ) {
 	for(children, interaction, _) in interaction_query.iter() {
 		//grabs children of button
@@ -118,12 +117,8 @@ fn credits_button_handler(
 		match interaction {
 			Interaction::Clicked =>{
 				image.0 = ui_assets.button_pressed.clone();
-				// This could be an Err result, but is not checked.
-				// We assume this will never fail?
-				match state.set(GameState::Credits) {
-					Ok(_) => {},
-					Err(_) => { error!("Could not change game state to credits in credit button handler..."); }
-				};
+				// Change to the credits state
+				commands.insert_resource(NextState(GameState::Credits));
 			},
 			Interaction::Hovered=> {
 				image.0 = ui_assets.button_pressed.clone();
