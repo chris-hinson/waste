@@ -1,5 +1,5 @@
-use bevy::{prelude::*};
-use crate::backgrounds::{Background, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W};
+use bevy::{prelude::*, sprite::collide_aabb::collide, sprite::collide_aabb::Collision};
+use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
 pub(crate) const PLAYER_SPEED: f32 = 4.;
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
@@ -80,7 +80,8 @@ pub(crate) fn animate_sprite(
 // is actually appropriate for our game.
 pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
-	mut player: Query<&mut Transform, (With<Player>, Without<Background>)>,
+	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
+	mut monster_tiles: Query<&mut MonsterTile>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -129,4 +130,19 @@ pub(crate) fn move_player(
 	} else {
 		pt.translation.y + y_vel
 	};
+
+	// This is where we will check for collisions with monsters
+	for monster_tile in monster_tiles.iter() {
+		let monster_pos = monster_tile.transform.translation;
+		let collision = collide(pt.translation, Vec2::splat(64.), monster_pos, Vec2::splat(64.));
+		match collision {
+			None => {},
+			Some(_) => {
+				// Now as long as the player is standing on a tile, this will keep triggering
+				// This looks like an easy fix with state transitioning, we will see when that's implemented
+				// If not the solution is also simple: we kick the player out of the monster tile :)
+				println!("Collided with monster! Battle!");
+			}
+		}
+	}
 }

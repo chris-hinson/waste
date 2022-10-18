@@ -20,7 +20,12 @@ pub(crate) const GAME_BACKGROUND: &str = "backgrounds/test_scroll_background.png
 pub(crate) const OVERWORLD_TILESHEET: &str = "backgrounds/overworld_tilesheet.png";
 
 #[derive(Component)]
-pub(crate) struct Background;
+pub(crate) struct Tile;
+
+#[derive(Component)]
+pub(crate) struct MonsterTile{
+    pub(crate) transform: Transform,
+}
 
 pub(crate) fn init_background(mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -61,7 +66,23 @@ pub(crate) fn init_background(mut commands: Commands,
                 },
                 ..default()
             })
-            .insert(Background);
+            .insert(Tile);
+            if tile == 4 {
+                commands
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: map_atlas_handle.clone(),
+                    transform: Transform {
+                        translation: t,
+                        ..default()
+                    },
+                    sprite: TextureAtlasSprite {
+                        index: 4,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert(MonsterTile{transform: Transform::from_xyz(x, y, -1.)});
+            }
 
             x += TILE_SIZE;
             // if x > x_bound {

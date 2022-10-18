@@ -8,7 +8,7 @@ use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
 	WIN_H, WIN_W, 
-	Background
+	Tile
 };
 
 //for now, text for buttons is black, but that can be changed here:
@@ -132,7 +132,7 @@ fn credits_button_handler(
 
 fn setup_menu(mut commands: Commands,
 	assets: Res<AssetServer>,
-	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Background>)>
+	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>
 ){ 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
