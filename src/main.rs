@@ -67,13 +67,13 @@ fn main() {
         .run_in_state(GameState::Playing)
             .with_system(move_player)
             .with_system(move_camera)
-            .with_system(animate_sprite))
-        .add_system_set(SystemSet::on_exit(GameState::Playing)
-            .with_system(despawn_game))
-        .add_system(bevy::window::close_on_esc)
-        // .add_system(move_player)
-        // .add_system(move_camera)
-        .run();
+            .with_system(animate_sprite)
+        .into()
+    )
+    // Despawn game when exiting game state
+    // Will change as we change the behavior of pause and whatnot
+    .add_exit_system(GameState::Playing, despawn_game)
+    .run();
 }
 
 pub(crate) fn setup_game(mut commands: Commands,
@@ -98,7 +98,6 @@ pub(crate) fn setup_game(mut commands: Commands,
     // He's so smol right now
     commands
         .spawn_bundle(SpriteSheetBundle { 
-            //texture: asset_server.load(PLAYER_SPRITE),
             texture_atlas: texture_atlas_handle,
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
