@@ -134,7 +134,7 @@ pub(crate) fn move_player(
 	// This is where we will check for collisions with monsters
 	for monster_tile in monster_tiles.iter() {
 		let monster_pos = monster_tile.transform.translation;
-		let collision = collide(pt.translation, Vec2::splat(64.), monster_pos, Vec2::splat(64.));
+		let collision = collide(pt.translation, Vec2::splat(32.), monster_pos, Vec2::splat(32.));
 		match collision {
 			None => {},
 			Some(_) => {
