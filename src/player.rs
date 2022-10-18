@@ -1,12 +1,8 @@
 use bevy::{prelude::*};
 use crate::backgrounds::{Background, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W};
-pub(crate) const PLAYER_SPEED: f32 = 3.;
+pub(crate) const PLAYER_SPEED: f32 = 4.;
 pub(crate) const ANIM_TIME: f32 = 0.15;
-
-
-// We'll wanna replace these with animated sprite sheets later
-// pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
-//pub(crate) const PLAYER_SPRITE: &str = "characters/sprite_movement.png";
+pub(crate) const ANIM_FRAMES: usize = 4;
 
 #[derive(Component)]
 pub(crate) struct Player;
@@ -21,12 +17,33 @@ pub(crate) fn animate_sprite(
 	mut player: Query<(&mut TextureAtlasSprite, &mut AnimationTimer), With<Player>>,
 ) {
 
+	if input.just_released(KeyCode::S) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = 0;
+		}
+	}
+	else if input.just_released(KeyCode::D) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES
+		}
+	}
+	else if input.just_released(KeyCode::A) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES * 2
+		}
+	}
+	else if input.just_released(KeyCode::W) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES * 3;
+		}
+	}
+
 	if input.pressed(KeyCode::S){
 		for (mut sprite, mut timer) in player.iter_mut() {
 			timer.tick(time.delta());
 			if timer.just_finished() {
 				// let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
-				sprite.index = (sprite.index + 1) % 4;
+				sprite.index = (sprite.index + 1) % ANIM_FRAMES;
 			}
 		}
 	}
@@ -34,7 +51,7 @@ pub(crate) fn animate_sprite(
 		for (mut sprite, mut timer) in player.iter_mut() {
 			timer.tick(time.delta());
 			if timer.just_finished() {
-				sprite.index = ((sprite.index + 1) % 4) + 4;
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 4;
 			}
 		}
 	}
@@ -42,7 +59,7 @@ pub(crate) fn animate_sprite(
 		for (mut sprite, mut timer) in player.iter_mut() {
 			timer.tick(time.delta());
 			if timer.just_finished() {
-				sprite.index = ((sprite.index + 1) % 4) + 8;
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 8;
 			}
 		}
 	}
@@ -50,7 +67,7 @@ pub(crate) fn animate_sprite(
 		for (mut sprite, mut timer) in player.iter_mut() {
 			timer.tick(time.delta());
 			if timer.just_finished() {
-				sprite.index = ((sprite.index + 1) % 4) + 12;
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 12;
 			}
 		}
 	}
