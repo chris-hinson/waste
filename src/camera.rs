@@ -1,7 +1,7 @@
 use bevy::{prelude::*};
 use crate::player::{Player};
 use crate::backgrounds::{
-    Background,
+    Tile,
     LEVEL_HEIGHT, LEVEL_WIDTH, 
     WIN_H, WIN_W,
     TILE_SIZE,
@@ -18,8 +18,8 @@ pub(crate) struct MenuCamera;
 pub(crate) struct SlidesCamera;
 
 pub(crate) fn move_camera(
-    player: Query<&mut Transform, (With<Player>, Without<Background>)>,
-    mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Background>)>,
+    player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
+    mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Tile>)>,
 ) {
     if camera.is_empty() {
         error!("Found no camera...?");

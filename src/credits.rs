@@ -3,7 +3,7 @@ use iyes_loopless::prelude::*;
 use crate::GameState;
 use crate::camera::{SlidesCamera};
 use crate::player::{Player};
-use crate::backgrounds::{Background};
+use crate::backgrounds::{Tile};
 
 #[derive(Component, Deref, DerefMut)]
 pub(crate) struct SlideTimer {
@@ -37,7 +37,7 @@ impl Plugin for CreditsPlugin {
 
 pub(crate) fn setup_credits(mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<Entity, (With<Camera2d>, Without<SlidesCamera>, Without<Player>, Without<Background>)>
+    cameras: Query<Entity, (With<Camera2d>, Without<SlidesCamera>, Without<Player>, Without<Tile>)>
 ) {
     // Despawn all non-slides cameras
     cameras.for_each(|camera| {

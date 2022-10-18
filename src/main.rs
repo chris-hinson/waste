@@ -79,7 +79,7 @@ fn main() {
 pub(crate) fn setup_game(mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Background>)>,
+    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Tile>)>,
 ) {
     // Despawn other cameras
     cameras.for_each(|camera| {
@@ -113,7 +113,7 @@ pub(crate) fn setup_game(mut commands: Commands,
 
 pub(crate) fn despawn_game(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,
-    background_query: Query<Entity, With<Background>>,
+    background_query: Query<Entity, With<Tile>>,
     player_query: Query<Entity, With<Player>>,
 ) {
     // Despawn main camera
