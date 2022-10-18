@@ -1,4 +1,5 @@
 use bevy::{prelude::*};
+use iyes_loopless::prelude::*;
 use crate::GameState;
 use crate::camera::{SlidesCamera};
 use crate::player::{Player};
@@ -23,13 +24,14 @@ pub(crate) struct CreditsPlugin;
 impl Plugin for CreditsPlugin {
     fn build(&self, app: &mut App) {
 		app
-        .add_system_set(SystemSet::on_enter(GameState::Credits)
-            .with_system(setup_credits))
-        .add_system_set(SystemSet::on_update(GameState::Credits)
-            .with_system(show_slide)
-            .with_system(handle_exit_slides))
-		.add_system_set(SystemSet::on_exit(GameState::Credits)
-			.with_system(despawn_credits));
+        .add_enter_system(GameState::Credits, setup_credits)
+        .add_system_set(ConditionSet::new()
+            // Run these systems only when in Credits states
+            .run_in_state(GameState::Credits)
+                .with_system(show_slide)
+                .with_system(handle_exit_slides)
+            .into())
+        .add_exit_system(GameState::Credits, despawn_credits);
 	}
 }
 
@@ -143,13 +145,11 @@ pub(crate) fn show_slide(
 }
 
 fn handle_exit_slides(
+    mut commands: Commands,
 	input: Res<Input<KeyCode>>,
-    mut state: ResMut<State<GameState>>
 ) {
     if input.pressed(KeyCode::Escape) {
-        match state.set(GameState::Start) {
-            Ok(_) => {},
-            Err(_) => { error!("Could not change game state from credits to start in escape key handler..."); }
-        };
+        // Change back to start menu state
+        commands.insert_resource(NextState(GameState::Start));
     }
 }

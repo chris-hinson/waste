@@ -1,6 +1,9 @@
 use bevy::{prelude::*, 
 	window::PresentMode,
 };
+// Please see https://github.com/IyesGames/iyes_loopless#states
+// to learn about this. It's a much more simple way of managing states.
+use iyes_loopless::prelude::*;
 use std::convert::From;
 
 
@@ -39,8 +42,6 @@ use wfc::*;
 
 fn main() {
     App::new()
-		//Starts game at main menu
-		.add_state(GameState::Start)
         .insert_resource(WindowDescriptor {
             title: String::from(TITLE),
             width: WIN_W,
@@ -49,14 +50,21 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
-		//adds MainMenu
+        // Starts game at main menu
+        // Initial state should be "loopless"
+		.add_loopless_state(GameState::Start)
 		.add_plugin(MainMenuPlugin)
-        .add_plugin(CreditsPlugin) // Must find a way to conditionally set up plugins
-        //.add_startup_system(setup)
-        .add_system_set(SystemSet::on_enter(GameState::Playing)
+    .add_plugin(CreditsPlugin) 
+    .add_enter_system_set(GameState::Playing, 
+        // This system set is unconditional, as it is being added in an enter helper
+        SystemSet::new()
             .with_system(init_background)
-            .with_system(setup_game))
-        .add_system_set(SystemSet::on_update(GameState::Playing)
+            .with_system(setup_game)
+    )
+    .add_system_set(ConditionSet::new()
+        // These systems will only run in the condition that the game is in the state
+        // Playing
+        .run_in_state(GameState::Playing)
             .with_system(move_player)
             .with_system(move_camera)
             .with_system(animate_sprite))
