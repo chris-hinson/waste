@@ -1,13 +1,77 @@
 use bevy::{prelude::*};
 use crate::backgrounds::{Background, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W};
-pub(crate) const PLAYER_SPEED: f32 = 8.;
-
-
-// We'll wanna replace these with animated sprite sheets later
-pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
+pub(crate) const PLAYER_SPEED: f32 = 4.;
+pub(crate) const ANIM_TIME: f32 = 0.15;
+pub(crate) const ANIM_FRAMES: usize = 4;
 
 #[derive(Component)]
 pub(crate) struct Player;
+
+#[derive(Component, Deref, DerefMut)]
+pub(crate) struct AnimationTimer(pub(crate) Timer);
+
+
+pub(crate) fn animate_sprite(
+    time: Res<Time>,
+	input: Res<Input<KeyCode>>,
+	mut player: Query<(&mut TextureAtlasSprite, &mut AnimationTimer), With<Player>>,
+) {
+
+	if input.just_released(KeyCode::S) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = 0;
+		}
+	}
+	else if input.just_released(KeyCode::D) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES
+		}
+	}
+	else if input.just_released(KeyCode::A) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES * 2
+		}
+	}
+	else if input.just_released(KeyCode::W) {
+		for (mut sprite, mut timer) in player.iter_mut() {
+			sprite.index = ANIM_FRAMES * 3;
+		}
+	}
+
+	if input.pressed(KeyCode::S){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				// let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+				sprite.index = (sprite.index + 1) % ANIM_FRAMES;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::D){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 4;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::A){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 8;
+			}
+		}
+	}
+	else if input.pressed(KeyCode::W){
+		for (mut sprite, mut timer) in player.iter_mut() {
+			timer.tick(time.delta());
+			if timer.just_finished() {
+				sprite.index = ((sprite.index + 1) % ANIM_FRAMES) + 12;
+			}
+		}
+	}
+}
 
 // Taken from Dr. Farnan's examples at
 // https://github.com/nfarnan/cs1666_examples/blob/main/bevy/examples/bv07_side_scroll.rs
