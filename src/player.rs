@@ -1,8 +1,13 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide, sprite::collide_aabb::Collision};
 use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
-pub(crate) const PLAYER_SPEED: f32 = 4.;
+// original 8px/frame movement equalled 480 px/sec.
+// frame-independent movement is in px/second (480 px/sec.)
+pub(crate) const PLAYER_SPEED: f32 = 480.;
+// We'll wanna replace these with animated sprite sheets later
+pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
+
 
 #[derive(Component)]
 pub(crate) struct Player;
@@ -80,6 +85,7 @@ pub(crate) fn animate_sprite(
 // is actually appropriate for our game.
 pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
+  time: Res<Time>,
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
 	mut monster_tiles: Query<&mut MonsterTile>,
 ){
@@ -88,28 +94,30 @@ pub(crate) fn move_player(
 		return;
 	}
 
+    // PLAYER_MOVEMENT = pixels/second = pixels/frame * frames/second
+    let PLAYER_MOVEMENT = PLAYER_SPEED * time.delta_seconds();
 	let mut pt = player.single_mut();
 
 	let mut x_vel = 0.;
 	let mut y_vel = 0.;
 
 	if input.pressed(KeyCode::W) {
-		y_vel += PLAYER_SPEED;
+		y_vel += PLAYER_MOVEMENT;
 		x_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::S) {
-		y_vel -= PLAYER_SPEED;
+		y_vel -= PLAYER_MOVEMENT;
 		x_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::A) {
-		x_vel -= PLAYER_SPEED;
+		x_vel -= PLAYER_MOVEMENT;
 		y_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::D) {
-		x_vel += PLAYER_SPEED;
+		x_vel += PLAYER_MOVEMENT;
 		y_vel = 0.;
 	}
 
@@ -130,6 +138,7 @@ pub(crate) fn move_player(
 	} else {
 		pt.translation.y + y_vel
 	};
+}
 
 	// This is where we will check for collisions with monsters
 	for monster_tile in monster_tiles.iter() {
