@@ -4,7 +4,6 @@ use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
 // We'll wanna replace these with animated sprite sheets later
-pub(crate) const PLAYER_SPRITE: &str = "characters/stickdude.png";
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
 
@@ -85,9 +84,9 @@ pub(crate) fn animate_sprite(
 // is actually appropriate for our game.
 pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
-  time: Res<Time>,
+  	time: Res<Time>,
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
-	mut monster_tiles: Query<&mut MonsterTile>,
+	monster_tiles: Query<&mut MonsterTile>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -138,12 +137,11 @@ pub(crate) fn move_player(
 	} else {
 		pt.translation.y + y_vel
 	};
-}
 
 	// This is where we will check for collisions with monsters
 	for monster_tile in monster_tiles.iter() {
 		let monster_pos = monster_tile.transform.translation;
-		let collision = collide(pt.translation, Vec2::splat(64.), monster_pos, Vec2::splat(64.));
+		let collision = collide(pt.translation, Vec2::splat(32.), monster_pos, Vec2::splat(32.));
 		match collision {
 			None => {},
 			Some(_) => {
