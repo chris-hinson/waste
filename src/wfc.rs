@@ -178,11 +178,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
             // board is in a collapsable state or if no valid option is available here.
             // This is the core part of WFC. Collapse will modify board to
             // be in a collapsed state, if possible.
-            let solvable = board.collapse(
-                // This choose function picks the tile on the board with the least entropy
-                // (that means the least number of possible states)
-                board.choose_tile_to_collapse()
-            );
+            let solvable = board.collapse();
             println!("solved? {solvable:?}");
             println!("\n");
 
@@ -347,61 +343,103 @@ impl Board {
 
     /// Takes 1 tile, collapses its state down to a concrete type, and udpates its neighbors' superpositions.
     /// Returns true on success or false on failure.
-    fn collapse(&mut self, center_tile: (usize, usize)) -> bool {
-        // If our board is already marked as solved, we're done here, 
-        // jump back up the stack.
-        if self.is_solved() {
-            return true;
-        }
+    fn collapse(&mut self) -> bool {
 
-        // center_tile is the tile we are pivoting collapse on right now.
-        // Get the super position of the tile, back it up,
-        // and empty out the position of this tile.
-        let mut random_pos = self[center_tile].position.clone();
-        let backup_pos = self[center_tile].position.clone();
-        self[center_tile].position = Vec::new();
+        let mut backup_stack: UndoStack = Vec::new();
 
-        // Shuffle up the position and check all of them to find one that is valid.
-        // This shuffle gives us the randomality of WFC
-        random_pos.shuffle(&mut thread_rng());
-        for pos in random_pos {
-            // Tentatively give our tile this concrete position
-            self[center_tile].t = Some(pos);
+        // Everything in here should become iterative
+        while !self.is_solved() {
 
-            // Backup our neighbors and update neighbors' superpositions
-            // according to the current subposition we are trying to collapse
-            let old_neighbors = self.get_neighbors(center_tile);
-            for mut n in self.get_neighbors(center_tile) {
-                n.tile
-                    .position
-                    // Keep only subpositions that are valid in relation to our
-                    // ruleset
-                    .retain(|t| self.rules[&pos][&n.direction].contains(t));
-            }
+            // // If our board is already marked as solved, we're done here, 
+            // // jump back up the stack.
+            // if self.is_solved() {
+            //     return true;
+            // }
 
-            // If this subposition is a valid position,
-            // call solve on the next tile to be collapse
-            if self.valid_position() {
-                // if we are not in a solved board, continue recursing, otherwise, return our way up the call stack
-                if self.collapse(self.choose_tile_to_collapse()) {
-                    return true;
+            // This choose function picks the tile on the board with the least entropy
+            // (that means the least number of possible states)
+            let collapsing_tile = self.choose_tile_to_collapse();
+
+            // center_tile is the tile we are pivoting collapse on right now.
+            // Get the super position of the tile, back it up,
+            // and empty out the position of this tile.
+            let mut random_pos = self[collapsing_tile].position.clone();
+            let backup_pos = self[collapsing_tile].position.clone();
+            self[collapsing_tile].position = Vec::new();
+
+            // Shuffle up the position and check all of them to find one that is valid.
+            // This shuffle gives us the randomality of WFC
+            random_pos.shuffle(&mut thread_rng());
+            for pos in random_pos {
+                // Tentatively give our tile this concrete position
+                self[collapsing_tile].t = Some(pos);
+
+                self.map.iter().map(
+                    |row| 
+                        row.iter().map(
+                            |tile| 
+                                println!("{:?}", tile)
+                            )
+                    );
+
+                // Backup our neighbors and update neighbors' superpositions
+                // according to the current subposition we are trying to collapse
+                let old_neighbors = self.get_neighbors(collapsing_tile);
+
+                // Make a backup
+                backup_stack.push(UndoStackElement {
+                    coords: collapsing_tile,
+                    tile_kind: pos,
+                    position: backup_pos.clone(),
+                    neighbors: old_neighbors.clone(),
+                });
+
+                for mut n in self.get_neighbors(collapsing_tile) {
+                    n.tile
+                        .position
+                        // Keep only subpositions that are valid in relation to our
+                        // ruleset
+                        .retain(|t| self.rules[&pos][&n.direction].contains(t));
+                }
+
+                // If this subposition is a valid position,
+                // call solve on the next tile to be collapse
+                if self.valid_position() {
+                    // If we are not in a solved board, continue iterating, otherwise, return our way up the call stack
+                    continue;
                 } else {
-                    // Do not return a success if we could not collapse any neighbor
-                }
-            } else {
-                // If we're not in a valid position,
-                // set ourselves back to what we were before
-                // trying and then we will try the next subpos.
-                for n in old_neighbors {
-                    self[n.tile.coords] = n.tile.clone();
+                    // If we're not in a valid position,
+                    // set ourselves back to what we were before
+                    // trying and then we will try the next subpos.
+                    for n in old_neighbors {
+                        self[n.tile.coords] = n.tile.clone();
+                    }
                 }
             }
-        }
-        // Reset ourselves and fail if no position 
-        // ever succeeded. 
-        self[center_tile].t = None;
-        self[center_tile].position = backup_pos.clone();
-        return false;
+            // Reset ourselves and fail if no position 
+            // ever succeeded. 
+            // Should we maybe do this inside the for loop?
+            // Don't think so, because then we give back our old position,
+            // which includes the one we just tried.
+            let resetting_tile = backup_stack.pop();
+            match resetting_tile {
+                Some(backup) => {
+                    self[backup.coords].t = None;
+                    self[backup.coords].position = backup.position.clone();
+                    // for n in backup.neighbors {
+                    //     self[n.tile.coords] = n.tile.clone();
+                    // }
+                },
+                None => return false,
+            }
+            
+            // self[collapsing_tile].t = None;
+            // self[collapsing_tile].position = backup_pos.clone();
+            // return false;
+        } // end of while loop
+
+        // If while loop broke then we succeeded
+        return true;
     }
 }
 
@@ -413,7 +451,7 @@ struct Neighbors {
     east: Option<(usize, usize)>,
     west: Option<(usize, usize)>,
 }*/
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Neighbors {
     north: Option<Tile>,
     south: Option<Tile>,
@@ -532,3 +570,22 @@ impl Tile {
         }
     }
 }
+
+/// Bookkeeping struct
+/// 
+/// Contains the coordinates, chosen tile, old position, and old neighbor 
+/// states for a tile, so that when we iterate we can undo operations that were done
+/// in the order we did them.
+struct UndoStackElement {
+    // Coordinates of the tile we changed with that operation
+    coords: (usize, usize), 
+    // Type we chose for that tile
+    tile_kind: usize, 
+    // Old superposition
+    position: Vec<usize>,
+    // Old neighbors
+    neighbors: Neighbors
+}
+
+/// Bookkeeping vector for iterative approach
+type UndoStack = Vec<UndoStackElement>;
