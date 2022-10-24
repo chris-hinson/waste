@@ -1,8 +1,4 @@
-use bevy::{prelude::*, 
-	window::PresentMode,
-};
-// Please see https://github.com/IyesGames/iyes_loopless#states
-// to learn about this. It's a much more simple way of managing states.
+use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
 use std::convert::From;
 
@@ -13,9 +9,9 @@ pub (crate) enum GameState{
 	Start,
 	Pause,
 	Playing,
+    Battle,
     Credits,
 }
-
 
 pub(crate) const TITLE: &str = "Waste";
 // END GAMEWIDE CONSTANTS
@@ -28,6 +24,7 @@ mod player;
 mod camera;
 mod start_menu;
 mod wfc;
+mod battle;
 
 //use statements:
 use credits::*;
@@ -35,6 +32,7 @@ use backgrounds::*;
 use player::*;
 use camera::*;
 use start_menu::*;
+use battle::*;
 use wfc::*;
 
 // END CUSTOM MODULES
@@ -54,7 +52,8 @@ fn main() {
         // Initial state should be "loopless"
 		.add_loopless_state(GameState::Start)
 		.add_plugin(MainMenuPlugin)
-    .add_plugin(CreditsPlugin) 
+    .add_plugin(CreditsPlugin)
+        .add_plugin(BattlePlugin)
     .add_enter_system_set(GameState::Playing, 
         // This system set is unconditional, as it is being added in an enter helper
         SystemSet::new()
@@ -70,9 +69,17 @@ fn main() {
             .with_system(animate_sprite)
         .into()
     )
+    .add_enter_system_set(GameState::Battle,
+        SystemSet::new()
+            .with_system(setup_battle)
+    )
+    .add_system_set(ConditionSet::new()
+        .run_in_state(GameState::Battle)
+        .into()
+    )
     // Despawn game when exiting game state
-    // Will change as we change the behavior of pause and whatnot
-    .add_exit_system(GameState::Playing, despawn_game)
+    // .add_exit_system(GameState::Playing, despawn_game)
+    //.add_exit_system(GameState::Playing, despawn_camera_temp)
     .run();
 }
 
@@ -109,7 +116,12 @@ pub(crate) fn setup_game(mut commands: Commands,
 
 }
 
-
+pub(crate) fn despawn_camera_temp(mut commands: Commands, camera_query: Query<Entity, With<MainCamera>>)
+{
+    camera_query.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
+}
 
 pub(crate) fn despawn_game(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,
@@ -130,5 +142,4 @@ pub(crate) fn despawn_game(mut commands: Commands,
     player_query.for_each(|player| {
         commands.entity(player).despawn();
     });
-
 }

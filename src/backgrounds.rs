@@ -23,7 +23,7 @@ pub(crate) const OVERWORLD_TILESHEET: &str = "backgrounds/overworld_tilesheet.pn
 pub(crate) struct Tile;
 
 #[derive(Component)]
-pub(crate) struct MonsterTile{
+pub(crate) struct MonsterTile {
     pub(crate) transform: Transform,
 }
 

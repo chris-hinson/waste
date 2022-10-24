@@ -1,5 +1,9 @@
+use std::os::macos::raw::stat;
 use bevy::{prelude::*, sprite::collide_aabb::collide, sprite::collide_aabb::Collision};
+use iyes_loopless::state::NextState;
+use crate::GameState;
 use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
+
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -22,22 +26,22 @@ pub(crate) fn animate_sprite(
 ) {
 
 	if input.just_released(KeyCode::S) {
-		for (mut sprite, mut timer) in player.iter_mut() {
+		for (mut sprite, _) in player.iter_mut() {
 			sprite.index = 0;
 		}
 	}
 	else if input.just_released(KeyCode::D) {
-		for (mut sprite, mut timer) in player.iter_mut() {
+		for (mut sprite, _) in player.iter_mut() {
 			sprite.index = ANIM_FRAMES
 		}
 	}
 	else if input.just_released(KeyCode::A) {
-		for (mut sprite, mut timer) in player.iter_mut() {
+		for (mut sprite, _) in player.iter_mut() {
 			sprite.index = ANIM_FRAMES * 2
 		}
 	}
 	else if input.just_released(KeyCode::W) {
-		for (mut sprite, mut timer) in player.iter_mut() {
+		for (mut sprite, _) in player.iter_mut() {
 			sprite.index = ANIM_FRAMES * 3;
 		}
 	}
@@ -77,14 +81,10 @@ pub(crate) fn animate_sprite(
 	}
 }
 
-// Taken from Dr. Farnan's examples at
-// https://github.com/nfarnan/cs1666_examples/blob/main/bevy/examples/bv07_side_scroll.rs
-//
-// This will need to be edited heavily, of course, in order to make it so that the movement
-// is actually appropriate for our game.
 pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
   	time: Res<Time>,
+	mut commands: Commands,
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
 	monster_tiles: Query<&mut MonsterTile>,
 ){
@@ -94,29 +94,29 @@ pub(crate) fn move_player(
 	}
 
     // PLAYER_MOVEMENT = pixels/second = pixels/frame * frames/second
-    let PLAYER_MOVEMENT = PLAYER_SPEED * time.delta_seconds();
+    let player_movement = PLAYER_SPEED * time.delta_seconds();
 	let mut pt = player.single_mut();
 
 	let mut x_vel = 0.;
 	let mut y_vel = 0.;
 
 	if input.pressed(KeyCode::W) {
-		y_vel += PLAYER_MOVEMENT;
+		y_vel += player_movement;
 		x_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::S) {
-		y_vel -= PLAYER_MOVEMENT;
+		y_vel -= player_movement;
 		x_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::A) {
-		x_vel -= PLAYER_MOVEMENT;
+		x_vel -= player_movement;
 		y_vel = 0.;
 	}
 
 	if input.pressed(KeyCode::D) {
-		x_vel += PLAYER_MOVEMENT;
+		x_vel += player_movement;
 		y_vel = 0.;
 	}
 
@@ -139,16 +139,20 @@ pub(crate) fn move_player(
 	};
 
 	// This is where we will check for collisions with monsters
+
 	for monster_tile in monster_tiles.iter() {
-		let monster_pos = monster_tile.transform.translation;
-		let collision = collide(pt.translation, Vec2::splat(32.), monster_pos, Vec2::splat(32.));
+		let mt_position = monster_tile.transform.translation;
+		let collision = collide(pt.translation, Vec2::splat(32.), mt_position, Vec2::splat(32.));
 		match collision {
 			None => {},
 			Some(_) => {
 				// Now as long as the player is standing on a tile, this will keep triggering
 				// This looks like an easy fix with state transitioning, we will see when that's implemented
 				// If not the solution is also simple: we kick the player out of the monster tile :)
-				println!("Collided with monster! Battle!");
+				// temporary marker
+				//println!("Collided with monster! Battle!");
+				// switches from Playing -> Battle state
+				commands.insert_resource(NextState(GameState::Battle));
 			}
 		}
 	}

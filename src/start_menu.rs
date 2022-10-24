@@ -39,9 +39,6 @@ impl Plugin for MainMenuPlugin {
 		.add_enter_system(GameState::Start, setup_menu)
 		.add_system_set(ConditionSet::new()
 			// Only run handlers on Start state
-			// TODO: This could be refactored to be cleaner following the
-			// example in iyes_loopless:
-			// https://github.com/IyesGames/iyes_loopless/blob/main/examples/menu.rs
 			.run_in_state(GameState::Start)
 				.with_system(start_button_handler)
 				.with_system(credits_button_handler)
@@ -70,7 +67,6 @@ fn despawn_start_menu(mut commands: Commands,
 		commands.entity(bckg).despawn();
 	}
 }
-
 
 fn start_button_handler(
 	mut commands: Commands,
