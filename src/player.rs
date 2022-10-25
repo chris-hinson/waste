@@ -144,9 +144,6 @@ pub(crate) fn move_player(
 		match collision {
 			None => {},
 			Some(_) => {
-				// Now as long as the player is standing on a tile, this will keep triggering
-				// This looks like an easy fix with state transitioning, we will see when that's implemented
-				// If not the solution is also simple: we kick the player out of the monster tile :)
 				// temporary marker
 				//println!("Collided with monster! Battle!");
 				// switches from Playing -> Battle state

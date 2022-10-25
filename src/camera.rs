@@ -17,6 +17,8 @@ pub(crate) struct MenuCamera;
 #[derive(Component)]
 pub(crate) struct SlidesCamera;
 
+pub(crate) const CAMERA_Z_VALUE: f32 = 100.;
+
 // #[derive(Component)]
 // pub(crate) struct BattleCamera;
 
@@ -62,6 +64,6 @@ pub(crate) fn move_camera(
     // Move camera only when the player actually leaves a screen boundary
      
     for mut transform in camera.iter_mut() {
-        *transform = Transform::from_xyz(x, y, 0.);
+        *transform = Transform::from_xyz(x, y, CAMERA_Z_VALUE);
     }
 }
