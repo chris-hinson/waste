@@ -72,6 +72,9 @@ fn main() {
     .add_enter_system_set(GameState::Battle,
         SystemSet::new()
             .with_system(setup_battle)
+            .with_system(battle_stats)
+            .with_system(spawn_battle_sprite)
+            .with_system(spawn_monster)
     )
     .add_system_set(ConditionSet::new()
         .run_in_state(GameState::Battle)
