@@ -7,8 +7,8 @@ use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
 use crate::player::Player;
 
 const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
-const ENEMY_MONSTER: &str = "characters/clean_monster.png";
-const MONSTER: &str = "characters/stickdude.png";
+const ENEMY_MONSTER: &str = "monsters/clean_monster.png";
+const MONSTER: &str = "monsters/stickdude.png";
 
 
 #[derive(Component)]
@@ -259,7 +259,6 @@ pub(crate) fn spawn_monster(mut commands: Commands,
     })
         .insert(EnemyMonster);
 }
-
 
 pub(crate) fn despawn_battle(mut commands: Commands,
     camera_query: Query<Entity,  With<MainCamera>>,

@@ -25,6 +25,7 @@ mod camera;
 mod start_menu;
 mod wfc;
 mod battle;
+mod monster;
 
 //use statements:
 use credits::*;
@@ -34,6 +35,7 @@ use camera::*;
 use start_menu::*;
 use battle::*;
 use wfc::*;
+use monster::*;
 
 // END CUSTOM MODULES
 
@@ -52,8 +54,9 @@ fn main() {
         // Initial state should be "loopless"
 		.add_loopless_state(GameState::Start)
 		.add_plugin(MainMenuPlugin)
-    .add_plugin(CreditsPlugin)
+        .add_plugin(CreditsPlugin)
         .add_plugin(BattlePlugin)
+        .add_plugin(MonsterPlugin)
     .add_enter_system_set(GameState::Playing, 
         // This system set is unconditional, as it is being added in an enter helper
         SystemSet::new()
