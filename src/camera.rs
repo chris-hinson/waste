@@ -17,6 +17,9 @@ pub(crate) struct MenuCamera;
 #[derive(Component)]
 pub(crate) struct SlidesCamera;
 
+// #[derive(Component)]
+// pub(crate) struct BattleCamera;
+
 pub(crate) fn move_camera(
     player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
     mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Tile>)>,
