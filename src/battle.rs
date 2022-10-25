@@ -15,16 +15,16 @@ const MONSTER: &str = "monsters/stickdude.png";
 pub(crate) struct BattleBackground;
 
 #[derive(Component)]
-pub(crate) struct Monster;
+pub(crate) struct PlayerMonster;
 
 #[derive(Component)]
 pub (crate) struct EnemyMonster;
 
-// Unit structs to help identify the specifi UI component for the player, since there may be many Text components
+// Unit structs to help identify the specific UI components for player's or enemy's monster health/level
+// since there may be many Text components
 #[derive(Component)]
 struct PlayerHealth;
 
-// Unit struct to help identify Enemy Health UI component, since there may be many Text components
 #[derive(Component)]
 struct EnemyHealth;
 
@@ -58,13 +58,13 @@ pub(crate) fn setup_battle(mut commands: Commands,
         error!("No spawned camera...?");
       }
       let (ct, _) = cameras.single();
-  
-    //   commands.spawn_bundle(SpriteBundle {
-    //       texture: asset_server.load(BATTLE_BACKGROUND),
-    //       transform: Transform::from_xyz(ct.translation.x, ct.translation.y, ct.translation.z),
-    //       ..default()
-    //   })
-    //       .insert(BattleBackground);
+      
+        commands.spawn_bundle(SpriteBundle {
+          texture: asset_server.load(BATTLE_BACKGROUND),
+          transform: Transform::from_xyz(ct.translation.x, ct.translation.y, ct.translation.z),
+          ..default()
+      })
+          .insert(BattleBackground);
 }
 
 pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer>) 
@@ -215,7 +215,7 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
 
 }
 
-pub(crate) fn spawn_battle_sprite(mut commands: Commands, 
+pub(crate) fn spawn_player_monster(mut commands: Commands, 
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
     //mut player_query: Query<Entity, With<Player>>
@@ -234,12 +234,12 @@ pub(crate) fn spawn_battle_sprite(mut commands: Commands,
         transform: Transform::from_xyz(ct.translation.x - 500., ct.translation.y, ct.translation.z), 
         ..default()
     })
-        .insert(Monster);
+        .insert(PlayerMonster);
 
 }
 
 
-pub(crate) fn spawn_monster(mut commands: Commands,
+pub(crate) fn spawn_enemy_monster(mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>
 ) {
