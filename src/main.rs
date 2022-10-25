@@ -100,7 +100,12 @@ pub(crate) fn setup_game(mut commands: Commands,
     });
 
     // done so that this camera doesn't mess with any UI cameras for start or pause menu
-	let camera = Camera2dBundle::default();
+	let camera = Camera2dBundle {
+        // Intentionally give the camera a Z value high enough that we can see
+        // everything velow us. Camera needs a bird's eye view.
+        transform: Transform::from_xyz(0.,0.,CAMERA_Z_VALUE),
+        ..default()
+    };
     commands.spawn_bundle(camera).insert(MainCamera);
 
     let texture_handle = asset_server.load("characters/sprite_movement.png");
