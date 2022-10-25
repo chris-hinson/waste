@@ -352,9 +352,10 @@ impl Board {
 
             // // If our board is already marked as solved, we're done here, 
             // // jump back up the stack.
-            // if self.is_solved() {
-            //     return true;
-            // }
+            // Redundant
+            if self.is_solved() {
+                return true;
+            }
 
             // This choose function picks the tile on the board with the least entropy
             // (that means the least number of possible states)
