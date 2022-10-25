@@ -1,13 +1,10 @@
 #[warn(unused_imports)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::{
-    GameState
-};
+use crate::{GameState};
 use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
-use crate::credits::{CreditsPlugin, despawn_credits, show_slide};
-use crate::player::{ANIM_TIME, AnimationTimer, Player};
+use crate::player::Player;
 
 const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
 
@@ -38,7 +35,7 @@ pub(crate) fn setup_battle(mut commands: Commands,
     if cameras.is_empty() {
         error!("No spawned camera...?");
       }
-      let (ct, ce) = cameras.single();
+      let (ct, _) = cameras.single();
   
       commands.spawn_bundle(SpriteBundle {
           texture: asset_server.load(BATTLE_BACKGROUND),
