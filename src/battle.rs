@@ -32,15 +32,20 @@ impl Plugin for BattlePlugin {
 
 pub(crate) fn setup_battle(mut commands: Commands,
                            asset_server: Res<AssetServer>,
-                           cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
-                                                   Without<Player>, Without<Tile>)>
+                           cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
+                            Without<Player>, Without<Tile>)>
 ) {
-    commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load(BATTLE_BACKGROUND),
-        transform: Transform::from_xyz(0., 0., 0.),
-        ..default()
-    })
-        .insert(BattleBackground);
+    if cameras.is_empty() {
+        error!("No spawned camera...?");
+      }
+      let (ct, ce) = cameras.single();
+  
+      commands.spawn_bundle(SpriteBundle {
+          texture: asset_server.load(BATTLE_BACKGROUND),
+          transform: Transform::from_xyz(ct.translation.x, ct.translation.y, ct.translation.z),
+          ..default()
+      })
+          .insert(BattleBackground);
 }
 
 
