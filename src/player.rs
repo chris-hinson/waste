@@ -1,5 +1,4 @@
-use std::os::macos::raw::stat;
-use bevy::{prelude::*, sprite::collide_aabb::collide, sprite::collide_aabb::Collision};
+use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::GameState;
 use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
@@ -96,10 +95,8 @@ pub(crate) fn move_player(
     let player_movement = PLAYER_SPEED * time.delta_seconds();
 	let mut pt = player.single_mut();
 
-    if input.pressed(KeyCode::W) {
-        y_vel += player_movement;
-        x_vel = 0.;
-    }
+	let mut x_vel = 0.;
+	let mut y_vel = 0.;
 
 	if input.pressed(KeyCode::W) {
 		y_vel += player_movement;
@@ -138,7 +135,6 @@ pub(crate) fn move_player(
 	} else {
 		pt.translation.y + y_vel
 	};
-}
 
 	// This is where we will check for collisions with monsters
 
