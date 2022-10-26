@@ -316,7 +316,6 @@ pub (crate) fn button_system(
                 // states so that the initial transition from Start -> StartPlaying (a new state)
                 // is the only one that spawns the world. In this paradigm,
                 // it will regenerate the whole world as if it just started.
-                info!("We claim to be changing state!");
                 commands.insert_resource(NextState(GameState::Playing));
             }
             Interaction::Hovered => {
@@ -332,9 +331,6 @@ pub (crate) fn button_system(
 }
 
 pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // ui camera
-    // commands.spawn_bundle(Camera2dBundle::default());
-    info!("A button is being spawned");
     commands
         .spawn_bundle(ButtonBundle {
             style: Style {
@@ -369,10 +365,6 @@ pub(crate) fn despawn_battle(mut commands: Commands,
     monster_query: Query<Entity, With<Monster>>,
     battle_ui_element_query: Query<Entity, With<BattleUIElement>>
 ) {
-//    camera_query.for_each(|camera| {
-//        commands.entity(camera).despawn();
-//    });
-
     if background_query.is_empty() 
     {
         error!("background is here!");
@@ -398,7 +390,7 @@ pub(crate) fn despawn_battle(mut commands: Commands,
     }
 
    battle_ui_element_query.for_each(|battle_ui_element| {
-        commands.entity(battle_ui_element).despawn();
+        commands.entity(battle_ui_element).despawn_recursive();
    });
 
 }

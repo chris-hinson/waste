@@ -147,6 +147,8 @@ pub(crate) fn move_player(
 				// temporary marker
 				//println!("Collided with monster! Battle!");
 				// switches from Playing -> Battle state
+				// This is TERRIBLE but it KINDA WORKS
+				pt.translation.x += 32.;
 				commands.insert_resource(NextState(GameState::Battle));
 			}
 		}
