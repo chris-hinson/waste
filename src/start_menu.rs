@@ -84,7 +84,7 @@ fn start_button_handler(
 		match interaction {
 			Interaction::Clicked =>{
 				image.0 = ui_assets.button_pressed.clone();
-				commands.insert_resource(NextState(GameState::Playing));
+				commands.insert_resource(NextState(GameState::StartPlaying));
 			},
 			Interaction::Hovered=> {
 				image.0 = ui_assets.button_pressed.clone();
