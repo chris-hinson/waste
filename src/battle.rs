@@ -10,9 +10,16 @@ const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
 const ENEMY_MONSTER: &str = "monsters/clean_monster.png";
 const MONSTER: &str = "monsters/stickdude.png";
 
+const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
+
 
 #[derive(Component)]
 pub(crate) struct BattleBackground;
+
+#[derive(Component)]
+pub(crate) struct Monster;
 
 #[derive(Component)]
 pub(crate) struct PlayerMonster;
@@ -34,16 +41,38 @@ struct PlayerLevel;
 #[derive(Component)]
 struct EnemyLevel;
 
+#[derive(Component)]
+pub(crate) struct AbortButton;
+
+#[derive(Component)]
+pub(crate) struct BattleUIElement;
+
+struct UiAssets{
+	font: Handle<Font>,
+	button: Handle<Image>,
+	button_pressed: Handle<Image>,
+}
+
+
 pub(crate) struct BattlePlugin;
 
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_enter_system(GameState::Battle, setup_battle)
+            .add_enter_system_set(GameState::Battle, 
+                SystemSet::new()
+                    .with_system(setup_battle)
+                    .with_system(battle_stats)
+                    .with_system(abort_button)
+                    .with_system(spawn_player_monster)
+                    .with_system(spawn_enemy_monster)
+                )
             .add_system_set(ConditionSet::new()
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                     // addl systems go here
+                    .with_system(button_system)
+                    // .with_system(abort_button)
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle);
     }
@@ -107,7 +136,8 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
-        .insert(PlayerHealth);
+        .insert(PlayerHealth)
+        .insert(BattleUIElement);
 
         commands.spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
@@ -143,7 +173,8 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
-        .insert(PlayerLevel);
+        .insert(PlayerLevel)
+        .insert(BattleUIElement);
 
         commands.spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
@@ -179,7 +210,8 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
-        .insert(EnemyHealth);
+        .insert(EnemyHealth)
+        .insert(BattleUIElement);
 
         commands.spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
@@ -215,7 +247,8 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
-        .insert(EnemyLevel);
+        .insert(EnemyLevel)
+        .insert(BattleUIElement);
 
 }
 
@@ -233,10 +266,11 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
       commands.spawn_bundle(
         SpriteBundle {
         texture: asset_server.load(MONSTER),
-        transform: Transform::from_xyz(ct.translation.x - 300., ct.translation.y - 150., 1.), 
+        transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.), 
         ..default()
     })
-        .insert(PlayerMonster);
+        .insert(PlayerMonster)
+        .insert(Monster);
 
 }
 
@@ -256,21 +290,107 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
     commands.spawn_bundle(
         SpriteBundle {
         texture: asset_server.load(ENEMY_MONSTER),
-        transform: Transform::from_xyz(ct.translation.x + 500., ct.translation.y - 150., 1.), 
+        transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
         ..default()
     })
-        .insert(EnemyMonster);
+        .insert(EnemyMonster)
+        .insert(Monster);
+}
+
+pub (crate) fn button_system(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<AbortButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut commands: Commands
+) {
+
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Abort".to_string();
+                *color = PRESSED_BUTTON.into();
+                // This is gonna cause us problems as is, until we modify
+                // states so that the initial transition from Start -> StartPlaying (a new state)
+                // is the only one that spawns the world. In this paradigm,
+                // it will regenerate the whole world as if it just started.
+                commands.insert_resource(NextState(GameState::Playing));
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Abort".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Abort".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Abort",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                },
+            ));
+        })
+        .insert(AbortButton)
+        .insert(BattleUIElement);
 }
 
 pub(crate) fn despawn_battle(mut commands: Commands,
-    camera_query: Query<Entity,  With<MainCamera>>,
-    background_query: Query<Entity, With<Tile>>,
+    background_query: Query<Entity, With<BattleBackground>>,
+    monster_query: Query<Entity, With<Monster>>,
+    battle_ui_element_query: Query<Entity, With<BattleUIElement>>
 ) {
-   camera_query.for_each(|camera| {
-       commands.entity(camera).despawn();
-   });
+    if background_query.is_empty() 
+    {
+        error!("background is here!");
+    }
 
    background_query.for_each(|background| {
-       commands.entity(background).despawn();
+        commands.entity(background).despawn();
    });
+
+   if monster_query.is_empty() 
+   {
+        error!("monsters are here!");
+   }
+
+   monster_query.for_each(|monster| {
+        commands.entity(monster).despawn();
+   });
+
+
+   if battle_ui_element_query.is_empty() 
+    {
+    error!("ui elements are here!");
+    }
+
+   battle_ui_element_query.for_each(|battle_ui_element| {
+        commands.entity(battle_ui_element).despawn_recursive();
+   });
+
 }
