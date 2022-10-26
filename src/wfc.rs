@@ -1,5 +1,7 @@
 // Authors: Chris Hinson, Dan Li
 
+use rand::distributions::WeightedIndex;
+use rand::prelude::Distribution;
 //use colored::Colorize;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
@@ -12,68 +14,65 @@ use std::{fs::File, io::Read};
 use rand::thread_rng;
 
 use crate::backgrounds::{
-    // CHUNK_HEIGHT, CHUNK_WIDTH, 
-    MAP_HEIGHT, MAP_WIDTH, 
-    TILE_SIZE
+    // CHUNK_HEIGHT, CHUNK_WIDTH,
+    MAP_HEIGHT,
+    MAP_WIDTH,
+    TILE_SIZE,
 };
 
-/// Generate a fixed (map) sized screen using wave function collapse
-/// and return a 2D vector of indexes into the texture atlas.
-pub(crate) fn wfc() -> Vec<Vec<usize>> {
-    // let args: Vec<String> = env::args().collect();
+//@param
+//required: filename of seeding textfile
+pub(crate) fn rulegen(infile: &str) -> HashMap<usize, Rule> {
+    //let mut file = File::open("assets/backgrounds/input.txt").unwrap();
 
-    // println!("{args:?}");
-
-    //let mut file = File::open("chars.txt").unwrap();
-    let mut file = File::open("assets/backgrounds/input.txt").unwrap();
+    let mut file = File::open(infile).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
 
-    // Initialize 
-    let mut tile_types: Vec<usize> = Vec::new();
-    let mut rules: HashMap<usize, HashMap<Dir, Vec<usize>>> = HashMap::new();
+    // Initialize tile and rulebook information
+    let mut freqs: HashMap<usize, usize> = HashMap::new();
+    let mut rules: HashMap<usize, Rule> = HashMap::new();
 
     // Board input is a text file of usize indexes used to map to a tile index in
     // the texture atlas
     // Split file into lines
-    let in_board: Vec<Vec<usize>> = contents.lines()
-    // Split each line by spaces
-    .map(|l| l.split(" ")
-    // Parse as a usize
-    .map(|s| s.parse::<usize>().unwrap())
-    // Collect the split line into a single vector
-    .collect::<Vec<usize>>())
-    // Collect all the line vectors into a 2D vector
-    .collect::<Vec<Vec<usize>>>();
+    let in_board: Vec<Vec<usize>> = contents
+        .lines()
+        // Split each line by spaces
+        .map(|l| {
+            l.split(" ")
+                // Parse as a usize
+                .map(|s| s.parse::<usize>().unwrap())
+                // Collect the split line into a single vector
+                .collect::<Vec<usize>>()
+        })
+        // Collect all the line vectors into a 2D vector
+        .collect::<Vec<Vec<usize>>>();
 
-    //the real board
-    //let mut board = board::new((100, 100), rules);
+    //PASS 1 - GATHER TILE FREQUENCY INFORMATION
+    for line in in_board.iter() {
+        for col in line.iter() {
+            *freqs.entry(*col).or_insert(0) += 1;
+        }
+    }
 
+    //PASS 2 - GATHER LEGAL NEIGHBOR INFORMATION
     // Iterate over the board in row major order and generate rules
     for (row, line) in in_board.iter().enumerate() {
         for (col, tile_type) in line.iter().enumerate() {
-            //print!("{c}");
-
-            // If we've never seen this tile type before,
-            // add it to our list of all seen tile types.
-            if !tile_types.contains(&(*tile_type as usize)) {
-                tile_types.push(*tile_type as usize);
-            }
-
             // Get the adjacency rules for this tile type if they exist,
             // or insert a new adjacency rule map if none exist.
             // The adjacency matrix will be a hashmap mapping from neighbor
             // direction to a vector of allowed tiles for that direction.
-            let cur = rules
-                .entry(*tile_type as usize)
-                .or_insert(
-                    HashMap::from([
-                        (Dir::WEST, Vec::new()),
-                        (Dir::NORTH, Vec::new()),
-                        (Dir::EAST, Vec::new()),
-                        (Dir::SOUTH, Vec::new()),
-                    ])
-                );
+            let cur = rules.entry(*tile_type as usize).or_insert(Rule {
+                neighbor_rules: HashMap::from([
+                    (Dir::WEST, Vec::new()),
+                    (Dir::NORTH, Vec::new()),
+                    (Dir::EAST, Vec::new()),
+                    (Dir::SOUTH, Vec::new()),
+                ]),
+                freq: freqs[tile_type],
+            });
 
             // Below we actually add the neighbors we see on this iteration to
             // the appropriate rule vector based on the direction of each neighbor
@@ -84,14 +83,13 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                 .and_then(|e| {
                     // Get type of northern neighbor
                     let north_type = *e as usize;
-                    // Add this type to the allowed types 
+                    // Add this type to the allowed types
                     // if it doesn't already exist there.
-                    cur.entry(Dir::NORTH).and_modify(|allowed| {
+                    cur.neighbor_rules.entry(Dir::NORTH).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
                             allowed.push(north_type);
                         }
                     });
-
 
                     // Required by and_then
                     Some(true)
@@ -103,7 +101,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                 .and_then(|c| c.get(col))
                 .and_then(|e| {
                     let north_type = *e as usize;
-                    cur.entry(Dir::SOUTH).and_modify(|allowed| {
+                    cur.neighbor_rules.entry(Dir::SOUTH).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
                             allowed.push(north_type);
                         }
@@ -117,7 +115,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                 .and_then(|col| in_board[row].get(col))
                 .and_then(|char| {
                     let north_type = *char as usize;
-                    cur.entry(Dir::WEST).and_modify(|allowed| {
+                    cur.neighbor_rules.entry(Dir::WEST).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
                             allowed.push(north_type);
                         }
@@ -131,7 +129,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                 .and_then(|col| in_board[row].get(col))
                 .and_then(|char| {
                     let north_type = *char as usize;
-                    cur.entry(Dir::EAST).and_modify(|allowed| {
+                    cur.neighbor_rules.entry(Dir::EAST).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
                             allowed.push(north_type);
                         }
@@ -140,48 +138,48 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                     Some(true)
                 });
         }
-        //print!("\n");
     }
 
-    // Check which rules we produced
-    // println!("done rulegen");
-    // println!("{:?}", rules);
+    //println!("rulegen done \n {:?}", rules);
 
-    // Create the board with a specific height and width 
+    return rules;
+}
+
+/// Generate a fixed (map) sized screen using wave function collapse
+/// and return a 2D vector of indexes into the texture atlas.
+pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>) -> Vec<Vec<usize>> {
+    let rules = rulegen("assets/backgrounds/input.txt");
+
+    // Create the board with a specific height and width
     // (HEIGHT COMES FIRST because ROW MAJOR order)
     // and the rules and tile types the board will use.
     let mut board = Board::new(
-        (
-            // CHUNK_HEIGHT,
-            // CHUNK_WIDTH,
-            MAP_HEIGHT,
-            MAP_WIDTH,
-        ),
-        rules,
-        tile_types,
+        (MAP_HEIGHT, MAP_WIDTH),
+        rules.clone(),
+        rules.keys().map(|v| *v).collect::<Vec<usize>>(),
+        seeding,
     );
 
-    /*for (k, v) in &board.rules {
-        println!("{:?}: {:?}", k, v);
-    }*/
     // The result of our WFC operation, what we will want to return.
     let mut result_map: Vec<Vec<usize>> = Vec::new();
 
     // Let's spawn a new thread to do this with a large amount of stack memory
     // because of how many calls this might make.
-    let builder = thread::Builder::new().stack_size(4194304);
+    let builder = thread::Builder::new()
+        .stack_size(4194304)
+        .name("generation thread".to_string());
 
     // Handler just is so we can join the thread back in
     let handler = builder
         .spawn(move || {
-            // Collapse gives us a boolean telling us whether the 
+            // Collapse gives us a boolean telling us whether the
             // board is in a collapsable state or if no valid option is available here.
             // This is the core part of WFC. Collapse will modify board to
             // be in a collapsed state, if possible.
             let solvable = board.collapse(
                 // This choose function picks the tile on the board with the least entropy
                 // (that means the least number of possible states)
-                board.choose_tile_to_collapse()
+                board.choose_tile_to_collapse(),
             );
             println!("solved? {solvable:?}");
             println!("\n");
@@ -192,7 +190,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
                 let mut result_row: Vec<usize> = Vec::new();
                 for c in row {
                     // print!("{}", char::from_u32(c.t.unwrap() as u32).unwrap());
-                    print!("{}", c.t.unwrap());
+                    print!("{:02X} ", c.t.unwrap());
                     result_row.push(c.t.unwrap());
                 }
                 result_map.push(result_row);
@@ -203,7 +201,7 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
             result_map
         })
         .unwrap();
-    
+
     // Join thread into parent
     handler.join().unwrap()
 
@@ -216,8 +214,8 @@ pub(crate) fn wfc() -> Vec<Vec<usize>> {
 #[derive(Debug, Clone)]
 struct Board {
     map: Vec<Vec<Tile>>,
-    rules: HashMap<usize, HashMap<Dir, Vec<usize>>>,
-    //tile_types: Vec<usize>,
+    rules: HashMap<usize, Rule>,
+    remaining: usize, //tile_types: Vec<usize>,
 }
 
 impl Index<(usize, usize)> for Board {
@@ -238,8 +236,9 @@ impl Board {
     /// Initialize a board
     fn new(
         size: (usize, usize),
-        rules: HashMap<usize, HashMap<Dir, Vec<usize>>>,
+        rules: HashMap<usize, Rule>,
         tile_types: Vec<usize>,
+        seeding: Option<Vec<(usize, (usize, usize))>>,
     ) -> Self {
         let mut map: Vec<Vec<Tile>> = Vec::new();
 
@@ -250,15 +249,24 @@ impl Board {
             }
         }
 
+        if seeding.is_some() {
+            for seed in seeding.unwrap() {
+                match map.get_mut(seed.1 .0).and_then(|r| r.get_mut(seed.1 .1)) {
+                    Some(v) => *v = Tile::set(v.coords, seed.0),
+                    None => {}
+                }
+            }
+        }
+
         Self {
             map,
             rules,
-            //tile_types,
+            remaining: 0,
         }
     }
 
     // TODO: Very poor runtime, needs optimization.
-    /// This will make sure no tiles on the board are breaking adjacency rules. 
+    /// This will make sure no tiles on the board are breaking adjacency rules.
     /// It will NOT check if we have a completed board.
     fn valid_position(&self) -> bool {
         for row in &self.map {
@@ -273,7 +281,7 @@ impl Board {
                 if col.t.is_some() {
                     for n in self.get_neighbors(col.coords) {
                         if n.tile.t.is_some() {
-                            if !self.rules[&n.tile.t.unwrap()][&n.anti_direction]
+                            if !self.rules[&n.tile.t.unwrap()].neighbor_rules[&n.anti_direction]
                                 .contains(&col.t.unwrap())
                             {
                                 return false;
@@ -348,7 +356,7 @@ impl Board {
     /// Takes 1 tile, collapses its state down to a concrete type, and udpates its neighbors' superpositions.
     /// Returns true on success or false on failure.
     fn collapse(&mut self, center_tile: (usize, usize)) -> bool {
-        // If our board is already marked as solved, we're done here, 
+        // If our board is already marked as solved, we're done here,
         // jump back up the stack.
         if self.is_solved() {
             return true;
@@ -357,14 +365,26 @@ impl Board {
         // center_tile is the tile we are pivoting collapse on right now.
         // Get the super position of the tile, back it up,
         // and empty out the position of this tile.
+
         let mut random_pos = self[center_tile].position.clone();
+        let weight_dist =
+            WeightedIndex::new(random_pos.iter().map(|pos| self.rules[pos].freq)).unwrap();
+
         let backup_pos = self[center_tile].position.clone();
         self[center_tile].position = Vec::new();
 
         // Shuffle up the position and check all of them to find one that is valid.
         // This shuffle gives us the randomality of WFC
-        random_pos.shuffle(&mut thread_rng());
-        for pos in random_pos {
+        //random_pos.shuffle(&mut thread_rng());
+
+        //for pos in random_pos {
+        for _i in 0..random_pos.len() {
+            let mut pos = backup_pos[weight_dist.sample(&mut thread_rng())];
+            while !random_pos.contains(&pos) {
+                pos = backup_pos[weight_dist.sample(&mut thread_rng())];
+            }
+            random_pos.retain(|e| *e != pos);
+
             // Tentatively give our tile this concrete position
             self[center_tile].t = Some(pos);
 
@@ -376,7 +396,7 @@ impl Board {
                     .position
                     // Keep only subpositions that are valid in relation to our
                     // ruleset
-                    .retain(|t| self.rules[&pos][&n.direction].contains(t));
+                    .retain(|t| self.rules[&pos].neighbor_rules[&n.direction].contains(t));
             }
 
             // If this subposition is a valid position,
@@ -397,22 +417,14 @@ impl Board {
                 }
             }
         }
-        // Reset ourselves and fail if no position 
-        // ever succeeded. 
+        // Reset ourselves and fail if no position
+        // ever succeeded.
         self[center_tile].t = None;
         self[center_tile].position = backup_pos.clone();
         return false;
     }
 }
 
-/*
-#[derive(Debug)]
-struct Neighbors {
-    north: Option<(usize, usize)>,
-    south: Option<(usize, usize)>,
-    east: Option<(usize, usize)>,
-    west: Option<(usize, usize)>,
-}*/
 #[derive(Debug)]
 struct Neighbors {
     north: Option<Tile>,
@@ -509,19 +521,26 @@ struct Tile {
 }
 impl Tile {
     /// Create a fresh tile with
-    /// a full superposition. Subpositions will be removed 
+    /// a full superposition. Subpositions will be removed
     /// as collapse occurs.
     fn fresh(coords: (usize, usize), full: Vec<usize>) -> Self {
         Self {
             coords,
-            //rep: 'X',
             t: None,
             position: full,
         }
     }
 
+    fn set(coords: (usize, usize), t: usize) -> Self {
+        Self {
+            coords,
+            t: Some(t),
+            position: Vec::new(),
+        }
+    }
+
     /// Determine what the entropy of the tile is
-    /// 
+    ///
     /// Entropy is defined as the number of possible subpositions
     /// in this tile's superposition, or infinity if it is collapsed.
     fn entropy(&self) -> usize {
@@ -531,4 +550,12 @@ impl Tile {
             return self.position.len();
         }
     }
+}
+
+//a rule is information about what is allowed to go on around a tiletype as well as additional information needed for generation such as frequency and symmetry
+#[derive(Debug, Clone)]
+pub struct Rule {
+    neighbor_rules: HashMap<Dir, Vec<usize>>,
+    freq: usize,
+    //symmetry: add me :)
 }
