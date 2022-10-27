@@ -120,21 +120,10 @@ pub(crate) fn move_player(
 
 	// Most of these numbers come from debugging
 	// and seeing what works. 
-	pt.translation.x = if pt.translation.x + x_vel > LEVEL_WIDTH - (WIN_W/2. + TILE_SIZE/4.){
-		LEVEL_WIDTH - (WIN_W/2. + TILE_SIZE/4.)
-	} else if pt.translation.x + x_vel <= (-WIN_W/2. + TILE_SIZE/4.) {
-		-WIN_W/2. + TILE_SIZE/4.
-	} else {
-		pt.translation.x + x_vel
-	};
+	pt.translation.x = pt.translation.x + x_vel;
 
-	pt.translation.y = if pt.translation.y + y_vel > LEVEL_HEIGHT - (WIN_H/2. + TILE_SIZE/2.) {
-		LEVEL_HEIGHT - (WIN_H/2. + TILE_SIZE/2.)
-	} else if pt.translation.y + y_vel <= (-WIN_H/2. + TILE_SIZE/2.) {
-		-WIN_H/2. + TILE_SIZE/2.
-	} else {
-		pt.translation.y + y_vel
-	};
+
+	pt.translation.y = pt.translation.y + y_vel;
 
 	// This is where we will check for collisions with monsters
 

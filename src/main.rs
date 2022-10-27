@@ -71,6 +71,7 @@ fn main() {
             .with_system(move_player)
             .with_system(move_camera)
             .with_system(animate_sprite)
+            .with_system(find_next_chunk)
         .into()
     )
     // Despawn game when exiting game state
