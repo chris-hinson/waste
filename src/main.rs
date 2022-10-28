@@ -28,6 +28,7 @@ mod start_menu;
 mod wfc;
 mod battle;
 mod monster;
+mod world;
 
 //use statements:
 use credits::*;
@@ -38,6 +39,7 @@ use start_menu::*;
 use battle::*;
 use wfc::*;
 use monster::*;
+use world::*;
 
 // END CUSTOM MODULES
 
@@ -51,6 +53,7 @@ fn main() {
             present_mode: PresentMode::Fifo,
             ..default()
         })
+        .init_resource::<WorldMap>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"

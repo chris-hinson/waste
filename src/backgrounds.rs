@@ -3,6 +3,7 @@ use crate::wfc::wfc;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::{Collision, collide};
 use std::collections::HashMap;
+use crate::world::WorldMap;
 
 pub(crate) const TILE_SIZE: f32 = 64.;
 pub(crate) const MAP_WIDTH: usize = 20;
@@ -52,6 +53,7 @@ pub(crate) fn init_background(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut world: ResMut<WorldMap>,
 ) {
 
     let starting_center = ChunkCenter {
@@ -119,7 +121,8 @@ pub(crate) fn init_background(
         y += TILE_SIZE;
     }
 
-    commands.spawn().insert(starting_chunk);
+    world.chunks.insert(commands.spawn().insert(starting_chunk).id().id() as usize, (0,0));
+    info!("Chunks: {:?}", world.chunks);
 }
 
 pub(crate) fn find_next_chunk(mut commands: Commands,
