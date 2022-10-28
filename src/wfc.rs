@@ -370,7 +370,7 @@ impl Board {
         let weight_dist =
             WeightedIndex::new(random_pos.iter().map(|pos| self.rules[pos].freq)).unwrap();
 
-        let backup_pos = self[center_tile].position.clone();
+        let mut backup_pos = self[center_tile].position.clone();
         self[center_tile].position = Vec::new();
 
         // Shuffle up the position and check all of them to find one that is valid.
@@ -384,6 +384,8 @@ impl Board {
                 pos = backup_pos[weight_dist.sample(&mut thread_rng())];
             }
             random_pos.retain(|e| *e != pos);
+            // Make sure even our backup doesn't try this again
+            backup_pos.retain(|e| *e != pos);
 
             // Tentatively give our tile this concrete position
             self[center_tile].t = Some(pos);
