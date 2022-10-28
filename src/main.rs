@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
 use std::convert::From;
+use std::collections::HashMap;
 
 
 // GAMEWIDE CONSTANTS
@@ -110,7 +111,7 @@ pub(crate) fn setup_game(mut commands: Commands,
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
         .insert(Player{
-            current_chunk: ChunkCenter { transform: Transform { translation: Vec3{x:0.,y:0.,z:-1.}, ..default() }
+            current_chunk: ChunkCenter { transform: Transform { translation: Vec3{x:0., y:0., z:-1.}, ..default() },
         }});
 
     // Finally, transition to normal playing state

@@ -2,6 +2,7 @@ use crate::player::Player;
 use crate::wfc::wfc;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::{Collision, collide};
+use std::collections::HashMap;
 
 pub(crate) const TILE_SIZE: f32 = 64.;
 pub(crate) const MAP_WIDTH: usize = 20;
@@ -139,6 +140,8 @@ pub(crate) fn find_next_chunk(mut commands: Commands,
 
     let pt = player.single_mut();
 
+    // Imperative that we pick a single chunk out based on some hashmap or similar rather than
+    // looping over all of them each time
     for chunk in chunks.iter_mut(){
         let chunk_position = chunk.center.transform.translation;
         let collision = collide(pt.translation, Vec2::splat(320.), chunk_position, Vec2::new(WIN_W, WIN_H));
