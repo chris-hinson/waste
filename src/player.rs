@@ -86,7 +86,7 @@ pub(crate) fn move_player(
   	time: Res<Time>,
 	mut commands: Commands,
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
-	monster_tiles: Query<&mut MonsterTile>,
+	monster_tiles: Query<(Entity, &Transform), With<MonsterTile>>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -129,8 +129,8 @@ pub(crate) fn move_player(
 
 	// This is where we will check for collisions with monsters
 
-	for monster_tile in monster_tiles.iter() {
-		let mt_position = monster_tile.transform.translation;
+	for (monster_tile, tile_pos) in monster_tiles.iter() {
+		let mt_position = tile_pos.translation;
 		let collision = collide(pt.translation, Vec2::splat(32.), mt_position, Vec2::splat(32.));
 		match collision {
 			None => {},
@@ -139,7 +139,7 @@ pub(crate) fn move_player(
 				//println!("Collided with monster! Battle!");
 				// switches from Playing -> Battle state
 				// This is TERRIBLE but it KINDA WORKS
-				pt.translation.x += 32.;
+				commands.entity(monster_tile).remove::<MonsterTile>();
 				commands.insert_resource(NextState(GameState::Battle));
 			}
 		}

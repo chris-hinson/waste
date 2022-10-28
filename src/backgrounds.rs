@@ -3,7 +3,7 @@ use crate::wfc::wfc;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::{Collision, collide};
 use std::collections::HashMap;
-use crate::world::WorldMap;
+use crate::world::{WorldMap, add_to_world};
 
 pub(crate) const TILE_SIZE: f32 = 64.;
 pub(crate) const MAP_WIDTH: usize = 20;
@@ -121,8 +121,7 @@ pub(crate) fn init_background(
         y += TILE_SIZE;
     }
 
-    world.chunks.insert(commands.spawn().insert(starting_chunk).id().id() as usize, (0,0));
-    info!("Chunks: {:?}", world.chunks);
+    add_to_world(commands, world, starting_chunk, 0, 0);
 }
 
 pub(crate) fn find_next_chunk(mut commands: Commands,
