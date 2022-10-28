@@ -5,6 +5,7 @@ use crate::backgrounds::{
     LEVEL_HEIGHT, LEVEL_WIDTH, 
     WIN_H, WIN_W,
     TILE_SIZE,
+    Chunk,
     // CHUNK_HEIGHT, CHUNK_WIDTH
 };
 
@@ -23,7 +24,7 @@ pub(crate) const CAMERA_Z_VALUE: f32 = 100.;
 // pub(crate) struct BattleCamera;
 
 pub(crate) fn move_camera(
-    player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
+    player: Query<(&mut Transform, &Chunk), (With<Player>, Without<Tile>)>,
     mut camera: Query<&mut Transform, (With<Camera2d>, With<MainCamera>, Without<Player>, Without<Tile>)>,
 ) {
     if camera.is_empty() {
@@ -35,7 +36,8 @@ pub(crate) fn move_camera(
         return;
     }
 
-    let pt = player.single();
+    let pt = player.single().0;
+    let current_chunk = player.single().1;
     let ct = camera.single();
 
     let x = if pt.translation.x < 0. {

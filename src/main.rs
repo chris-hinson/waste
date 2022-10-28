@@ -109,7 +109,9 @@ pub(crate) fn setup_game(mut commands: Commands,
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
-        .insert(Player);
+        .insert(Player{
+            current_chunk: ChunkCenter { transform: Transform { translation: Vec3{x:0.,y:0.,z:-1.}, ..default() }
+        }});
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
