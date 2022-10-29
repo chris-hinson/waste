@@ -85,8 +85,8 @@ pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
   	time: Res<Time>,
 	mut commands: Commands,
-	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
-	monster_tiles: Query<(Entity, &Transform), With<MonsterTile>>,
+	mut player: Query<&mut Transform, (With<Player>, Without<Tile>, Without<MonsterTile>)>,
+	monster_tiles: Query<(Entity, &Transform), (With<MonsterTile>, Without<Player>)>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");

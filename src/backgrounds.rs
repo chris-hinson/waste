@@ -154,7 +154,7 @@ pub(crate) fn find_next_chunk(mut commands: Commands,
                     Collision::Top => {
                         let mut seed: Vec<(usize,(usize, usize))> = Vec::new();
                         for i in 0..MAP_WIDTH{
-                            let this_tile = (chunk.tiles[0][i], (0 as usize, i));
+                            let this_tile = (chunk.tiles[MAP_HEIGHT-1][i], (0 as usize, i));
                             seed.push(this_tile);
                         }
                         let new_x = chunk_position.x;
@@ -231,6 +231,11 @@ pub(crate) fn find_next_chunk(mut commands: Commands,
                         }
                     },
                     Collision::Bottom => {
+                        let mut seed: Vec<(usize,(usize, usize))> = Vec::new();
+                        for i in 0..MAP_WIDTH{
+                            let this_tile = (chunk.tiles[0][i], (MAP_HEIGHT-1, i));
+                            seed.push(this_tile);
+                        }
                         let new_x = chunk_position.x;
                         let new_y = chunk_position.y - WIN_H;
                         let new_center = ChunkCenter {
@@ -240,6 +245,9 @@ pub(crate) fn find_next_chunk(mut commands: Commands,
                         if !chunk_centers.iter().any(|c| c == &new_center){
                             let new_chunk = Chunk{
                                 center: new_center,
+                                // Using a seed on the bottom causes an infinite loop no matter what
+                                // we do, even after updating neighbor's
+                                // tiles: wfc(Some(seed)),
                                 tiles: wfc(None),
                             };
                             info!("New chunk spawned at: {:?}", new_center);

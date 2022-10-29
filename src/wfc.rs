@@ -252,7 +252,49 @@ impl Board {
         if seeding.is_some() {
             for seed in seeding.unwrap() {
                 match map.get_mut(seed.1 .0).and_then(|r| r.get_mut(seed.1 .1)) {
-                    Some(v) => *v = Tile::set(v.coords, seed.0),
+                    Some(v) => {
+                        *v = Tile::set(v.coords, seed.0);
+                        
+                        // Collect neighbors by hand, cannot call functions because they are only for
+                        // existing boards.
+                        let mut n = Neighbors::new();
+                        let pos = v.coords;
+                        
+                        // North
+                        n.north = pos
+                            .0
+                            .checked_sub(1)
+                            .and_then(|e| map.get(e))
+                            .and_then(|f| Some(f[pos.1].clone()));
+
+                        // South
+                        n.south = pos
+                            .0
+                            .checked_add(1)
+                            .and_then(|e| map.get(e))
+                            .and_then(|f| Some(f[pos.1].clone()));
+
+                        // West
+                        n.west = pos
+                            .1
+                            .checked_sub(1)
+                            .and_then(|e| map[pos.0].get(e))
+                            .and_then(|f| Some(f.clone()));
+
+                        // East
+                        n.east = pos
+                            .1
+                            .checked_add(1)
+                            .and_then(|e| map[pos.0].get(e))
+                            .and_then(|f| Some(f.clone()));
+
+                        // Do neighbor update
+                        for mut neighbor in n {
+                            neighbor.tile
+                                .position
+                                .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
+                        }
+                    },
                     None => {}
                 }
             }
@@ -353,6 +395,20 @@ impl Board {
         return n;
     }
 
+    /// Update the neighbors of this tile to reflect a change in our state.
+    /// 
+    /// Calls a `.retain()` on each neighbor's position to only keep subpositions
+    /// that are members of our neighbor-ruleset.
+    fn update_neighbors(&mut self, center_tile: (usize, usize), selected_pos: usize) {
+        for mut n in self.get_neighbors(center_tile) {
+            n.tile
+                .position
+                // Keep only subpositions that are valid in relation to our
+                // neighbor ruleset
+                .retain(|t| self.rules[&selected_pos].neighbor_rules[&n.direction].contains(t));
+        }
+    }
+
     /// Takes 1 tile, collapses its state down to a concrete type, and udpates its neighbors' superpositions.
     /// Returns true on success or false on failure.
     fn collapse(&mut self, center_tile: (usize, usize)) -> bool {
@@ -367,7 +423,7 @@ impl Board {
         // and empty out the position of this tile.
 
         let mut random_pos = self[center_tile].position.clone();
-        let weight_dist =
+        let mut weight_dist =
             WeightedIndex::new(random_pos.iter().map(|pos| self.rules[pos].freq)).unwrap();
 
         let mut backup_pos = self[center_tile].position.clone();
@@ -379,13 +435,14 @@ impl Board {
 
         //for pos in random_pos {
         for _i in 0..random_pos.len() {
+            // weight_dist = WeightedIndex::new(random_pos.iter().map(|pos| self.rules[pos].freq)).unwrap();
             let mut pos = backup_pos[weight_dist.sample(&mut thread_rng())];
             while !random_pos.contains(&pos) {
                 pos = backup_pos[weight_dist.sample(&mut thread_rng())];
             }
             random_pos.retain(|e| *e != pos);
             // Make sure even our backup doesn't try this again
-            backup_pos.retain(|e| *e != pos);
+            // backup_pos.retain(|e| *e != pos);
 
             // Tentatively give our tile this concrete position
             self[center_tile].t = Some(pos);
@@ -393,13 +450,8 @@ impl Board {
             // Backup our neighbors and update neighbors' superpositions
             // according to the current subposition we are trying to collapse
             let old_neighbors = self.get_neighbors(center_tile);
-            for mut n in self.get_neighbors(center_tile) {
-                n.tile
-                    .position
-                    // Keep only subpositions that are valid in relation to our
-                    // ruleset
-                    .retain(|t| self.rules[&pos].neighbor_rules[&n.direction].contains(t));
-            }
+            // Update neighbors' positions
+            self.update_neighbors(center_tile, pos);
 
             // If this subposition is a valid position,
             // call solve on the next tile to be collapse
@@ -533,10 +585,10 @@ impl Tile {
         }
     }
 
-    fn set(coords: (usize, usize), t: usize) -> Self {
+    fn set(coords: (usize, usize), kind: usize) -> Self {
         Self {
             coords,
-            t: Some(t),
+            t: Some(kind),
             position: Vec::new(),
         }
     }
