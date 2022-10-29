@@ -15,7 +15,7 @@ pub(crate) const WIN_W: f32 = 1280.;
 pub(crate) const LEVEL_WIDTH: f32 = MAP_WIDTH as f32 * TILE_SIZE;
 pub(crate) const LEVEL_HEIGHT: f32 = MAP_HEIGHT as f32 * TILE_SIZE;
 const DRAW_START_X: f32 = -WIN_W / 2. + TILE_SIZE / 2.;
-const DRAW_START_Y: f32 = -WIN_H / 2. + TILE_SIZE / 2.;
+const DRAW_START_Y: f32 = WIN_H / 2. - TILE_SIZE / 2.;
 // const DRAW_STOP_X: f32  = LEVEL_WIDTH - TILE_SIZE/2.;
 // const DRAW_STOP_Y: f32  = LEVEL_HEIGHT - TILE_SIZE/2.;
 
@@ -101,7 +101,7 @@ pub(crate) fn init_background(
             x += TILE_SIZE;
         }
         x = DRAW_START_X;
-        y += TILE_SIZE;
+        y -= TILE_SIZE;
     }
     let entity = commands.spawn().insert(starting_chunk).id();
     world.add_to_world(entity, 0, 0);
