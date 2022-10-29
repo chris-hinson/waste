@@ -75,7 +75,7 @@ fn main() {
             .with_system(move_player)
             .with_system(move_camera)
             .with_system(animate_sprite)
-            .with_system(find_next_chunk)
+            .with_system(expand_map)
         .into()
     )
     // Despawn game when exiting game state
@@ -114,8 +114,8 @@ pub(crate) fn setup_game(mut commands: Commands,
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
         .insert(Player{
-            current_chunk: ChunkCenter { transform: Transform { translation: Vec3{x:0., y:0., z:-1.}, ..default() },
-        }});
+            current_chunk: (0, 0),
+        });
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));

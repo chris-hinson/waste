@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::GameState;
-use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile, Chunk, ChunkCenter};
+use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -12,7 +12,7 @@ pub(crate) const ANIM_FRAMES: usize = 4;
 
 #[derive(Component)]
 pub(crate) struct Player{
-	pub(crate) current_chunk: ChunkCenter,
+	pub(crate) current_chunk: (isize, isize),
 }
 
 #[derive(Component, Deref, DerefMut)]

@@ -7,7 +7,6 @@ use crate::backgrounds::{
     LEVEL_HEIGHT, LEVEL_WIDTH, 
     WIN_H, WIN_W,
     TILE_SIZE,
-    Chunk, ChunkCenter,
     // CHUNK_HEIGHT, CHUNK_WIDTH
 };
 
@@ -59,39 +58,15 @@ pub(crate) fn move_camera(
 
     // Change the player's current chunk center if the camera has switched chunks
     if pt.translation.x > (ct.translation.x + WIN_W/2.) {
-        pr.current_chunk = ChunkCenter {
-            transform: Transform::from_xyz(
-                pr.current_chunk.transform.translation.x + WIN_W, 
-                pr.current_chunk.transform.translation.y,
-                pr.current_chunk.transform.translation.z
-            ),
-        };
+        pr.current_chunk.0 += 1;
     } else if pt.translation.x < (ct.translation.x - WIN_W/2.) {
-        pr.current_chunk = ChunkCenter {
-            transform: Transform::from_xyz(
-                pr.current_chunk.transform.translation.x - WIN_W, 
-                pr.current_chunk.transform.translation.y,
-                pr.current_chunk.transform.translation.z
-            ),
-        };
+        pr.current_chunk.0 -= 1;
     }
 
     if pt.translation.y > (ct.translation.y + WIN_H/2. + TILE_SIZE) {
-        pr.current_chunk = ChunkCenter {
-            transform: Transform::from_xyz(
-                pr.current_chunk.transform.translation.x, 
-                pr.current_chunk.transform.translation.y + WIN_H,
-                pr.current_chunk.transform.translation.z
-            ),
-        };
+        pr.current_chunk.1 += 1;
     } else if pt.translation.y < (ct.translation.y - WIN_H/2. - TILE_SIZE) {
-        pr.current_chunk = ChunkCenter {
-            transform: Transform::from_xyz(
-                pr.current_chunk.transform.translation.x, 
-                pr.current_chunk.transform.translation.y - WIN_H,
-                pr.current_chunk.transform.translation.z
-            ),
-        };
+        pr.current_chunk.1 -= 1;
     } 
 
     // I am not sure why the window top is slightly off balance
