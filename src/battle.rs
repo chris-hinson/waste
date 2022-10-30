@@ -341,6 +341,12 @@ pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(100.0),
+                    left: Val::Px(100.0),
+                    ..default()
+                },
                 ..default()
             },
             color: NORMAL_BUTTON.into(),
