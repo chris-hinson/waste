@@ -11,7 +11,7 @@ use crate::backgrounds::{
 	Tile
 };
 
-const MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
+const START_MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
 const TEXT_COLOR: Color = Color::rgb(0.9,0.9,0.9);
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
@@ -144,7 +144,7 @@ pub (crate) fn multiplayer_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Multiplayer".to_string();
                 *color = PRESSED_BUTTON.into();
-                // commands.insert_resource(NextState(GameState::StartPlaying));
+                commands.insert_resource(NextState(GameState::MultiplayerMenu));
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Multiplayer".to_string();
@@ -171,7 +171,7 @@ fn setup_menu(mut commands: Commands,
     commands.spawn_bundle(camera).insert(MenuCamera);
 
 	commands.spawn_bundle(SpriteBundle {
-		texture: asset_server.load(MENU_BACKGROUND),
+		texture: asset_server.load(START_MENU_BACKGROUND),
 		transform: Transform::from_xyz(0., 0., 0.),
 		..default()
 	})
