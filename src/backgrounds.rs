@@ -29,10 +29,63 @@ pub(crate) struct MonsterTile {
     pub(crate) transform: Transform,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub(crate) struct Chunk {
     pub(crate) position: (isize, isize),
     pub(crate) tiles: Vec<Vec<usize>>,
+}
+
+macro_rules! draw_chunk {
+    ($chunk:expr, $commands:expr, $map_atlas_handle:expr) => {
+    // from center of the screen to half a tile from edge
+    // so the tile will never be "cut in half" by edge of screen
+    let rendering_center = logical_to_rendering($chunk.position.0, $chunk.position.1);
+    let mut x = rendering_center.0 + DRAW_START_X;
+    let mut y = rendering_center.1 + DRAW_START_Y;
+
+    for i in 0..$chunk.tiles.len() {
+        for j in 0..$chunk.tiles[i].len() {
+            let tile = $chunk.tiles[i][j];
+            let t = Vec3::new(x, y, -1.);
+            $commands
+                .spawn_bundle(SpriteSheetBundle {
+                    texture_atlas: $map_atlas_handle.clone(),
+                    transform: Transform {
+                        translation: t,
+                        ..default()
+                    },
+                    sprite: TextureAtlasSprite {
+                        index: tile,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert(Tile);
+            if tile == 4 {
+                $commands
+                    .spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: $map_atlas_handle.clone(),
+                        transform: Transform {
+                            translation: t,
+                            ..default()
+                        },
+                        sprite: TextureAtlasSprite {
+                            index: 4,
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(MonsterTile {
+                        transform: Transform::from_xyz(x, y, -1.),
+                    });
+            }
+
+            x += TILE_SIZE;
+        }
+        x = DRAW_START_X;
+        y -= TILE_SIZE;
+    }
+    };
 }
 
 pub(crate) fn init_background(
@@ -55,59 +108,14 @@ pub(crate) fn init_background(
 
     println!("Number of texture atlases: {}", map_atlas_len);
 
-    // from center of the screen to half a tile from edge
-    // so the tile will never be "cut in half" by edge of screen
-    let mut rendering_center = logical_to_rendering(starting_chunk.position.0, starting_chunk.position.1);
-    let mut x = rendering_center.0 + DRAW_START_X;
-    let mut y = rendering_center.1 + DRAW_START_Y;
-
-    for i in 0..starting_chunk.tiles.len() {
-        for j in 0..starting_chunk.tiles[i].len() {
-            let tile = starting_chunk.tiles[i][j];
-            let t = Vec3::new(x, y, -1.);
-            commands
-                .spawn_bundle(SpriteSheetBundle {
-                    texture_atlas: map_atlas_handle.clone(),
-                    transform: Transform {
-                        translation: t,
-                        ..default()
-                    },
-                    sprite: TextureAtlasSprite {
-                        index: tile,
-                        ..default()
-                    },
-                    ..default()
-                })
-                .insert(Tile);
-            if tile == 4 {
-                commands
-                    .spawn_bundle(SpriteSheetBundle {
-                        texture_atlas: map_atlas_handle.clone(),
-                        transform: Transform {
-                            translation: t,
-                            ..default()
-                        },
-                        sprite: TextureAtlasSprite {
-                            index: 4,
-                            ..default()
-                        },
-                        ..default()
-                    })
-                    .insert(MonsterTile {
-                        transform: Transform::from_xyz(x, y, -1.),
-                    });
-            }
-
-            x += TILE_SIZE;
-        }
-        x = DRAW_START_X;
-        y -= TILE_SIZE;
-    }
+    draw_chunk!(starting_chunk, commands, map_atlas_handle);
+    
     let entity = commands.spawn().insert(starting_chunk).id();
     world.add_to_world(entity, 0, 0);
 }
 
-pub(crate) fn expand_map(mut commands: Commands,
+pub(crate) fn expand_map(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut world: ResMut<WorldMap>,
@@ -122,6 +130,12 @@ pub(crate) fn expand_map(mut commands: Commands,
     let player_chunk_pos = player.current_chunk;
     let player_chunk = world.chunk_ids.get(&player_chunk_pos).unwrap();
 
+    let map_handle = asset_server.load(OVERWORLD_TILESHEET);
+    let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
+
+    let map_atlas_len = map_atlas.textures.len();
+    let map_atlas_handle = texture_atlases.add(map_atlas.clone());
+
     let east_chunk = world.chunk_ids.get(&(player_chunk_pos.0 + 1, player_chunk_pos.1));
     match east_chunk {
         Some(_) => (),
@@ -132,6 +146,7 @@ pub(crate) fn expand_map(mut commands: Commands,
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
+            // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk).id();
             world.add_to_world(entity, player_chunk_pos.0+1, player_chunk_pos.1);
         }
@@ -147,6 +162,7 @@ pub(crate) fn expand_map(mut commands: Commands,
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
+            // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk).id();
             world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1+1);
         }
@@ -162,6 +178,7 @@ pub(crate) fn expand_map(mut commands: Commands,
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
+            // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk).id();
             world.add_to_world(entity, player_chunk_pos.0-1, player_chunk_pos.1);
         }
@@ -177,6 +194,7 @@ pub(crate) fn expand_map(mut commands: Commands,
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
+            // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk).id();
             world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1-1);
         }

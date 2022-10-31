@@ -86,10 +86,6 @@ impl WorldMap{
 
 }
     
-
-
-
-
 pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
     (x as f32 * 1280.0, y as f32 * 768.0)
 }
