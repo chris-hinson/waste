@@ -19,8 +19,8 @@ pub(crate) struct SlidesCamera;
 
 pub(crate) const CAMERA_Z_VALUE: f32 = 100.;
 
-// #[derive(Component)]
-// pub(crate) struct BattleCamera;
+#[derive(Component)]
+pub(crate) struct BattleCamera;
 
 pub(crate) fn move_camera(
     player: Query<&mut Transform, (With<Player>, Without<Tile>)>,

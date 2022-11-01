@@ -4,6 +4,7 @@ use iyes_loopless::prelude::*;
 use crate::{
 	GameState
 };
+use std::net::UdpSocket;
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
@@ -206,6 +207,7 @@ pub (crate) fn host_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
+                commands.insert_resource(NextState(GameState::PreHost));
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();
@@ -234,6 +236,7 @@ pub (crate) fn client_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
+                commands.insert_resource(NextState(GameState::PrePeer));
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();

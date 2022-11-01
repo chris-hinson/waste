@@ -11,6 +11,10 @@ pub (crate) enum GameState{
     StartPlaying,
 	Playing,
     Battle,
+    PreHost,
+    PrePeer,
+    HostBattle,
+    PeerBattle,
     Credits,
     MultiplayerMenu
 }
