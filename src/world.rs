@@ -48,60 +48,20 @@ impl WorldMap{
         
     }
 
-    pub(crate) fn get_east(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x+1, y));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_east(&self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x + 1, y)
     }
     
-    pub(crate) fn get_west(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x-1, y));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_west(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x - 1, y)
     }
     
-    pub(crate) fn get_north(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x, y+1));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_north(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x, y + 1)
     }
     
-    pub(crate) fn get_south(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x, y-1));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_south(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x, y - 1)
     }
 
 }
