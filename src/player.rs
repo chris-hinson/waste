@@ -1,7 +1,7 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::GameState;
-use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
+use crate::backgrounds::{Tile, MonsterTile};
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -11,7 +11,9 @@ pub(crate) const ANIM_FRAMES: usize = 4;
 
 
 #[derive(Component)]
-pub(crate) struct Player;
+pub(crate) struct Player{
+	pub(crate) current_chunk: (isize, isize),
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub(crate) struct AnimationTimer(pub(crate) Timer);
@@ -83,8 +85,8 @@ pub(crate) fn move_player(
 	input: Res<Input<KeyCode>>,
   	time: Res<Time>,
 	mut commands: Commands,
-	mut player: Query<&mut Transform, (With<Player>, Without<Tile>)>,
-	monster_tiles: Query<&mut MonsterTile>,
+	mut player: Query<&mut Transform, (With<Player>, Without<Tile>, Without<MonsterTile>)>,
+	monster_tiles: Query<(Entity, &Transform), (With<MonsterTile>, Without<Player>)>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -120,26 +122,15 @@ pub(crate) fn move_player(
 
 	// Most of these numbers come from debugging
 	// and seeing what works. 
-	pt.translation.x = if pt.translation.x + x_vel > LEVEL_WIDTH - (WIN_W/2. + TILE_SIZE/4.){
-		LEVEL_WIDTH - (WIN_W/2. + TILE_SIZE/4.)
-	} else if pt.translation.x + x_vel <= (-WIN_W/2. + TILE_SIZE/4.) {
-		-WIN_W/2. + TILE_SIZE/4.
-	} else {
-		pt.translation.x + x_vel
-	};
+	pt.translation.x = pt.translation.x + x_vel;
 
-	pt.translation.y = if pt.translation.y + y_vel > LEVEL_HEIGHT - (WIN_H/2. + TILE_SIZE/2.) {
-		LEVEL_HEIGHT - (WIN_H/2. + TILE_SIZE/2.)
-	} else if pt.translation.y + y_vel <= (-WIN_H/2. + TILE_SIZE/2.) {
-		-WIN_H/2. + TILE_SIZE/2.
-	} else {
-		pt.translation.y + y_vel
-	};
+
+	pt.translation.y = pt.translation.y + y_vel;
 
 	// This is where we will check for collisions with monsters
 
-	for monster_tile in monster_tiles.iter() {
-		let mt_position = monster_tile.transform.translation;
+	for (monster_tile, tile_pos) in monster_tiles.iter() {
+		let mt_position = tile_pos.translation;
 		let collision = collide(pt.translation, Vec2::splat(32.), mt_position, Vec2::splat(32.));
 		match collision {
 			None => {},
@@ -148,7 +139,7 @@ pub(crate) fn move_player(
 				//println!("Collided with monster! Battle!");
 				// switches from Playing -> Battle state
 				// This is TERRIBLE but it KINDA WORKS
-				pt.translation.x += 32.;
+				commands.entity(monster_tile).remove::<MonsterTile>();
 				commands.insert_resource(NextState(GameState::Battle));
 			}
 		}

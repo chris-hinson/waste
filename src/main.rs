@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
 use std::convert::From;
+use std::collections::HashMap;
 
 
 // GAMEWIDE CONSTANTS
@@ -32,6 +33,7 @@ mod start_menu;
 mod wfc;
 mod battle;
 mod monster;
+mod world;
 mod multiplayer_menu;
 
 //use statements:
@@ -43,7 +45,9 @@ use start_menu::*;
 use battle::*;
 use wfc::*;
 use monster::*;
+use world::*;
 use multiplayer_menu::*;
+
 
 // END CUSTOM MODULES
 
@@ -57,6 +61,7 @@ fn main() {
             present_mode: PresentMode::Fifo,
             ..default()
         })
+        .init_resource::<WorldMap>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
@@ -79,6 +84,7 @@ fn main() {
             .with_system(move_player)
             .with_system(move_camera)
             .with_system(animate_sprite)
+            .with_system(expand_map)
         .into()
     )
     // Despawn game when exiting game state
@@ -116,7 +122,9 @@ pub(crate) fn setup_game(mut commands: Commands,
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
-        .insert(Player);
+        .insert(Player{
+            current_chunk: (0, 0),
+        });
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
