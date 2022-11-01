@@ -46,6 +46,12 @@ struct EnemyLevel;
 pub(crate) struct AbortButton;
 
 #[derive(Component)]
+pub(crate) struct AttackButton;
+
+#[derive(Component)]
+pub(crate) struct DefendButton;
+
+#[derive(Component)]
 pub(crate) struct BattleUIElement;
 
 struct UiAssets{
@@ -64,6 +70,8 @@ impl Plugin for BattlePlugin {
                     .with_system(setup_battle)
                     .with_system(battle_stats)
                     .with_system(abort_button)
+                    .with_system(attack_button)
+                    .with_system(defend_button)
                     .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
@@ -72,6 +80,9 @@ impl Plugin for BattlePlugin {
                 .run_in_state(GameState::Battle)
                     // addl systems go here
                     .with_system(abort_button_handler)
+                    .with_system(attack_button_handler)
+                    .with_system(defend_button_handler)
+                    
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle)
             .add_enter_system_set(GameState::HostBattle, 
@@ -79,6 +90,8 @@ impl Plugin for BattlePlugin {
                     .with_system(setup_battle)
                     .with_system(battle_stats)
                     .with_system(abort_button)
+                    .with_system(attack_button)
+                    .with_system(defend_button)
                     .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
@@ -87,6 +100,8 @@ impl Plugin for BattlePlugin {
                 .run_in_state(GameState::HostBattle)
                     // addl systems go here
                     .with_system(mult_abort_handler)
+                    .with_system(attack_button_handler)
+                    .with_system(defend_button_handler)
                 .into())
             .add_enter_system(GameState::PreHost, pre_host)
             .add_enter_system(GameState::PrePeer, pre_peer)
@@ -96,6 +111,8 @@ impl Plugin for BattlePlugin {
                     .with_system(setup_battle)
                     .with_system(battle_stats)
                     .with_system(abort_button)
+                    .with_system(attack_button)
+                    .with_system(defend_button)
                     .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
@@ -104,6 +121,8 @@ impl Plugin for BattlePlugin {
                 .run_in_state(GameState::PeerBattle)
                     // addl systems go here
                     .with_system(mult_abort_handler)
+                    .with_system(attack_button_handler)
+                    .with_system(defend_button_handler)
                 .into())
             .add_exit_system(GameState::PeerBattle, despawn_battle);
     }
@@ -359,10 +378,6 @@ pub (crate) fn mult_abort_handler (
             Interaction::Clicked => {
                 text.sections[0].value = "Abort".to_string();
                 *color = PRESSED_BUTTON.into();
-                // This is gonna cause us problems as is, until we modify
-                // states so that the initial transition from Start -> StartPlaying (a new state)
-                // is the only one that spawns the world. In this paradigm,
-                // it will regenerate the whole world as if it just started.
                 commands.insert_resource(NextState(GameState::Start));
             }
             Interaction::Hovered => {
@@ -410,6 +425,62 @@ pub (crate) fn abort_button_handler(
     }
 }
 
+pub (crate) fn attack_button_handler (
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<AttackButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut commands: Commands
+) {
+
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Attack".to_string();
+                *color = PRESSED_BUTTON.into();
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Attack".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Attack".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub (crate) fn defend_button_handler (
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<DefendButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut commands: Commands
+) {
+
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Defend".to_string();
+                *color = PRESSED_BUTTON.into();
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Defend".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Defend".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
 pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(ButtonBundle {
@@ -443,6 +514,78 @@ pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer
             ));
         })
         .insert(AbortButton)
+        .insert(BattleUIElement);
+}
+
+pub(crate) fn attack_button(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(100.0),
+                    left: Val::Px(325.0),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Attack",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                },
+            ));
+        })
+        .insert(AttackButton)
+        .insert(BattleUIElement);
+}
+
+pub(crate) fn defend_button(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(100.0),
+                    left: Val::Px(550.0),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Defend",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                },
+            ));
+        })
+        .insert(DefendButton)
         .insert(BattleUIElement);
 }
 
