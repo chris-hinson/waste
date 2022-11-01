@@ -54,7 +54,6 @@ struct UiAssets{
 	button_pressed: Handle<Image>,
 }
 
-
 pub(crate) struct BattlePlugin;
 
 impl Plugin for BattlePlugin {
@@ -72,13 +71,11 @@ impl Plugin for BattlePlugin {
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                     // addl systems go here
-                    .with_system(button_system)
-                    // .with_system(abort_button)
+                    .with_system(abort_button_handler)
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle)
             .add_enter_system_set(GameState::HostBattle, 
                 SystemSet::new()
-                    //.with_system(setup_camera)
                     .with_system(setup_battle)
                     .with_system(battle_stats)
                     .with_system(abort_button)
@@ -89,15 +86,13 @@ impl Plugin for BattlePlugin {
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::HostBattle)
                     // addl systems go here
-                    .with_system(button_system)
-                    // .with_system(abort_button)
+                    .with_system(mult_abort_handler)
                 .into())
             .add_enter_system(GameState::PreHost, pre_host)
             .add_enter_system(GameState::PrePeer, pre_peer)
             .add_exit_system(GameState::HostBattle, despawn_battle)
             .add_enter_system_set(GameState::PeerBattle, 
                 SystemSet::new()
-                    //.with_system(setup_camera)
                     .with_system(setup_battle)
                     .with_system(battle_stats)
                     .with_system(abort_button)
@@ -108,8 +103,7 @@ impl Plugin for BattlePlugin {
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::PeerBattle)
                     // addl systems go here
-                    .with_system(button_system)
-                    // .with_system(abort_button)
+                    .with_system(mult_abort_handler)
                 .into())
             .add_exit_system(GameState::PeerBattle, despawn_battle);
     }
@@ -349,7 +343,41 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
         .insert(Monster);
 }
 
-pub (crate) fn button_system(
+// handles abort button for multplayer battles 
+pub (crate) fn mult_abort_handler (
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<AbortButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut commands: Commands
+) {
+
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Abort".to_string();
+                *color = PRESSED_BUTTON.into();
+                // This is gonna cause us problems as is, until we modify
+                // states so that the initial transition from Start -> StartPlaying (a new state)
+                // is the only one that spawns the world. In this paradigm,
+                // it will regenerate the whole world as if it just started.
+                commands.insert_resource(NextState(GameState::Start));
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Abort".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Abort".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub (crate) fn abort_button_handler(
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &Children),
         (Changed<Interaction>, With<AbortButton>),
