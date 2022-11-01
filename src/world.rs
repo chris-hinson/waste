@@ -1,7 +1,7 @@
 use {bevy::prelude::*};
 use bevy::ecs::entity;
 
-use crate::Chunk;
+use crate::{Chunk, backgrounds::{WIN_W, WIN_H}};
 use std::collections::HashMap;
 
 
@@ -87,5 +87,5 @@ impl WorldMap{
 }
     
 pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
-    (x as f32 * 1280.0, y as f32 * 768.0)
+    (x as f32 * WIN_W, y as f32 * WIN_H)
 }

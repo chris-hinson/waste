@@ -40,6 +40,7 @@ macro_rules! draw_chunk {
     // from center of the screen to half a tile from edge
     // so the tile will never be "cut in half" by edge of screen
     let rendering_center = logical_to_rendering($chunk.position.0, $chunk.position.1);
+    info!("Rendering chunk at {:?}", rendering_center);
     let mut x = rendering_center.0 + DRAW_START_X;
     let mut y = rendering_center.1 + DRAW_START_Y;
 
@@ -82,7 +83,7 @@ macro_rules! draw_chunk {
 
             x += TILE_SIZE;
         }
-        x = DRAW_START_X;
+        x = rendering_center.0 + DRAW_START_X;
         y -= TILE_SIZE;
     }
     };
@@ -105,13 +106,11 @@ pub(crate) fn init_background(
 
     let map_atlas_len = map_atlas.textures.len();
     let map_atlas_handle = texture_atlases.add(map_atlas.clone());
-
-    println!("Number of texture atlases: {}", map_atlas_len);
+    
+    let entity = commands.spawn().insert(starting_chunk.clone()).id();
+    world.add_to_world(entity, 0, 0);
 
     draw_chunk!(starting_chunk, commands, map_atlas_handle);
-    
-    let entity = commands.spawn().insert(starting_chunk).id();
-    world.add_to_world(entity, 0, 0);
 }
 
 pub(crate) fn expand_map(
@@ -146,9 +145,9 @@ pub(crate) fn expand_map(
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
-            // draw_chunk!(new_chunk, commands, map_atlas_handle);
-            let entity = commands.spawn().insert(new_chunk).id();
+            let entity = commands.spawn().insert(new_chunk.clone()).id();
             world.add_to_world(entity, player_chunk_pos.0+1, player_chunk_pos.1);
+            draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
 
@@ -163,8 +162,9 @@ pub(crate) fn expand_map(
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
-            let entity = commands.spawn().insert(new_chunk).id();
+            let entity = commands.spawn().insert(new_chunk.clone()).id();
             world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1+1);
+            draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
 
@@ -179,8 +179,9 @@ pub(crate) fn expand_map(
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
-            let entity = commands.spawn().insert(new_chunk).id();
+            let entity = commands.spawn().insert(new_chunk.clone()).id();
             world.add_to_world(entity, player_chunk_pos.0-1, player_chunk_pos.1);
+            draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
 
@@ -195,8 +196,9 @@ pub(crate) fn expand_map(
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
-            let entity = commands.spawn().insert(new_chunk).id();
+            let entity = commands.spawn().insert(new_chunk.clone()).id();
             world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1-1);
+            draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
 }
