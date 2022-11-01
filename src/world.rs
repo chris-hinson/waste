@@ -17,15 +17,35 @@ pub(crate) struct WorldMap{
     // which is INSANE
     // so here it is:
     pub(crate) chunks: HashMap<usize, Entity>,
+    // AFAIK, there is no way to get a component from an Entity
+    // which is GREAT
+    // so here it is:
+    pub(crate) chunk_components: HashMap<usize, Chunk>,
 }
 
 
 impl WorldMap{
-    pub(crate) fn add_to_world(&mut self, entity: Entity, x: isize, y: isize){
+    pub(crate) fn add_to_world(&mut self, chunk: Chunk, entity: Entity, x: isize, y: isize){
         let id = entity.id();
         self.positions.insert(id as usize, (x, y));
         self.chunk_ids.insert((x, y), id as usize);
         self.chunks.insert(id as usize, entity);
+        self.chunk_components.insert(id as usize, chunk);
+    }
+
+    pub(crate) fn get_chunk(&self, x: isize, y: isize) -> Option<Chunk>{
+        let id = self.chunk_ids.get(&(x, y));
+        if let Some(id) = id{
+            let chunk = self.chunk_components.get(id);
+            if let Some(chunk) = chunk{
+                Some(chunk.clone())
+            }else {
+                None
+            }
+        }else {
+            None
+        }
+        
     }
 
     pub(crate) fn get_east(&mut self, x: isize, y: isize) -> Option<Entity>{

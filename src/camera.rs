@@ -4,7 +4,6 @@ use bevy::{prelude::*};
 use crate::player::{Player};
 use crate::backgrounds::{
     Tile,
-    LEVEL_HEIGHT, LEVEL_WIDTH, 
     WIN_H, WIN_W,
     TILE_SIZE,
     // CHUNK_HEIGHT, CHUNK_WIDTH

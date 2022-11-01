@@ -1,23 +1,17 @@
-use crate::player::{Player, self};
+use crate::player::{Player};
 use crate::wfc::wfc;
 use bevy::prelude::*;
-use bevy::sprite::collide_aabb::{Collision, collide};
-use std::collections::HashMap;
 use crate::world::{WorldMap, logical_to_rendering};
 
 pub(crate) const TILE_SIZE: f32 = 64.;
 pub(crate) const MAP_WIDTH: usize = 20;
 pub(crate) const MAP_HEIGHT: usize = 12;
-// pub(crate) const CHUNK_WIDTH: usize  = 20   ;
-// pub(crate) const CHUNK_HEIGHT: usize = 12   ;
 pub(crate) const WIN_H: f32 = 768.;
 pub(crate) const WIN_W: f32 = 1280.;
-pub(crate) const LEVEL_WIDTH: f32 = MAP_WIDTH as f32 * TILE_SIZE;
-pub(crate) const LEVEL_HEIGHT: f32 = MAP_HEIGHT as f32 * TILE_SIZE;
 const DRAW_START_X: f32 = -WIN_W / 2. + TILE_SIZE / 2.;
 const DRAW_START_Y: f32 = WIN_H / 2. - TILE_SIZE / 2.;
-// const DRAW_STOP_X: f32  = LEVEL_WIDTH - TILE_SIZE/2.;
-// const DRAW_STOP_Y: f32  = LEVEL_HEIGHT - TILE_SIZE/2.;
+// pub(crate) const LEVEL_WIDTH: f32 = MAP_WIDTH as f32 * TILE_SIZE;
+// pub(crate) const LEVEL_HEIGHT: f32 = MAP_HEIGHT as f32 * TILE_SIZE;
 
 pub(crate) const OVERWORLD_TILESHEET: &str = "backgrounds/overworld_tilesheet.png";
 
@@ -104,11 +98,10 @@ pub(crate) fn init_background(
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
-    let map_atlas_len = map_atlas.textures.len();
     let map_atlas_handle = texture_atlases.add(map_atlas.clone());
     
     let entity = commands.spawn().insert(starting_chunk.clone()).id();
-    world.add_to_world(entity, 0, 0);
+    world.add_to_world(starting_chunk.clone(), entity, 0, 0);
 
     draw_chunk!(starting_chunk, commands, map_atlas_handle);
 }
@@ -127,18 +120,23 @@ pub(crate) fn expand_map(
 
     let player = player_query.single_mut();
     let player_chunk_pos = player.current_chunk;
-    let player_chunk = world.chunk_ids.get(&player_chunk_pos).unwrap();
+    // These unwraps could panic if the player goes off the map?
+    // Get the chunk the player is in
+    let player_chunk = world.get_chunk(player_chunk_pos.0, player_chunk_pos.1).unwrap();
 
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
-    let map_atlas_len = map_atlas.textures.len();
     let map_atlas_handle = texture_atlases.add(map_atlas.clone());
 
     let east_chunk = world.chunk_ids.get(&(player_chunk_pos.0 + 1, player_chunk_pos.1));
     match east_chunk {
         Some(_) => (),
         None => {
+            let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+            for i in 0..MAP_HEIGHT{
+                seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, MAP_WIDTH - 1)));
+            }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0+1, player_chunk_pos.1),
                 tiles: wfc(None),
@@ -146,7 +144,8 @@ pub(crate) fn expand_map(
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(entity, player_chunk_pos.0+1, player_chunk_pos.1);
+            // Add to world before drawing, so there is no chance it being redrawn because it's not in the world
+            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0+1, player_chunk_pos.1);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -155,6 +154,10 @@ pub(crate) fn expand_map(
     match south_chunk {
         Some(_) => (),
         None => {
+            let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+            for i in 0..MAP_WIDTH{
+                seed.push((player_chunk.tiles[MAP_HEIGHT - 1][i], (MAP_HEIGHT - 1, i)));
+            }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1+1),
                 tiles: wfc(None),
@@ -163,7 +166,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1+1);
+            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0, player_chunk_pos.1+1);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -172,6 +175,10 @@ pub(crate) fn expand_map(
     match west_chunk {
         Some(_) => (),
         None => {
+            let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+            for i in 0..MAP_HEIGHT{
+                seed.push((player_chunk.tiles[i][0], (i, 0)));
+            }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0-1, player_chunk_pos.1),
                 tiles: wfc(None),
@@ -180,7 +187,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(entity, player_chunk_pos.0-1, player_chunk_pos.1);
+            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0-1, player_chunk_pos.1);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -189,6 +196,10 @@ pub(crate) fn expand_map(
     match north_chunk{
         Some(_) => {},
         None => {
+            let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+            for i in 0..MAP_WIDTH{
+                seed.push((player_chunk.tiles[0][i], (0, i)));
+            }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1-1),
                 tiles: wfc(None),
@@ -197,7 +208,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(entity, player_chunk_pos.0, player_chunk_pos.1-1);
+            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0, player_chunk_pos.1-1);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
