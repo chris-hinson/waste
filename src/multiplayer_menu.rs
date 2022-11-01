@@ -52,14 +52,10 @@ impl Plugin for MultMenuPlugin {
 }
 
 fn despawn_mult_menu(mut commands: Commands,
-	button_query: Query<Entity, With<Button>>,
 	camera_query: Query<Entity,  With<MenuCamera>>,
-	background_query: Query<Entity, With<MultMenuBackground>>
+	background_query: Query<Entity, With<MultMenuBackground>>,
+    mult_ui_element_query: Query<Entity, With<MultMenuUIElement>>
 ){
-	// Despawn buttons
-	for b in button_query.iter() {
-		commands.entity(b).despawn_recursive();
-	}
 	// Despawn cameras
 	for c in camera_query.iter() {
 		commands.entity(c).despawn();
@@ -68,6 +64,16 @@ fn despawn_mult_menu(mut commands: Commands,
 	for bckg in background_query.iter() {
 		commands.entity(bckg).despawn();
 	}
+
+    if mult_ui_element_query.is_empty() 
+    {
+    error!("ui elements are here!");
+    }
+
+    // Despawn multiplayer UI elements
+    mult_ui_element_query.for_each(|mult_ui_element| {
+        commands.entity(mult_ui_element).despawn_recursive();
+   });
 }
 
 fn setup_mult(mut commands: Commands,
