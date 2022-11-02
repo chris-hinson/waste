@@ -1,8 +1,8 @@
-#[warn(unused_imports)]
+#[allow(unused_imports)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::{GameState};
-use std::net::UdpSocket;
+use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
 use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
 use crate::player::Player;
@@ -440,6 +440,10 @@ pub (crate) fn attack_button_handler (
             Interaction::Clicked => {
                 text.sections[0].value = "Attack".to_string();
                 *color = PRESSED_BUTTON.into();
+
+                // Attack button handler -> send msg to other player when pressed
+                
+                
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Attack".to_string();

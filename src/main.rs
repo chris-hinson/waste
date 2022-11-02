@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
-use std::convert::From;
+use local_ip_address::local_ip;
+use std::{convert::From, net::{SocketAddr, Ipv4Addr, IpAddr, UdpSocket}};
 
 
 // GAMEWIDE CONSTANTS
@@ -105,8 +106,7 @@ pub(crate) fn setup_game(mut commands: Commands,
     let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 4, 4);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    // Draw the player
-    // He's so smol right now
+    // let start_address = get_addr();
     commands
         .spawn_bundle(SpriteSheetBundle { 
             texture_atlas: texture_atlas_handle,
@@ -115,8 +115,15 @@ pub(crate) fn setup_game(mut commands: Commands,
         })
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
-        .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
-        .insert(Player);
+        .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)));
+        // Give player marker struct containing default network information
+        // .insert(Player {
+        //     socket: Socket {
+        //         addr: start_address,
+        //         socket: UdpSocket::bind(start_address).unwrap(),
+        //     },
+        //     player_type: SocketType::Client,
+        // });
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));

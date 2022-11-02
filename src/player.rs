@@ -1,7 +1,10 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
+use local_ip_address::local_ip;
 use crate::GameState;
 use crate::backgrounds::{Tile, TILE_SIZE, LEVEL_WIDTH, LEVEL_HEIGHT, WIN_H, WIN_W, MonsterTile};
+use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
+
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -9,9 +12,27 @@ pub(crate) const PLAYER_SPEED: f32 = 480.;
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
 
+pub(crate) enum PlayerType {
+    Host,
+	Client,
+}
+
+pub(crate) struct Socket {
+	pub(crate) addr: SocketAddr,
+	pub(crate) socket: UdpSocket
+}
 
 #[derive(Component)]
-pub(crate) struct Player;
+pub(crate) struct Player; // {
+// 	pub(crate) socket: PlayerSocket,
+// 	pub(crate) player_type: SocketType,
+// }
+
+#[derive(Component)]
+pub(crate) struct GameClient {
+	pub(crate) socket: Socket,
+	pub(crate) player_type: PlayerType,
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub(crate) struct AnimationTimer(pub(crate) Timer);
@@ -153,4 +174,24 @@ pub(crate) fn move_player(
 			}
 		}
 	}
+}
+
+fn get_ip_addr_host() -> SocketAddr {
+    let my_local_ip = local_ip().unwrap();
+    let mut ip_addr = Ipv4Addr::new(127, 0, 0, 1);
+    if let IpAddr::V4(ipv4) = my_local_ip {
+        ip_addr = ipv4;
+    }
+    let socket = SocketAddr::new(IpAddr::from(ip_addr), 8080);
+    socket
+}
+
+fn get_ip_addr_client() -> SocketAddr {
+    let my_local_ip = local_ip().unwrap();
+    let mut ip_addr = Ipv4Addr::new(127, 0, 0, 1);
+    if let IpAddr::V4(ipv4) = my_local_ip {
+        ip_addr = ipv4;
+    }
+    let socket = SocketAddr::new(IpAddr::from(ip_addr), 9800);
+    socket
 }
