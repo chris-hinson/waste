@@ -135,10 +135,11 @@ pub(crate) fn expand_map(
         None => {
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_HEIGHT{
-                seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, MAP_WIDTH - 1)));
+                seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, 0)));
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0+1, player_chunk_pos.1),
+                // tiles: wfc(Some(seed)),
                 tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
@@ -156,10 +157,11 @@ pub(crate) fn expand_map(
         None => {
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
-                seed.push((player_chunk.tiles[MAP_HEIGHT - 1][i], (MAP_HEIGHT - 1, i)));
+                seed.push((player_chunk.tiles[0][i], (MAP_HEIGHT - 1, i)));
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1+1),
+                // tiles: wfc(some(Seed)),
                 tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
@@ -177,11 +179,12 @@ pub(crate) fn expand_map(
         None => {
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_HEIGHT{
-                seed.push((player_chunk.tiles[i][0], (i, 0)));
+                seed.push((player_chunk.tiles[i][0], (i, MAP_WIDTH-1)));
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0-1, player_chunk_pos.1),
-                tiles: wfc(None),
+                tiles: wfc(Some(seed)),
+                // tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
@@ -198,10 +201,11 @@ pub(crate) fn expand_map(
         None => {
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
-                seed.push((player_chunk.tiles[0][i], (0, i)));
+                seed.push((player_chunk.tiles[MAP_HEIGHT-1][i], (0, i)));
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1-1),
+                // tiles: wfc(Some(seed)),
                 tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);

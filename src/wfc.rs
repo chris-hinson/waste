@@ -1,5 +1,6 @@
 // Authors: Chris Hinson, Dan Li
 
+use bevy::prelude::info;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 //use colored::Colorize;
@@ -260,6 +261,11 @@ impl Board {
                         let mut n = Neighbors::new();
                         let pos = v.coords;
                         
+                        // let north_idx = (pos.0 - 1, pos.1);
+                        // let south_idx = (pos.0 + 1, pos.1);
+                        // let west_idx = (pos.0, pos.1 - 1);
+                        // let east_idx = (pos.0, pos.1 + 1);
+
                         // North
                         n.north = pos
                             .0
@@ -290,15 +296,26 @@ impl Board {
 
                         // Do neighbor update
                         for mut neighbor in n {
-                            neighbor.tile
+                            map[neighbor.tile.coords.0][neighbor.tile.coords.1]
                                 .position
                                 .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
+                            // neighbor.tile
+                            //     .position
+                            //     .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
                         }
                     },
                     None => {}
                 }
             }
         }
+
+        for row in map.iter() {
+            for col in row.iter() {
+                print!("{:?} ", col.entropy());
+            }
+            print!("\n");
+        }
+        
 
         Self {
             map,
@@ -313,6 +330,7 @@ impl Board {
     fn valid_position(&self) -> bool {
         for row in &self.map {
             for col in row {
+                // print!("{:?} ", col.entropy());
                 // Empty superpositions are invalid unless the tile has a concrete type
                 if col.position.len() == 0 && col.t.is_none() {
                     return false;
@@ -332,6 +350,7 @@ impl Board {
                     }
                 }
             }
+            // print!("\n");
         }
 
         return true;
@@ -417,6 +436,8 @@ impl Board {
         if self.is_solved() {
             return true;
         }
+
+        info!("collapsing {:?}", center_tile);
 
         // center_tile is the tile we are pivoting collapse on right now.
         // Get the super position of the tile, back it up,
