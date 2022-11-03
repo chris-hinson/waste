@@ -4,7 +4,7 @@ use crate::GameState;
 use crate::backgrounds::{Tile, MonsterTile};
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
-pub(crate) const PLAYER_SPEED: f32 = 480.;
+pub(crate) const PLAYER_SPEED: f32 = 4800.;
 // We'll wanna replace these with animated sprite sheets later
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;

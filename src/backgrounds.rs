@@ -133,6 +133,10 @@ pub(crate) fn expand_map(
     match east_chunk {
         Some(_) => (),
         None => {
+            // Prevent the system from trying to generate a chunk here again
+            let (x, y) = (player_chunk_pos.0+1, player_chunk_pos.1);
+            world.chunk_ids.insert((x, y), 0);
+            // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_HEIGHT{
                 seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, 0)));
@@ -146,7 +150,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
             // Add to world before drawing, so there is no chance it being redrawn because it's not in the world
-            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0+1, player_chunk_pos.1);
+            world.add_to_world(new_chunk.clone(), entity, x, y);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -155,6 +159,10 @@ pub(crate) fn expand_map(
     match south_chunk {
         Some(_) => (),
         None => {
+            // Prevent the system from trying to generate another chunk here while we're drawing this one
+            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1+1);
+            world.chunk_ids.insert((x, y), 0);
+            // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
                 seed.push((player_chunk.tiles[0][i], (MAP_HEIGHT - 1, i)));
@@ -168,7 +176,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0, player_chunk_pos.1+1);
+            world.add_to_world(new_chunk.clone(), entity, x, y);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -177,6 +185,10 @@ pub(crate) fn expand_map(
     match west_chunk {
         Some(_) => (),
         None => {
+            // Prevent the system from trying to generate another chunk here while we're drawing this one
+            let (x, y) = (player_chunk_pos.0-1, player_chunk_pos.1);
+            world.chunk_ids.insert((x, y), 0);
+            // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_HEIGHT{
                 seed.push((player_chunk.tiles[i][0], (i, MAP_WIDTH-1)));
@@ -190,7 +202,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0-1, player_chunk_pos.1);
+            world.add_to_world(new_chunk.clone(), entity, x, y);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }
@@ -199,6 +211,10 @@ pub(crate) fn expand_map(
     match north_chunk{
         Some(_) => {},
         None => {
+            // Prevent the system from trying to generate another chunk here while we're drawing this one
+            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1-1);
+            world.chunk_ids.insert((x, y), 0);
+            // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
                 seed.push((player_chunk.tiles[MAP_HEIGHT-1][i], (0, i)));
@@ -212,7 +228,7 @@ pub(crate) fn expand_map(
             info!("World: {:?}", world.chunk_ids);
             // draw_chunk!(new_chunk, commands, map_atlas_handle);
             let entity = commands.spawn().insert(new_chunk.clone()).id();
-            world.add_to_world(new_chunk.clone(), entity, player_chunk_pos.0, player_chunk_pos.1-1);
+            world.add_to_world(new_chunk.clone(), entity, x, y);
             draw_chunk!(new_chunk, commands, map_atlas_handle);
         }
     }

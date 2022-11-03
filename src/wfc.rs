@@ -419,12 +419,19 @@ impl Board {
     /// Calls a `.retain()` on each neighbor's position to only keep subpositions
     /// that are members of our neighbor-ruleset.
     fn update_neighbors(&mut self, center_tile: (usize, usize), selected_pos: usize) {
-        for mut n in self.get_neighbors(center_tile) {
-            n.tile
+        for mut neighbor in self.get_neighbors(center_tile) {
+            neighbor.tile
                 .position
                 // Keep only subpositions that are valid in relation to our
                 // neighbor ruleset
-                .retain(|t| self.rules[&selected_pos].neighbor_rules[&n.direction].contains(t));
+                .retain(|t| self.rules[&selected_pos].neighbor_rules[&neighbor.direction].contains(t));
+            // TODO: Major issue, this looks like the code to ACTUALLY update the tile's positions in our map,
+            // the above only affects a stack allocated tile that is destroyed when the function ends. 
+            // Yet, when we let the bottom code run, the game crashes almost 50% of the time because it cannot 
+            // find a valid state. This means that the backtracking algorithm straight up *doesn't work at all.*
+            // self.map[neighbor.tile.coords.0][neighbor.tile.coords.1]
+            //     .position
+            //     .retain(|t| self.rules[&selected_pos].neighbor_rules[&neighbor.direction].contains(t));
         }
     }
 
