@@ -1,7 +1,6 @@
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
-use local_ip_address::local_ip;
-use std::{convert::From, net::{SocketAddr, Ipv4Addr, IpAddr, UdpSocket}};
+use std::{convert::From};
 
 
 // GAMEWIDE CONSTANTS
@@ -34,6 +33,7 @@ mod wfc;
 mod battle;
 mod monster;
 mod multiplayer_menu;
+mod socket;
 
 //use statements:
 use credits::*;
@@ -115,7 +115,8 @@ pub(crate) fn setup_game(mut commands: Commands,
         })
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
-        .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)));
+        .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
+        .insert(Player);
         // Give player marker struct containing default network information
         // .insert(Player {
         //     socket: Socket {

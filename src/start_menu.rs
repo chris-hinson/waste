@@ -1,14 +1,16 @@
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
+use rand::seq::SliceRandom;
 
 #[warn(unused_imports)]
-use bevy::{prelude::*, ui::*};
+use bevy::{prelude::*};
 use iyes_loopless::prelude::*;
 use local_ip_address::local_ip;
 use crate::{
 	GameState
 };
+use crate::socket::*;
 use crate::camera::{MenuCamera};
-use crate::player::{Player, Socket, GameClient, PlayerType};
+use crate::player::{Player};
 use crate::backgrounds::{
 	WIN_H, WIN_W, 
 	Tile
@@ -294,10 +296,11 @@ fn setup_menu(mut commands: Commands,
 	commands.spawn().insert(GameClient {
 		socket: Socket {
 			addr: addr,
-			socket: socket
+			udp_socket: socket
 		},
     player_type: PlayerType::Client,
 	});
+	println!("{}", addr);
 
 	// generating player UDP socket
     // let player_addr = get_addr();
@@ -311,11 +314,12 @@ fn setup_menu(mut commands: Commands,
 }
 
 pub(crate) fn get_addr() -> SocketAddr {
+	let port_list = vec![8080, 9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
     let my_local_ip = local_ip().unwrap();
     let mut ip_addr = Ipv4Addr::new(127, 0, 0, 1);
     if let IpAddr::V4(ipv4) = my_local_ip {
         ip_addr = ipv4;
     }
-    let socket = SocketAddr::new(IpAddr::from(ip_addr), 8080);
+    let socket = SocketAddr::new(IpAddr::from(ip_addr), *port_list.choose(&mut rand::thread_rng()).unwrap());
     socket
 }

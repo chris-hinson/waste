@@ -12,27 +12,11 @@ pub(crate) const PLAYER_SPEED: f32 = 480.;
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
 
-pub(crate) enum PlayerType {
-    Host,
-	Client,
-}
-
-pub(crate) struct Socket {
-	pub(crate) addr: SocketAddr,
-	pub(crate) socket: UdpSocket
-}
-
 #[derive(Component)]
 pub(crate) struct Player; // {
 // 	pub(crate) socket: PlayerSocket,
 // 	pub(crate) player_type: SocketType,
 // }
-
-#[derive(Component)]
-pub(crate) struct GameClient {
-	pub(crate) socket: Socket,
-	pub(crate) player_type: PlayerType,
-}
 
 #[derive(Component, Deref, DerefMut)]
 pub(crate) struct AnimationTimer(pub(crate) Timer);
