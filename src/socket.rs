@@ -1,4 +1,6 @@
 use std::net::{UdpSocket, SocketAddr};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 
 use bevy::prelude::{Query, Component, info, Plugin, App};
 
@@ -20,15 +22,21 @@ pub(crate) struct GameClient {
 	pub(crate) player_type: PlayerType,
 }
 
-// pub(crate) struct SocketPlugin;
 
-// impl Plugin for SocketPlugin {
-//     fn build(&self, app: &mut App) {
-//         app
-//             .with_system(receive_msg)
-//         .into()
-//     };
-// }
+
+pub(crate) fn socket_controller(socket: UdpSocket, sx: Sender<String>, mrx: Receiver<String>) {
+    //println!("{:?}", socket.local_addr());
+
+    sx.send("test from new thread to main thread".parse().unwrap()).expect("couldnt send msg from new to main thread");
+
+    for received in mrx {
+        println!("Got this in new thread: {}", received);
+    }
+
+
+
+
+}
 
 pub(crate) fn send_msg_to_client(mut game_client_query: Query<&mut GameClient>) {
 
@@ -37,7 +45,8 @@ pub(crate) fn send_msg_to_client(mut game_client_query: Query<&mut GameClient>) 
         return;
     }
 
-    let game_client = game_client_query.get_single_mut().unwrap();
+    let mut game_client = game_client_query.get_single_mut().unwrap();
+
     game_client.socket.udp_socket.send(b"message from host to client").expect("Msg couldnt be sent from host to client");
 }
 

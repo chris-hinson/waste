@@ -7,7 +7,10 @@ use crate::{
 use std::net::{Ipv4Addr};
 // use std::sync::mpsc::{Sender, self};
 // use std::sync::mpsc::Receiver;
-use std::{io};
+use std::{io, thread};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread::spawn;
 use crate::socket::*;
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
@@ -269,8 +272,23 @@ pub (crate) fn host_button_handler(
                 println!("{}", client_addr_port);
 
                 // HOST SOCKET CONNECTS TO CLIENT SOCKET
+
+                //channel set to communicate btwn main thread and new thread (new -> main )
+                let (sx, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
+                //channel set to communicate btwn new thread and main thread (main -> new )
+                let (msx, mrx): (Sender<String>, Receiver<String>) = mpsc::channel();
+
                 game_client.socket.udp_socket.connect(client_addr_port).unwrap();
-                // game_client.
+                let cloned_game_client_udp_socket = game_client.socket.udp_socket.try_clone().unwrap();
+
+                thread::spawn(|| {
+                   socket_controller(cloned_game_client_udp_socket, sx, mrx);
+                });
+
+                let received = rx.recv().unwrap();
+                println!("Got this in main thread: {}", received);
+
+                msx.send("sending from main thread to new thread".parse().unwrap()).expect("couldn't send msg from main to new thread");
 
                 //Changing GameState to PreHost
                 commands.insert_resource(NextState(GameState::PreHost));
