@@ -143,8 +143,8 @@ pub(crate) fn expand_map(
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0+1, player_chunk_pos.1),
-                // tiles: wfc(Some(seed)),
-                tiles: wfc(None),
+                tiles: wfc(Some(seed)),
+                // tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
@@ -169,8 +169,8 @@ pub(crate) fn expand_map(
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1+1),
-                // tiles: wfc(some(Seed)),
-                tiles: wfc(None),
+                tiles: wfc(Some(seed)),
+                // tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);
@@ -221,8 +221,8 @@ pub(crate) fn expand_map(
             }
             let new_chunk = Chunk{
                 position: (player_chunk_pos.0, player_chunk_pos.1-1),
-                // tiles: wfc(Some(seed)),
-                tiles: wfc(None),
+                tiles: wfc(Some(seed)),
+                // tiles: wfc(None),
             };
             info!("New chunk generated at {:?}", new_chunk.position);
             info!("World: {:?}", world.chunk_ids);

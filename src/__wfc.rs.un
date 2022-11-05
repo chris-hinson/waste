@@ -1,3 +1,7 @@
+// Authors: Chris Hinson, Dan Li
+// WARNING:
+// THIS IS A BACKUP FILE, DO NOT INCLUDE IT IN CODE
+
 use bevy::prelude::info;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
@@ -19,11 +23,11 @@ use crate::backgrounds::{
     TILE_SIZE,
 };
 
-const MAX_REPICK_ATTEMPTS: usize = 20;
-
 //@param
 //required: filename of seeding textfile
 pub(crate) fn rulegen(infile: &str) -> HashMap<usize, Rule> {
+    //let mut file = File::open("assets/backgrounds/input.txt").unwrap();
+
     let mut file = File::open(infile).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
@@ -141,7 +145,7 @@ pub(crate) fn rulegen(infile: &str) -> HashMap<usize, Rule> {
 
     //println!("rulegen done \n {:?}", rules);
 
-    rules
+    return rules;
 }
 
 /// Generate a fixed (map) sized screen using wave function collapse
@@ -156,7 +160,7 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>) -> Vec<Vec<usiz
         (MAP_HEIGHT, MAP_WIDTH),
         rules.clone(),
         rules.keys().map(|v| *v).collect::<Vec<usize>>(),
-        seeding.clone(),
+        seeding,
     );
 
     // The result of our WFC operation, what we will want to return.
@@ -175,28 +179,13 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>) -> Vec<Vec<usiz
             // board is in a collapsable state or if no valid option is available here.
             // This is the core part of WFC. Collapse will modify board to
             // be in a collapsed state, if possible.
-            let mut attempts = 0usize;
-            while attempts < MAX_REPICK_ATTEMPTS {
-                let solvable = board.collapse(
-                    // This choose function picks the tile on the board with the least entropy
-                    // (that means the least number of possible states)
-                    board.choose_tile_to_collapse(),
-                );
-                println!("solved on attempt {attempts}? {solvable:?}");
-                println!("\n");
-                if ! solvable {
-                    board = Board::new(
-                        (MAP_HEIGHT, MAP_WIDTH),
-                        rules.clone(),
-                        rules.keys().map(|v| *v).collect::<Vec<usize>>(),
-                        seeding.clone(),
-                    );
-                } else {
-                    break;
-                }
-
-                attempts += 1;
-            }
+            let solvable = board.collapse(
+                // This choose function picks the tile on the board with the least entropy
+                // (that means the least number of possible states)
+                board.choose_tile_to_collapse(),
+            );
+            println!("solved? {solvable:?}");
+            println!("\n");
 
             // Put the board contents into the result
             // so we can return it.
@@ -351,7 +340,6 @@ impl Board {
 
                 // Only way we could be breaking adjacency rules is if this tile has a concrete position and one of its neighbors
                 // ALSO has a conrete position, which is not allowed beside it.
-                // We should NOT check this, because this simply SHOULDN'T BE ALLOWED TO EVER HAPPEN AT ALL
                 // if col.t.is_some() {
                 //     for n in self.get_neighbors(col.coords) {
                 //         if n.tile.t.is_some() {
@@ -380,29 +368,16 @@ impl Board {
 
     /// Choose the tile on the board with the lowest entropy and return its coords within the map
     fn choose_tile_to_collapse(&self) -> (usize, usize) {
-        // Find the minimum entropy of the board
-        let minimum = self.map.iter().flatten()
+        return self
+            .map
+            .iter()
+            .flatten()
             .min_by(|x, y| x.entropy().cmp(&y.entropy()))
             .unwrap()
-            .entropy(); 
-
-        // Collect all tiles into a vector first, we'll operate on this because it's easier
-        let mut random_tiles: Vec<&Tile> = self.map.iter().flatten()
-            .collect::<Vec<&Tile>>();
-
-        // Retain only tiles with the same entropy as the minimum
-        random_tiles
-            .retain(|tile| tile.entropy() == minimum);
-        
-        // Shuffle these tiles up in case more than one tile matches
-        random_tiles.shuffle(&mut thread_rng());
-        
-        // Pick the first of this random ordering
-        random_tiles[0].coords
+            .coords;
     }
 
-    /// Returns a NEW neighbors struct, with indices into the map of the neighboring tiles
-    /// Note that this DOES NOT return references to the ACTUAL neighbors on the maps
+    /// Returns a neighbors struct, with inidces into the map of the neighboring tiles
     fn get_neighbors(&self, pos: (usize, usize)) -> Neighbors {
         let mut n = Neighbors::new();
 
@@ -434,6 +409,10 @@ impl Board {
             .and_then(|e| self.map[pos.0].get(e))
             .and_then(|f| Some(f.clone()));
 
+        //println!("east: {:?}", n.east);
+
+        //println!("neighbors: {:?}", n);
+
         return n;
     }
 
@@ -442,8 +421,13 @@ impl Board {
     /// Calls a `.retain()` on each neighbor's position to only keep subpositions
     /// that are members of our neighbor-ruleset.
     fn update_neighbors(&mut self, center_tile: (usize, usize), selected_pos: usize) {
-        for neighbor in self.get_neighbors(center_tile) {
-            // Major issue, this looks like the code to ACTUALLY update the tile's positions in our map,
+        for mut neighbor in self.get_neighbors(center_tile) {
+            // neighbor.tile
+            //     .position
+            //     // Keep only subpositions that are valid in relation to our
+            //     // neighbor ruleset
+            //     .retain(|t| self.rules[&selected_pos].neighbor_rules[&neighbor.direction].contains(t));
+            // TODO: Major issue, this looks like the code to ACTUALLY update the tile's positions in our map,
             // the above only affects a stack allocated tile that is destroyed when the function ends. 
             // Yet, when we let the bottom code run, the game crashes almost 50% of the time because it cannot 
             // find a valid state. This means that the backtracking algorithm straight up *doesn't work at all.*
