@@ -182,8 +182,8 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>) -> Vec<Vec<usiz
                     // (that means the least number of possible states)
                     board.choose_tile_to_collapse(),
                 );
-                println!("solved on attempt {attempts}? {solvable:?}");
-                println!("\n");
+                // println!("solved on attempt {attempts}? {solvable:?}");
+                // println!("\n");
                 if ! solvable {
                     board = Board::new(
                         (MAP_HEIGHT, MAP_WIDTH),
@@ -204,11 +204,11 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>) -> Vec<Vec<usiz
                 let mut result_row: Vec<usize> = Vec::new();
                 for c in row {
                     // print!("{}", char::from_u32(c.t.unwrap() as u32).unwrap());
-                    print!("{:02X} ", c.t.unwrap());
+                    // print!("{:02X} ", c.t.unwrap());
                     result_row.push(c.t.unwrap());
                 }
                 result_map.push(result_row);
-                print!("\n")
+                // print!("\n")
             }
 
             // Return the map we created from the thread
@@ -322,12 +322,12 @@ impl Board {
             }
         }
 
-        for row in map.iter() {
-            for col in row.iter() {
-                print!("{:?} ", col.entropy());
-            }
-            print!("\n");
-        }
+        // for row in map.iter() {
+        //     for col in row.iter() {
+        //         print!("{:?} ", col.entropy());
+        //     }
+        //     print!("\n");
+        // }
         
 
         Self {
@@ -462,7 +462,7 @@ impl Board {
             return true;
         }
 
-        info!("collapsing {:?}", center_tile);
+        // info!("collapsing {:?}", center_tile);
 
         // center_tile is the tile we are pivoting collapse on right now.
         // Get the super position of the tile, back it up,
