@@ -1,6 +1,7 @@
-#[warn(unused_imports)]
+#![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use crate::monster::MonsterBundle;
 use crate::{GameState};
 use std::net::UdpSocket;
 use crate::backgrounds::Tile;
@@ -31,16 +32,16 @@ pub (crate) struct EnemyMonster;
 // Unit structs to help identify the specific UI components for player's or enemy's monster health/level
 // since there may be many Text components
 #[derive(Component)]
-struct PlayerHealth;
+pub (crate) struct PlayerHealth;
 
 #[derive(Component)]
-struct EnemyHealth;
+pub (crate) struct EnemyHealth;
 
 #[derive(Component)]
-struct PlayerLevel;
+pub (crate) struct PlayerLevel;
 
 #[derive(Component)]
-struct EnemyLevel;
+pub (crate) struct EnemyLevel;
 
 #[derive(Component)]
 pub(crate) struct AbortButton;
@@ -68,7 +69,7 @@ impl Plugin for BattlePlugin {
             .add_enter_system_set(GameState::Battle, 
                 SystemSet::new()
                     .with_system(setup_battle)
-                    .with_system(battle_stats)
+                    .with_system(setup_battle_stats)
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
@@ -82,13 +83,14 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button_handler)
                     .with_system(attack_button_handler)
                     .with_system(defend_button_handler)
+                    .with_system(update_battle_stats)
                     
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle)
             .add_enter_system_set(GameState::HostBattle, 
                 SystemSet::new()
                     .with_system(setup_battle)
-                    .with_system(battle_stats)
+                    .with_system(setup_battle_stats)
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
@@ -109,7 +111,7 @@ impl Plugin for BattlePlugin {
             .add_enter_system_set(GameState::PeerBattle, 
                 SystemSet::new()
                     .with_system(setup_battle)
-                    .with_system(battle_stats)
+                    .with_system(setup_battle_stats)
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
@@ -165,8 +167,25 @@ pub(crate) fn setup_battle(mut commands: Commands,
         .insert(BattleBackground);
 }
 
-pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer>) 
+pub(crate) fn setup_battle_stats(mut commands: Commands, 
+	asset_server: Res<AssetServer>,
+	mut player: Query<&mut Player>,
+	mut monster_query: Query<(&mut MonsterBundle)>) 
 {
+	if player.is_empty() {
+		error!("No player found!");
+	}
+
+	if monster_query.is_empty() {
+		error!("No monster found!");
+	}
+	
+	let p = player.single_mut();
+	//spawn default monster
+	//TODO: Change this later!
+	let mut monster = MonsterBundle::default();
+	commands.spawn_bundle(monster);
+
     commands.spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
@@ -181,7 +200,7 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 ),
                 // health of player's monster
                 TextSection::new(
-                    "10",
+                    p.health.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
@@ -201,7 +220,6 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
-        .insert(PlayerHealth)
         .insert(BattleUIElement);
 
         commands.spawn_bundle(
@@ -218,7 +236,7 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 ),
                 // level of player's monster
                 TextSection::new(
-                    "1",
+                    p.level.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
@@ -254,14 +272,20 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                     },
                 ),
                 // health of enemy's monster
-                TextSection::new(
-                    "20",
-                    TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
-                        color: Color::BLACK,
-                    },
-                )
+                // TextSection::new(
+                //     //monster.hp.health.to_string(),
+				// &monster.hp.health.to_string(),
+                // TextStyle {
+                //         font: asset_server.load("buttons/joystix monospace.ttf"),
+                //         font_size: 40.0,
+                //         color: Color::BLACK,
+                //     },
+                // )
+                TextSection::from_style(TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::BLACK,
+                }),
             ])
             .with_style(Style {
                     align_self: AlignSelf::FlexEnd,
@@ -275,8 +299,11 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 },
             ),
         )
+        //.insert(MonsterBundle::default())
         .insert(EnemyHealth)
         .insert(BattleUIElement);
+
+
 
         commands.spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
@@ -292,7 +319,7 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
                 ),
                 // level of player's monster
                 TextSection::new(
-                    "1",
+                	&monster.lvl.level.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
@@ -316,6 +343,17 @@ pub(crate) fn battle_stats(mut commands: Commands, asset_server: Res<AssetServer
         .insert(BattleUIElement);
 
 }
+
+pub(crate) fn update_battle_stats(
+    mut query: Query<&mut Text, With<EnemyHealth>>,
+    mut monster_query: Query<(&mut MonsterBundle)>,
+) {
+    let mut monster = monster_query.single_mut();
+    for mut text in &mut query {
+        text.sections[1].value = format!("{}", &monster.hp.health.to_string());
+    }
+}
+
 
 pub(crate) fn spawn_player_monster(mut commands: Commands, 
     asset_server: Res<AssetServer>,
@@ -359,7 +397,8 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
         ..default()
     })
         .insert(EnemyMonster)
-        .insert(Monster);
+        .insert(Monster)
+        .insert(MonsterBundle::default());
 }
 
 // handles abort button for multplayer battles 
@@ -407,7 +446,7 @@ pub (crate) fn abort_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Abort".to_string();
                 *color = PRESSED_BUTTON.into();
-                // This is gonna cause us problems as is, until we modify
+                // This is gonna cfause us problems as is, until we modify
                 // states so that the initial transition from Start -> StartPlaying (a new state)
                 // is the only one that spawns the world. In this paradigm,
                 // it will regenerate the whole world as if it just started.
@@ -430,6 +469,7 @@ pub (crate) fn attack_button_handler (
         (&Interaction, &mut UiColor, &Children),
         (Changed<Interaction>, With<AttackButton>),
     >,
+	mut monster_query: Query<(&mut MonsterBundle)>,
     mut text_query: Query<&mut Text>,
     mut commands: Commands
 ) {
@@ -440,6 +480,18 @@ pub (crate) fn attack_button_handler (
             Interaction::Clicked => {
                 text.sections[0].value = "Attack".to_string();
                 *color = PRESSED_BUTTON.into();
+
+				if monster_query.is_empty(){
+					error!("No monster found to attack!");
+				} else {
+					let mut monster = monster_query.single_mut();
+					monster.hp.health-=1;
+
+					if monster.hp.health == 0 {
+						commands.insert_resource(NextState(GameState::Playing));
+					}
+				}
+
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Attack".to_string();

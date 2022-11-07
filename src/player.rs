@@ -1,3 +1,5 @@
+use std::char::MAX;
+
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::GameState;
@@ -8,15 +10,23 @@ pub(crate) const PLAYER_SPEED: f32 = 480.;
 // We'll wanna replace these with animated sprite sheets later
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
+pub(crate) const MAX_HEALTH: u16 = 10;
+pub(crate) const MAX_LEVEL: u16 = 10;
+
 
 
 #[derive(Component)]
 pub(crate) struct Player{
 	pub(crate) current_chunk: (isize, isize),
+	pub(crate) max_health: u16,
+	pub(crate) health: u16,
+	pub(crate) max_level: u16,
+	pub(crate) level: u16,
 }
 
 #[derive(Component, Deref, DerefMut)]
 pub(crate) struct AnimationTimer(pub(crate) Timer);
+
 
 
 pub(crate) fn animate_sprite(
