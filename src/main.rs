@@ -1,6 +1,8 @@
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
 use std::{convert::From};
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 
 
 // GAMEWIDE CONSTANTS
@@ -50,6 +52,12 @@ use multiplayer_menu::*;
 
 
 fn main() {
+
+    //channel set to communicate btwn main thread and new thread (new -> main )
+    let (sx, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
+    //channel set to communicate btwn new thread and main thread (main -> new )
+    let (msx, mrx): (Sender<String>, Receiver<String>) = mpsc::channel();
+
     App::new()
         .insert_resource(WindowDescriptor {
             title: String::from(TITLE),
@@ -117,14 +125,6 @@ pub(crate) fn setup_game(mut commands: Commands,
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
         .insert(Player);
-        // Give player marker struct containing default network information
-        // .insert(Player {
-        //     socket: Socket {
-        //         addr: start_address,
-        //         socket: UdpSocket::bind(start_address).unwrap(),
-        //     },
-        //     player_type: SocketType::Client,
-        // });
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));

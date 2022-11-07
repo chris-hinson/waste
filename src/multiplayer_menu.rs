@@ -5,13 +5,12 @@ use crate::{
 	GameState
 };
 use std::net::{Ipv4Addr};
-// use std::sync::mpsc::{Sender, self};
-// use std::sync::mpsc::Receiver;
 use std::{io, thread};
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::spawn;
 use crate::socket::*;
+// use crate::start_menu::Channel;
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
@@ -24,7 +23,6 @@ const TEXT_COLOR: Color = Color::rgb(0.9,0.9,0.9);
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
-
 
 pub struct MultMenuPlugin;
 
@@ -42,6 +40,31 @@ pub(crate) struct ClientButton;
 
 #[derive(Component)]
 pub(crate) struct MultMenuUIElement;
+
+
+// thought the channel could be a component and spawn an entity but nvm
+// #[derive(Component)]
+// pub(crate) struct MM_Channel {
+//     // channel set for main thread/sending/receiving data
+//     pub(crate) mmrx: Receiver<String>,
+//     pub(crate) mmsx: Sender<String>,
+// }
+
+struct MyString(String);
+
+trait StringTraitIdk {
+    fn show(&self);
+}
+
+impl StringTraitIdk for String {
+    fn show(&self) {
+        println!("{}", &self);
+    }
+}
+
+//implementing Send/Sync marker traits
+unsafe impl Send for MyString { }
+unsafe impl Sync for MyString { }
 
 // Builds plugin called MainMenuPlugin
 impl Plugin for MultMenuPlugin {
@@ -87,7 +110,16 @@ fn despawn_mult_menu(mut commands: Commands,
 fn setup_mult(mut commands: Commands,
 	asset_server: Res<AssetServer>,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>
-){ 
+){
+
+    // giving it a trait instead of regular type bc it's complaining
+    let (sx,rx): (Sender<dyn StringTraitIdk + Send + Sync>, Receiver<dyn StringTraitIdk + Send + Sync>) = channel();
+
+    // commands.spawn().insert(MM_Channel {
+    // 	mmsx: sx,
+    // 	mmrx: rx
+    // });
+
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
 	});
@@ -173,6 +205,8 @@ commands
 })
 .insert(ClientButton)
 .insert(MultMenuUIElement);
+
+
 	
 }
 
@@ -214,6 +248,7 @@ pub (crate) fn host_button_handler(
         (Changed<Interaction>, With<HostButton>),
     >,
     mut game_client_query: Query<&mut GameClient>,
+    //channel_query: Query<&MM_Channel>,
     mut text_query: Query<&mut Text>,
     mut commands: Commands
 ) {
@@ -222,7 +257,13 @@ pub (crate) fn host_button_handler(
         info!("no matches for host!");
         return;
     }
+    // if channel_query.is_empty() {
+    //     info!("channel could not be found!");
+    //     return;
+    // }
     let mut game_client = game_client_query.get_single_mut().unwrap();
+
+    //let channel = channel_query.get_single().unwrap();
 
     // Change player struct element `player_type` to be SocketType::Host
     // So you have to query player as mutable to modify their elements
@@ -282,7 +323,7 @@ pub (crate) fn host_button_handler(
                 let cloned_game_client_udp_socket = game_client.socket.udp_socket.try_clone().unwrap();
 
                 thread::spawn(|| {
-                   socket_controller(cloned_game_client_udp_socket, sx, mrx);
+                    socket_controller(cloned_game_client_udp_socket, sx, mrx);
                 });
 
                 let received = rx.recv().unwrap();

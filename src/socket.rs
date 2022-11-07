@@ -24,12 +24,12 @@ pub(crate) struct GameClient {
 
 
 
-pub(crate) fn socket_controller(socket: UdpSocket, sx: Sender<String>, mrx: Receiver<String>) {
+pub(crate) fn socket_controller(socket: UdpSocket, sx: Sender<String>, rx: Receiver<String>) {
     //println!("{:?}", socket.local_addr());
 
     sx.send("test from new thread to main thread".parse().unwrap()).expect("couldnt send msg from new to main thread");
 
-    for received in mrx {
+    for received in rx {
         println!("Got this in new thread: {}", received);
     }
 

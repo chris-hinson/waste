@@ -1,8 +1,11 @@
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use rand::seq::SliceRandom;
+use std::string::String;
 
 #[warn(unused_imports)]
 use bevy::{prelude::*};
+use bevy::prelude::KeyCode::S;
 use iyes_loopless::prelude::*;
 use local_ip_address::local_ip;
 use crate::{
@@ -38,6 +41,13 @@ pub(crate) struct MultiplayerButton;
 
 #[derive(Component)]
 pub(crate) struct StartMenuUIElement;
+
+// #[derive(Component)]
+// pub(crate) struct Channel {
+// 	// channel set for main thread/sending/receiving data
+// 	pub(crate) mrx: Receiver<String>,
+// 	pub(crate) msx: Sender<String>,
+// }
 
 //Builds plugin called MainMenuPlugin
 impl Plugin for MainMenuPlugin {
@@ -166,7 +176,7 @@ pub (crate) fn multiplayer_button_handler(
 fn setup_menu(mut commands: Commands,
 	asset_server: Res<AssetServer>,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>
-){ 
+){
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
 	});
@@ -301,6 +311,13 @@ fn setup_menu(mut commands: Commands,
     player_type: PlayerType::Client,
 	});
 	println!("{}", addr);
+
+	let (msx,mrx): (Sender<String>, Receiver<String>) = channel();
+
+	// commands.spawn().insert(Channel {
+	// 	mrx,
+	// 	msx
+	// });
 
 	// generating player UDP socket
     // let player_addr = get_addr();
