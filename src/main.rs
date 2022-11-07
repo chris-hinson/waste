@@ -1,7 +1,9 @@
+#![allow(unused)]
 use bevy::{prelude::*, window::PresentMode};
 use iyes_loopless::prelude::*;
 use std::convert::From;
 use std::collections::HashMap;
+
 
 
 // GAMEWIDE CONSTANTS
@@ -36,6 +38,7 @@ mod monster;
 mod world;
 mod multiplayer_menu;
 
+
 //use statements:
 use credits::*;
 use backgrounds::*;
@@ -47,6 +50,7 @@ use wfc::*;
 use monster::*;
 use world::*;
 use multiplayer_menu::*;
+
 
 
 // END CUSTOM MODULES
@@ -122,8 +126,14 @@ pub(crate) fn setup_game(mut commands: Commands,
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
+		//player stats init here:
         .insert(Player{
             current_chunk: (0, 0),
+			//constants can be found in player.rs
+			max_health: MAX_HEALTH,
+			health: MAX_HEALTH,
+			max_level: MAX_LEVEL,
+			level: 1,
         });
 
     // Finally, transition to normal playing state

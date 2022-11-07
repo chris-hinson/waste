@@ -1,4 +1,4 @@
-#[warn(unused_imports)]
+#![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::{

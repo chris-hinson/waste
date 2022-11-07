@@ -13,7 +13,7 @@ pub(crate) struct MonsterPlugin;
 pub(crate) const BASIC_ENEMY: &str = "monsters/clean_monster.png";
 
 // Elemental types
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) enum Element {
     Scav,
     Growth,
@@ -26,42 +26,48 @@ pub(crate) enum Element {
 }
 
 // stats, Components used for MonsterBundle
-#[derive(Component)]
-pub(crate) struct Level(u8);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
+pub(crate) struct Level{
+	pub max_level: u16,
+	pub level: u16,
+}
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Experience(u16);
-#[derive(Component)]
-pub(crate) struct Health(u16);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
+pub(crate) struct Health {
+	pub max_health: u16,
+	pub health: u16,
+}
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Vitality(u8);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Strength(u8);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Defense(u8);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Speed(u8);
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 // keeps track of the number of Actions per Turn a monster has (1-3 for now) (4 for bosses)
 pub(crate) struct Actions(u8);
 // to keep track of the Number of Known Moves a monster has (1-4, has to know 1)
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct NumMoves(u8);
 // keeps track of which slot in the party a monster is in. (0 by default means not in the party)
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Slot(u8);
 
 // tells you if a monster is an enemy or friend (in-party true)
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub(crate) struct Enemy(bool);
 
 
 // bundle stores all relevant compnents of monsters 
-#[derive(Bundle)]
+#[derive(Bundle, Component, Copy, Clone)]
 pub(crate) struct MonsterBundle{
     _typing: Element,
-    _lvl: Level,
+    pub lvl: Level,
     _exp: Experience,
-    _hp: Health,
+    pub hp: Health,
     _vit: Vitality,
     _stg: Strength,
     _def: Defense,
@@ -100,9 +106,15 @@ pub(crate) struct MonsterPartyBundle{
 impl Default for MonsterBundle {
     fn default() -> Self { MonsterBundle {
         _typing: Element::Clean,
-        _lvl: Level(1),
+        lvl: Level {
+			max_level: 10,
+			level: 1,
+		},
         _exp: Experience(0),
-        _hp: Health(10),
+        hp: Health{
+			max_health: 10,
+			health: 10,
+		},
         _vit: Vitality(1),
         _stg: Strength(1),
         _def: Defense(1),
