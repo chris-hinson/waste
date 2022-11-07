@@ -380,6 +380,7 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
         ..default()
     })
         .insert(EnemyMonster)
+        .insert(Monster)
         .insert(MonsterBundle::default());
 }
 
