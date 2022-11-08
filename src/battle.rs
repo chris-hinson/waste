@@ -1,6 +1,7 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use crate::socket::{GameClient, Package};
 use crate::monster::MonsterBundle;
 use crate::{GameState};
 use std::net::UdpSocket;
@@ -83,6 +84,7 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button_handler)
                     .with_system(attack_button_handler)
                     .with_system(defend_button_handler)
+                    .with_system(socket_controller)
                     .with_system(update_battle_stats)
                     
                 .into())
@@ -127,6 +129,27 @@ impl Plugin for BattlePlugin {
                     .with_system(defend_button_handler)
                 .into())
             .add_exit_system(GameState::PeerBattle, despawn_battle);
+    }
+}
+
+pub(crate) fn socket_controller(
+    game_client_query: Query<&GameClient>,
+) {
+
+    if game_client_query.is_empty() {
+        info!("no game client");
+        return;
+    }
+
+    let game_client = game_client_query.get_single().unwrap();
+
+    for received in game_client.udp_channel.rx.try_recv() {
+        println!("Got this in new thread: {}", received.message);
+        println!("{:?}", received.sender);
+        let main_gsx = received.sender.expect("main thread's sender not here");
+
+        let response_back_to_main = Package::new(String::from("RESPONSE FROM THREAD HERE"), Some(game_client.udp_channel.sx.clone()));
+        main_gsx.send(response_back_to_main).expect("panic message");
     }
 }
 
