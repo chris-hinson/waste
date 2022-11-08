@@ -1,12 +1,14 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::monster::MonsterBundle;
+use crate::monster::{MonsterBundle, Enemy, Actions, Fighting};
 use crate::{GameState};
 use std::net::UdpSocket;
 use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
 use crate::player::Player;
+use crate::world::GameProgress;
+use rand::*;
 
 const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
 const ENEMY_MONSTER: &str = "monsters/clean_monster.png";
@@ -73,7 +75,7 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
-                    .with_system(spawn_player_monster)
+                    // .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
             .add_system_set(ConditionSet::new()
@@ -94,7 +96,7 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
-                    .with_system(spawn_player_monster)
+                    // .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
             .add_system_set(ConditionSet::new()
@@ -115,7 +117,7 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
-                    .with_system(spawn_player_monster)
+                    // .with_system(spawn_player_monster)
                     .with_system(spawn_enemy_monster)
                 )
             .add_system_set(ConditionSet::new()
@@ -169,18 +171,18 @@ pub(crate) fn setup_battle(mut commands: Commands,
 
 pub(crate) fn setup_battle_stats(mut commands: Commands, 
 	asset_server: Res<AssetServer>,
-	mut player: Query<&mut Player>,
-	mut monster_query: Query<(&mut MonsterBundle)>) 
+	mut my_monster: Query<&mut MonsterBundle, (With<Fighting>, Without<Enemy>)>,
+	mut enemy: Query<&mut MonsterBundle, With<Enemy>>) 
 {
-	if player.is_empty() {
+	if my_monster.is_empty() {
 		error!("No player found!");
 	}
 
-	if monster_query.is_empty() {
+	if enemy.is_empty() {
 		error!("No monster found!");
 	}
-	
-	let p = player.single_mut();
+
+	let mut my_fighting = my_monster.single_mut();
 	//spawn default monster
 	//TODO: Change this later!
 	let mut monster = MonsterBundle::default();
@@ -200,7 +202,7 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                 ),
                 // health of player's monster
                 TextSection::new(
-                    p.health.to_string(),
+                    my_fighting.hp.health.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
@@ -236,7 +238,7 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                 ),
                 // level of player's monster
                 TextSection::new(
-                    p.level.to_string(),
+                    my_fighting.lvl.level.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
@@ -469,7 +471,8 @@ pub (crate) fn attack_button_handler (
         (&Interaction, &mut UiColor, &Children),
         (Changed<Interaction>, With<AttackButton>),
     >,
-	mut monster_query: Query<(&mut MonsterBundle)>,
+	mut monster_query: Query<&mut MonsterBundle, With<Enemy>>,
+    mut my_monster: Query<&mut MonsterBundle, Without<Enemy>>,
     mut text_query: Query<&mut Text>,
     mut commands: Commands
 ) {
@@ -481,15 +484,29 @@ pub (crate) fn attack_button_handler (
                 text.sections[0].value = "Attack".to_string();
                 *color = PRESSED_BUTTON.into();
 
-				if monster_query.is_empty(){
+				if monster_query.is_empty() || my_monster.is_empty() {
 					error!("No monster found to attack!");
-				} else {
+				} 
+                else {
 					let mut monster = monster_query.single_mut();
-					monster.hp.health-=1;
+                    let mut my_monster = my_monster.single_mut();
+
+                    // Randomly do something
+                    let enemy_action = rand::thread_rng().gen_range(0..=1);
+                    info!("Action: {}", enemy_action);
+                    let damage = calculate_damage(my_monster.as_mut(), 0, monster.as_mut(), enemy_action);
+                    info!("You dealt {:?} damage to the enemy, you received {:?} damage!", damage.0, damage.1);
+                    monster.hp.health -= damage.0;
+                    my_monster.hp.health -= damage.1;
 
 					if monster.hp.health == 0 {
 						commands.insert_resource(NextState(GameState::Playing));
-					}
+                        info!("Monster defeated!");
+					} 
+                    else if my_monster.hp.health == 0 {
+                        commands.insert_resource(NextState(GameState::Playing));
+                        info!("You lost!");
+                    }  
 				}
 
             }
@@ -503,6 +520,52 @@ pub (crate) fn attack_button_handler (
             }
         }
     }
+}
+
+fn calculate_damage(player: &MonsterBundle, player_action: usize, 
+    enemy: &MonsterBundle, enemy_action: usize) -> (usize, usize) {
+    if (player_action == 1 || enemy_action == 1) {
+        // if either side defends this turn will not have any damage on either side
+        return (0, 0);
+    }
+    // More actions can be added later, we can also consider decoupling the actions from the damage
+    let mut result = (0,0);
+    // player attacks
+    // If our attack is less than the enemy's defense, we do 0 damage
+    if player.stg.atk <= enemy.def.def {
+        result.0 = 0;
+    } else {
+        // if we have damage, we do that much damage
+        // I've only implemented crits for now, dodge and element can follow
+        result.0 = player.stg.atk - enemy.def.def;
+        if player.stg.crt <= enemy.def.crt_res {
+            result.0 = result.0;
+        } else {
+            // calculate crit chance and apply crit damage
+            let mut crit_chance = player.stg.crt - enemy.def.crt_res;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                result.0 *= player.stg.crt_dmg;
+            }
+        }
+    }
+    // same for enemy
+    if enemy.stg.atk <= player.def.def {
+        result.1 = 0;
+    } else {
+        result.1 = enemy.stg.atk - player.def.def;
+        if enemy.stg.crt <= player.def.crt_res {
+            result.1 = result.1;
+        } else {
+            let mut crit_chance = enemy.stg.crt - player.def.crt_res;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                result.1 *= enemy.stg.crt_dmg;
+            }
+        }
+    }
+
+    result
 }
 
 pub (crate) fn defend_button_handler (

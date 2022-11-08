@@ -129,11 +129,7 @@ pub(crate) fn setup_game(mut commands: Commands,
 		//player stats init here:
         .insert(Player{
             current_chunk: (0, 0),
-			//constants can be found in player.rs
-			max_health: MAX_HEALTH,
-			health: MAX_HEALTH,
-			max_level: MAX_LEVEL,
-			level: 1,
+			//constants can be found in player.rs,
         });
 
     // Finally, transition to normal playing state
