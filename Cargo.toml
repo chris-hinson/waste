@@ -9,6 +9,7 @@ edition = "2021"
 bevy = { version = "0.8.1", features = ["dynamic"] }
 iyes_loopless = "0.7.1"
 rand = "0.8.5"
+local-ip-address = "0.4.9"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

@@ -1,8 +1,10 @@
 #![allow(unused)]
 use bevy::{prelude::*, window::PresentMode};
+use game_client::Package;
 use iyes_loopless::prelude::*;
 use std::convert::From;
 use std::collections::HashMap;
+use std::sync::mpsc::{Receiver, Sender};
 
 
 
@@ -37,6 +39,7 @@ mod battle;
 mod monster;
 mod world;
 mod multiplayer_menu;
+mod game_client;
 
 
 //use statements:
@@ -54,6 +57,15 @@ use multiplayer_menu::*;
 
 
 // END CUSTOM MODULES
+
+pub(crate) struct GameChannel {
+    // channel set for main thread/sending/receiving data
+    pub(crate) gsx: Sender<Package>,
+    pub(crate) grx: Receiver<Package>,
+}
+
+unsafe impl Send for GameChannel {}
+unsafe impl Sync for GameChannel {}
 
 
 fn main() {

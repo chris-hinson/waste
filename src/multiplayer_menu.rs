@@ -1,10 +1,12 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use crate::game_client::{GameClient, self, PlayerType, Package};
 use crate::{
-	GameState
+	GameState, GameChannel
 };
-use std::net::UdpSocket;
+use std::io;
+use std::net::{UdpSocket, Ipv4Addr};
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
@@ -78,7 +80,9 @@ fn despawn_mult_menu(mut commands: Commands,
 
 fn setup_mult(mut commands: Commands,
 	asset_server: Res<AssetServer>,
-	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>
+	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>,
+    game_channel: Res<GameChannel>,
+    game_client: Res<GameClient>
 ){ 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
@@ -129,6 +133,8 @@ fn setup_mult(mut commands: Commands,
     })
     .insert(HostButton)
     .insert(MultMenuUIElement);
+
+
 
 
 // CLIENT BUTTON
@@ -204,9 +210,11 @@ pub (crate) fn host_button_handler(
         (Changed<Interaction>, With<HostButton>),
     >,
     mut text_query: Query<&mut Text>,
+    game_channel: Res<GameChannel>,
+    mut game_client: ResMut<GameClient>,
     mut commands: Commands
 ) {
-
+    
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
         match *interaction {
@@ -214,6 +222,45 @@ pub (crate) fn host_button_handler(
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::PreHost));
+                
+                // if player clicks on host button, designate them as the host
+                game_client.player_type = PlayerType::Host;
+
+                // get client IP
+                println!("Enter in client IP address.");
+                let mut client_ip_addr: String = String::new();
+                //placeholder value for scope purposes
+                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
+	            match io::stdin().read_line(&mut client_ip_addr) {
+		            Ok(_) => {
+                         client_ip_addr = client_ip_addr.trim().to_string();
+                         //let split_ip_addr: Vec<u8> = client_ip_addr.split(".").map(|val| val.parse().unwrap()).collect();
+                        
+                    }
+                    Err(_e) => {
+                        // some error handling
+                    }
+	            }
+                // get client port
+                println!("Enter in client port.");
+                let mut client_port: String = String::new();
+	            match io::stdin().read_line(&mut client_port){
+		            Ok(_) => {
+                        client_port = client_port.trim().to_string();
+                    }
+                    Err(_e) => {
+                        //some error handling
+                    }
+	            }
+
+                let client_addr_port = format!("{}:{}", client_ip_addr, client_port);
+
+                // sends msg from host to client following successful connection
+                let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
+
+                // Creates the soft connection btwn player 1 and player 2
+                game_client.socket.udp_socket.connect(client_addr_port).unwrap();
+
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();

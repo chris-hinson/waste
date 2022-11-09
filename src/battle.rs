@@ -1,9 +1,11 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use crate::game_client::{GameClient, Package};
 use crate::monster::MonsterBundle;
-use crate::{GameState};
+use crate::{GameState, GameChannel};
 use std::net::UdpSocket;
+use std::thread;
 use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
 use crate::player::Player;
@@ -84,12 +86,14 @@ impl Plugin for BattlePlugin {
                     .with_system(attack_button_handler)
                     .with_system(defend_button_handler)
                     .with_system(update_battle_stats)
-                    
+                    .with_system(battle_thread)
+                
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle)
             .add_enter_system_set(GameState::HostBattle, 
                 SystemSet::new()
                     .with_system(setup_battle)
+                    .with_system(battle_pre_check)
                     .with_system(setup_battle_stats)
                     .with_system(abort_button)
                     .with_system(attack_button)
@@ -111,6 +115,7 @@ impl Plugin for BattlePlugin {
             .add_enter_system_set(GameState::PeerBattle, 
                 SystemSet::new()
                     .with_system(setup_battle)
+                    .with_system(battle_pre_check)
                     .with_system(setup_battle_stats)
                     .with_system(abort_button)
                     .with_system(attack_button)
@@ -145,8 +150,11 @@ pub(crate) fn pre_peer(mut commands: Commands){
 pub(crate) fn setup_battle(mut commands: Commands,
                            asset_server: Res<AssetServer>,
                            cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
-                            Without<Player>, Without<Tile>)>
+                            Without<Player>, Without<Tile>)>,
+                            game_channel: Res<GameChannel>,
+                            game_client: Res<GameClient>,
 ) { 
+
     //let temp 
     if cameras.is_empty() {
         // error!("No spawned camera...?");
@@ -165,6 +173,46 @@ pub(crate) fn setup_battle(mut commands: Commands,
         ..default()
     })
         .insert(BattleBackground);
+}
+
+pub(crate) fn battle_pre_check (
+    game_channel: Res<GameChannel>,
+    game_client: Res<GameClient>,
+    mut commands: Commands
+) {
+    // -----------------------------------------------------------------------------------------------------------
+   
+    // game_client.udp_channel.sx.send(Package::new(String::from("START OF BATTLE: P2P MESSAGE"), Some(game_client.udp_channel.sx.clone())));
+    // game_client.socket.udp_socket.send(b"MSG");
+    // let mut buf = [0; 100];
+    // match game_client.socket.udp_socket.recv(&mut buf) {
+    //     Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
+    //     Err(e) => println!("recv function failed: {e:?}"),
+    // }
+    
+    // blocks execution until confirmation that message is received from main. Will not need in future 
+    // but thought it would be good to have a sanity check until I get everything works smoothly
+    // let received_pkg = game_client.udp_channel.rx.recv().unwrap();
+    // info!("{}: {:?}", received_pkg.message, received_pkg.sender.expect("Ooops, can't get the sender"));
+}   
+
+
+// -----------------------------------------------------------------------------------------------------------
+
+pub(crate) fn battle_thread (
+    game_channel: Res<GameChannel>,
+    game_client: Res<GameClient>,
+    mut commands: Commands
+) {
+    // create thread for player's battle communication 
+    // thread::spawn(move || {
+    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(game_client.udp_channel.sx.clone()));
+
+    //     game_client.udp_channel.sx.send(test_pkg).unwrap();
+
+    //     let response = game_client.udp_channel.rx.try_recv().unwrap();
+    //     println!("Player thread receiving this message: {}", response.message);
+    // });
 }
 
 pub(crate) fn setup_battle_stats(mut commands: Commands, 
