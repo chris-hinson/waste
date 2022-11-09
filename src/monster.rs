@@ -36,7 +36,7 @@ pub(crate) struct Experience(u16);
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Health {
 	pub max_health: usize,
-	pub health: usize,
+	pub health: isize,
 }
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Vitality(u8);
@@ -81,32 +81,34 @@ pub(crate) struct Slot(u8);
 
 // tells you if a monster is an enemy or friend (in-party true)
 #[derive(Component, Copy, Clone)]
-pub(crate) struct Enemy(bool);
+pub(crate) struct Enemy;
 
 
 // bundle stores all relevant compnents of monsters 
 #[derive(Bundle, Component, Copy, Clone)]
 pub(crate) struct MonsterBundle{
-    _typing: Element,
+    // we need a &str that is texture of our monster
+    // might need name as well
+    pub typing: Element,
     pub lvl: Level,
-    _exp: Experience,
+    pub exp: Experience,
     pub hp: Health,
-    _vit: Vitality,
+    pub vit: Vitality,
     pub stg: Strength,
     pub def: Defense,
     pub spd: Speed,
-    _acts: Actions,
+    pub acts: Actions,
 
     pub moves: Moves,
 
-    _slot: Slot,
+    pub slot: Slot,
 
-    pub enemy: Enemy,
+    // pub enemy: Enemy,
 }
 
 // used for MonsterPartyBundle
-#[derive(Component)]
-pub(crate) struct SelectedMonster(u8);
+#[derive(Component, Clone, Copy)]
+pub(crate) struct SelectedMonster;
 #[derive(Component)]
 pub(crate) struct MonsterTotal(u8);
 #[derive(Component)]
@@ -128,60 +130,58 @@ pub(crate) struct MonsterPartyBundle{
 // Slot and Enemy may be redundant, but slot == 0 && Enemy == false allows for display of non-party, non-fighting monsters.
 impl Default for MonsterBundle {
     fn default() -> Self { MonsterBundle {
-        _typing: Element::Clean,
+        typing: Element::Clean,
         lvl: Level {
 			max_level: 10,
 			level: 1,
 		},
-        _exp: Experience(0),
+        exp: Experience(0),
         hp: Health{
 			max_health: 10,
 			health: 10,
 		},
-        _vit: Vitality(1),
-        stg: Strength{atk: 1, crt: 25, crt_dmg: 2},
+        vit: Vitality(1),
+        stg: Strength{atk: 2, crt: 25, crt_dmg: 2},
         def: Defense{def: 1, crt_res: 10},
         spd: Speed{spd: 1},
-        _acts: Actions(1),
+        acts: Actions(1),
 
 
         moves: Moves{known: 2, chosen: 0},
 
-        _slot: Slot(0),
-
-        enemy: Enemy(true),
+        slot: Slot(0),
     } }
 }
 // TODO: implement randomized monster initialization, may be difficult to balance how leveling changes start values.
 
 // default is that you're fighting 
-impl Default for MonsterPartyBundle {
-    fn default() -> Self { MonsterPartyBundle {
-        selected: SelectedMonster(0),
-        monsters: MonsterTotal(1),
-        fighting: Fighting(false),
-    }
-} }
+// impl Default for MonsterPartyBundle {
+//     fn default() -> Self { MonsterPartyBundle {
+//         selected: SelectedMonster(0),
+//         monsters: MonsterTotal(1),
+//         fighting: Fighting(false),
+//     }
+// } }
 
 // TODO: save the party to a file somehow to be able to revisit your party when re-opening the game.
-impl Plugin for MonsterPlugin {
-    fn build(&self, app: &mut App){
-        app.add_startup_system(spawn_initial_party);
-    }
-}
+// impl Plugin for MonsterPlugin {
+//     fn build(&self, app: &mut App){
+//         app.add_startup_system(spawn_initial_party);
+//     }
+// }
 
 // player has to have a monster in party, currently also spawns an enemy
 // implementation of Enemy Monsters needs further consideration, maybe switch to a Component Header to reduce Components down.
 
-fn spawn_initial_party(mut commands: Commands
-    ){
-        commands.spawn()
-            .insert_bundle(MonsterPartyBundle { ..Default::default()})
-            .insert_bundle(MonsterBundle{_slot: Slot(1), enemy: Enemy(false), ..Default::default() })
-            .insert_bundle(MonsterBundle{_slot: Slot(0), enemy: Enemy(true), ..Default::default() });
+// fn spawn_initial_party(mut commands: Commands
+//     ){
+//         commands.spawn()
+//             .insert_bundle(MonsterPartyBundle { ..Default::default()})
+//             .insert_bundle(MonsterBundle{_slot: Slot(1), enemy: Enemy(false), ..Default::default() })
+//             .insert_bundle(MonsterBundle{_slot: Slot(0), enemy: Enemy(true), ..Default::default() });
 
-            // below is additional consideration into nesting bundles to allow for MonsterPartyBundle to also store the MonsterBundles but i was having issues, right now it just tracks the data for all monsterBundles spawned in game.
+//             // below is additional consideration into nesting bundles to allow for MonsterPartyBundle to also store the MonsterBundles but i was having issues, right now it just tracks the data for all monsterBundles spawned in game.
             
-            //.with_children(|parent| {parent.spawn_bundle(MonsterBundle{ _slot: Slot(1), _enemy: Enemy(false), ..Default::default() });
-            //parent.spawn_bundle(MonsterBundle{ _lvl: Level(0), ..Default::default()});});
-}   
+//             //.with_children(|parent| {parent.spawn_bundle(MonsterBundle{ _slot: Slot(1), _enemy: Enemy(false), ..Default::default() });
+//             //parent.spawn_bundle(MonsterBundle{ _lvl: Level(0), ..Default::default()});});
+// }   

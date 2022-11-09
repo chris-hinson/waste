@@ -73,7 +73,7 @@ fn main() {
 		.add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
         .add_plugin(BattlePlugin)
-        .add_plugin(MonsterPlugin)
+        // .add_plugin(MonsterPlugin)
         .add_plugin(MultMenuPlugin)
     .add_enter_system_set(GameState::StartPlaying, 
         // This system set is unconditional, as it is being added in an enter helper
@@ -116,7 +116,6 @@ pub(crate) fn setup_game(mut commands: Commands,
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     // Draw the player
-    // He's so smol right now
     commands
         .spawn_bundle(SpriteSheetBundle { 
             texture_atlas: texture_atlas_handle,
@@ -131,6 +130,12 @@ pub(crate) fn setup_game(mut commands: Commands,
             current_chunk: (0, 0),
 			//constants can be found in player.rs,
         });
+
+    // Give the player a monster
+    commands.spawn_bundle(MonsterBundle {
+        hp: Health{max_health: 20, health: 20},
+        ..Default::default()
+    }).insert(SelectedMonster);
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
