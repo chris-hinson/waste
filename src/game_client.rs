@@ -24,7 +24,7 @@ pub(crate) struct GameClient {
     pub(crate) udp_channel: UdpChannel
 }
 
-
+#[derive(Debug)]
 pub(crate) struct Package {
     pub(crate) message: String,
     pub(crate) sender: Option<Sender<Package>>,

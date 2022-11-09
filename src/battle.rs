@@ -5,6 +5,7 @@ use crate::game_client::{GameClient, Package};
 use crate::monster::MonsterBundle;
 use crate::{GameState, GameChannel};
 use std::net::UdpSocket;
+use std::sync::mpsc::{Sender, Receiver, self};
 use std::thread;
 use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
@@ -204,15 +205,20 @@ pub(crate) fn battle_thread (
     game_client: Res<GameClient>,
     mut commands: Commands
 ) {
-    // create thread for player's battle communication 
+
+    // let c_sx = game_client.udp_channel.sx.clone();
+    
+    // // create thread for player's battle communication 
     // thread::spawn(move || {
-    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(game_client.udp_channel.sx.clone()));
+    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
-    //     game_client.udp_channel.sx.send(test_pkg).unwrap();
+    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
-    //     let response = game_client.udp_channel.rx.try_recv().unwrap();
-    //     println!("Player thread receiving this message: {}", response.message);
+    //     c_sx.send(test_pkg).unwrap();
+
     // });
+    // let response = game_client.udp_channel.rx.try_recv().unwrap();
+    // println!("Player thread receiving this message: {}", response.message);
 }
 
 pub(crate) fn setup_battle_stats(mut commands: Commands, 
