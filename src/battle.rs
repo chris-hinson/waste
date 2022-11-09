@@ -2,7 +2,7 @@
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::monster::{MonsterBundle, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves};
-use crate::{GameState, player, Gamechannel};
+use crate::{GameState, player, GameChannel};
 use crate::game_client::{GameClient, Package};
 use std::net::UdpSocket;
 use std::thread;
