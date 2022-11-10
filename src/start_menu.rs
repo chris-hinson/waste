@@ -202,6 +202,7 @@ fn setup_menu(mut commands: Commands,
 ){ 
 // -----------------------------------------------------------------------------------------------------------
 	let addr = get_addr();
+	println!(addr);
     let udp_socket = UdpSocket::bind(addr).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
 

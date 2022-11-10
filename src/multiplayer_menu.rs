@@ -254,12 +254,13 @@ pub (crate) fn host_button_handler(
 	            }
 
                 let client_addr_port = format!("{}:{}", client_ip_addr, client_port);
+                println!("printed this: {}", client_addr_port);
 
                 // sends msg from host to client following successful connection
                 let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
 
                 // Creates the soft connection btwn player 1 and player 2
-                game_client.socket.udp_socket.connect(client_addr_port).unwrap();
+                game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
 
                 game_client.socket.udp_socket.send(b"MSG FROM HOST TO CAELA HERE PLEASE WORK");
 
@@ -294,8 +295,8 @@ pub (crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
                 //commands.insert_resource(NextState(GameState::PrePeer));
-
-                let mut buf = [0; 10];
+                info!("got here");
+                let mut buf = [0; 100];
                 match game_client.socket.udp_socket.recv(&mut buf) {
                     Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
                     Err(e) => println!("recv function failed: {e:?}"),
