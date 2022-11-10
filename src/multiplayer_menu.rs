@@ -221,7 +221,7 @@ pub (crate) fn host_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                commands.insert_resource(NextState(GameState::PreHost));
+                //commands.insert_resource(NextState(GameState::PreHost));
                 
                 // if player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
@@ -293,7 +293,7 @@ pub (crate) fn client_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                commands.insert_resource(NextState(GameState::PrePeer));
+                //commands.insert_resource(NextState(GameState::PrePeer));
 
                 let mut buf = [0; 10];
                 match game_client.socket.udp_socket.recv(&mut buf) {
