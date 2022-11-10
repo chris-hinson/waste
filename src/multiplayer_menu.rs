@@ -262,7 +262,7 @@ pub (crate) fn host_button_handler(
                 // Creates the soft connection btwn player 1 and player 2
                 game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
 
-                game_client.socket.udp_socket.send(b"MSG FROM HOST TO CAELA HERE PLEASE WORK");
+                game_client.socket.udp_socket.send_to(b"MSG FROM HOST TO CAELA HERE PLEASE WORK", "10.4.27.34:9800");
 
             }
             Interaction::Hovered => {
