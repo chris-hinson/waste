@@ -1,7 +1,7 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::monster::{MonsterBundle, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves};
+use crate::monster::{MonsterBundle, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element};
 use crate::{GameState, player, GameChannel};
 use crate::game_client::{GameClient, Package};
 use std::net::UdpSocket;
@@ -442,22 +442,36 @@ pub(crate) fn update_battle_stats(mut commands: Commands,
 pub(crate) fn spawn_player_monster(mut commands: Commands, 
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
+    selected_type_query: Query<(&Element), (With<SelectedMonster>, Without<Enemy>)>,
 ) {
-    if cameras.is_empty() 
-    {
+    if cameras.is_empty() {
         error!("No spawned camera...?");
+        return;
     }
 
-      let (ct, _) = cameras.single();
+    if selected_type_query.is_empty() {
+        error!("No selected monster...?");
+        return;
+    }
 
-      commands.spawn_bundle(
+    let (ct, _) = cameras.single();
+
+    let selected_type = selected_type_query.single();
+
+    commands
+    .spawn_bundle(
         SpriteBundle {
-        texture: asset_server.load(MONSTER),
-        transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.), 
-        ..default()
+            sprite: Sprite {
+                flip_y: false,  // flips our little buddy, you guessed it, in the y direction
+                flip_x: true,   // guess what this does
+                ..default()
+            },
+            texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
+            transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.), 
+            ..default()
     })
-        .insert(PlayerMonster)
-        .insert(Monster);
+    .insert(PlayerMonster)
+    .insert(Monster);
 
 }
 
@@ -474,15 +488,21 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
 
     let (ct, _) = cameras.single();
 
+    let monster_info = MonsterBundle {
+        ..default()
+    };
+
+    let sprite_string = &get_monster_sprite_for_type(monster_info.clone().typing);
+
     commands.spawn_bundle(
         SpriteBundle {
-        texture: asset_server.load(ENEMY_MONSTER),
-        transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
-        ..default()
+            texture: asset_server.load(sprite_string),
+            transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
+            ..default()
     })
         .insert(EnemyMonster)
         .insert(Monster)
-        .insert(MonsterBundle::default());
+        .insert(monster_info.clone());
 }
 
 // handles abort button for multplayer battles 
@@ -521,8 +541,12 @@ pub (crate) fn abort_button_handler(
         (Changed<Interaction>, With<AbortButton>),
     >,
     mut text_query: Query<&mut Text>,
-    mut commands: Commands
-) {
+    mut commands: Commands,
+    mut enemy_monster: 
+        Query<Entity, (Without<SelectedMonster>, With<Enemy>)>,
+
+) { 
+    let mut em = enemy_monster.single_mut();
 
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
@@ -530,10 +554,11 @@ pub (crate) fn abort_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Abort".to_string();
                 *color = PRESSED_BUTTON.into();
-                // This is gonna cfause us problems as is, until we modify
+                // This is gonna cause us problems as is, until we modify
                 // states so that the initial transition from Start -> StartPlaying (a new state)
                 // is the only one that spawns the world. In this paradigm,
                 // it will regenerate the whole world as if it just started.
+                commands.entity(em).remove::<Enemy>();
                 commands.insert_resource(NextState(GameState::Playing));
             }
             Interaction::Hovered => {
@@ -592,10 +617,12 @@ pub (crate) fn attack_button_handler (
                 if em.1.health <= 0 {
                     info!("Enemy monster defeated.");
                     commands.entity(em.5).remove::<Enemy>();
+                    pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));         
                 } else if pm.1.health <= 0 {
                     info!("Your monster was defeated.");
                     commands.entity(em.5).remove::<Enemy>();
+                    pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));     
                 }
 
@@ -700,10 +727,12 @@ pub (crate) fn defend_button_handler (
                 if em.1.health <= 0 {
                     info!("Enemy monster defeated");
                     commands.entity(em.5).remove::<Enemy>();
+                    pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));         
                 } else if pm.1.health <= 0 {
                     info!("Your monster was defeated");
                     commands.entity(em.5).remove::<Enemy>();
+                    pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));     
                 }
             }
