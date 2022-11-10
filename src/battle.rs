@@ -215,19 +215,19 @@ pub(crate) fn battle_thread (
     mut commands: Commands
 ) {
 
-    // let c_sx = game_client.udp_channel.sx.clone();
+    let c_sx = game_client.udp_channel.sx.clone();
     
-    // // create thread for player's battle communication 
-    // thread::spawn(move || {
-    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
+    // create thread for player's battle communication 
+    thread::spawn(move || {
+        let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
-    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
-    //     c_sx.send(test_pkg).unwrap();
+        c_sx.send(test_pkg).unwrap();
 
-    // });
-    // let response = game_client.udp_channel.rx.try_recv().unwrap();
-    // println!("Player thread receiving this message: {}", response.message);
+    });
+    let response = game_client.udp_channel.rx.try_recv().unwrap();
+    println!("Player thread receiving this message: {}", response.message);
 }
 
 pub(crate) fn setup_battle_stats(mut commands: Commands, 

@@ -261,6 +261,8 @@ pub (crate) fn host_button_handler(
                 // Creates the soft connection btwn player 1 and player 2
                 game_client.socket.udp_socket.connect(client_addr_port).unwrap();
 
+                game_client.socket.udp_socket.send(b"MSG FROM HOST TO CAELA HERE PLEASE WORK");
+
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();
@@ -280,6 +282,8 @@ pub (crate) fn client_button_handler(
         (Changed<Interaction>, With<ClientButton>),
     >,
     mut text_query: Query<&mut Text>,
+    game_channel: Res<GameChannel>,
+    mut game_client: ResMut<GameClient>,
     mut commands: Commands
 ) {
 
@@ -290,6 +294,12 @@ pub (crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::PrePeer));
+
+                let mut buf = [0; 10];
+                match game_client.socket.udp_socket.recv(&mut buf) {
+                    Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
+                    Err(e) => println!("recv function failed: {e:?}"),
+                }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();
