@@ -3,8 +3,8 @@ use std::char::MAX;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::{GameState, monster};
-use crate::backgrounds::{Tile, MonsterTile};
-use crate::monster::{MonsterBundle, MonsterPartyBundle, Enemy, SelectedMonster};
+use crate::backgrounds::{Tile, MonsterTile, HealingTile};
+use crate::monster::{MonsterBundle, MonsterPartyBundle, Enemy, SelectedMonster, Health};
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -94,6 +94,8 @@ pub(crate) fn move_player(
 	mut commands: Commands,
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>, Without<MonsterTile>)>,
 	monster_tiles: Query<(Entity, &Transform), (With<MonsterTile>, Without<Player>)>,
+	healing_tiles: Query<(Entity, &Transform), (With<HealingTile>, Without<Player>)>,
+	mut monster_hp: Query<&mut Health, Without<Enemy>>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -157,4 +159,22 @@ pub(crate) fn move_player(
 			}
 		}
 	}
+
+	// check for healing cacti
+	for (healing_tile, tile_pos) in healing_tiles.iter() {
+		let ht_position = tile_pos.translation;
+		let collision = collide(pt.translation, Vec2::splat(32.), ht_position, Vec2::splat(32.));
+		match collision {
+			None => {},
+			Some(_) => {
+				// temporary marker
+				println!("Collided with healing tile! Healing!");
+				for mut hp in monster_hp.iter_mut() {
+					hp.health = hp.max_health as isize;
+				}
+				commands.entity(healing_tile).remove::<HealingTile>();
+			}
+		}
+	}
+
 }

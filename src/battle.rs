@@ -617,12 +617,12 @@ pub (crate) fn attack_button_handler (
                 if em.1.health <= 0 {
                     info!("Enemy monster defeated.");
                     commands.entity(em.5).remove::<Enemy>();
-                    pm.1.health = pm.1.max_health as isize;
+                    // pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));         
                 } else if pm.1.health <= 0 {
                     info!("Your monster was defeated.");
                     commands.entity(em.5).remove::<Enemy>();
-                    pm.1.health = pm.1.max_health as isize;
+                    // pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));     
                 }
 
@@ -637,52 +637,6 @@ pub (crate) fn attack_button_handler (
             }
         }
     }
-}
-
-fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: usize, 
-    enemy_stg: &Strength, enemy_def: &Defense, enemy_action: usize) -> (isize, isize) {
-    if (player_action == 1 || enemy_action == 1) {
-        // if either side defends this turn will not have any damage on either side
-        return (0, 0);
-    }
-    // More actions can be added later, we can also consider decoupling the actions from the damage
-    let mut result = (0,0);
-    // player attacks
-    // If our attack is less than the enemy's defense, we do 0 damage
-    if player_stg.atk <= enemy_def.def {
-        result.0 = 0;
-    } else {
-        // if we have damage, we do that much damage
-        // I've only implemented crits for now, dodge and element can follow
-        result.0 = player_stg.atk - enemy_def.def;
-        if player_stg.crt <= enemy_def.crt_res {
-            result.0 = result.0;
-        } else {
-            // calculate crit chance and apply crit damage
-            let mut crit_chance = player_stg.crt - enemy_def.crt_res;
-            let crit = rand::thread_rng().gen_range(0..=100);
-            if crit <= crit_chance {
-                result.0 *= player_stg.crt_dmg;
-            }
-        }
-    }
-    // same for enemy
-    if enemy_stg.atk <= player_def.def {
-        result.1 = 0;
-    } else {
-        result.1 = enemy_stg.atk - player_def.def;
-        if enemy_stg.crt <= player_def.crt_res {
-            result.1 = result.1;
-        } else {
-            let mut crit_chance = enemy_stg.crt - player_def.crt_res;
-            let crit = rand::thread_rng().gen_range(0..=100);
-            if crit <= crit_chance {
-                result.1 *= enemy_stg.crt_dmg;
-            }
-        }
-    }
-
-    return (result.0 as isize, result.1 as isize)
 }
 
 pub (crate) fn defend_button_handler (
@@ -727,12 +681,12 @@ pub (crate) fn defend_button_handler (
                 if em.1.health <= 0 {
                     info!("Enemy monster defeated");
                     commands.entity(em.5).remove::<Enemy>();
-                    pm.1.health = pm.1.max_health as isize;
+                    // pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));         
                 } else if pm.1.health <= 0 {
                     info!("Your monster was defeated");
                     commands.entity(em.5).remove::<Enemy>();
-                    pm.1.health = pm.1.max_health as isize;
+                    // pm.1.health = pm.1.max_health as isize;
                     commands.insert_resource(NextState(GameState::Playing));     
                 }
             }
@@ -889,4 +843,51 @@ pub(crate) fn despawn_battle(mut commands: Commands,
         commands.entity(battle_ui_element).despawn_recursive();
    });
 
+}
+
+
+fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: usize, 
+    enemy_stg: &Strength, enemy_def: &Defense, enemy_action: usize) -> (isize, isize) {
+    if (player_action == 1 || enemy_action == 1) {
+        // if either side defends this turn will not have any damage on either side
+        return (0, 0);
+    }
+    // More actions can be added later, we can also consider decoupling the actions from the damage
+    let mut result = (0,0);
+    // player attacks
+    // If our attack is less than the enemy's defense, we do 0 damage
+    if player_stg.atk <= enemy_def.def {
+        result.0 = 0;
+    } else {
+        // if we have damage, we do that much damage
+        // I've only implemented crits for now, dodge and element can follow
+        result.0 = player_stg.atk - enemy_def.def;
+        if player_stg.crt <= enemy_def.crt_res {
+            result.0 = result.0;
+        } else {
+            // calculate crit chance and apply crit damage
+            let mut crit_chance = player_stg.crt - enemy_def.crt_res;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                result.0 *= player_stg.crt_dmg;
+            }
+        }
+    }
+    // same for enemy
+    if enemy_stg.atk <= player_def.def {
+        result.1 = 0;
+    } else {
+        result.1 = enemy_stg.atk - player_def.def;
+        if enemy_stg.crt <= player_def.crt_res {
+            result.1 = result.1;
+        } else {
+            let mut crit_chance = enemy_stg.crt - player_def.crt_res;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                result.1 *= enemy_stg.crt_dmg;
+            }
+        }
+    }
+
+    return (result.0 as isize, result.1 as isize)
 }

@@ -23,6 +23,11 @@ pub(crate) struct MonsterTile {
     pub(crate) transform: Transform,
 }
 
+#[derive(Component)]
+pub(crate) struct HealingTile {
+    pub(crate) transform: Transform,
+}
+
 #[derive(Component, Debug, Clone)]
 pub(crate) struct Chunk {
     pub(crate) position: (isize, isize),
@@ -71,6 +76,24 @@ macro_rules! draw_chunk {
                         ..default()
                     })
                     .insert(MonsterTile {
+                        transform: Transform::from_xyz(x, y, -1.),
+                    });
+            }
+            if tile == 32 {
+                $commands
+                    .spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: $map_atlas_handle.clone(),
+                        transform: Transform {
+                            translation: t,
+                            ..default()
+                        },
+                        sprite: TextureAtlasSprite {
+                            index: 32,
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(HealingTile {
                         transform: Transform::from_xyz(x, y, -1.),
                     });
             }
