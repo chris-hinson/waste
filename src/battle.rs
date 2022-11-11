@@ -1,7 +1,7 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::monster::{MonsterBundle, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element};
+use crate::monster::{MonsterStats, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element, Boss};
 use crate::{GameState, player, GameChannel};
 use crate::game_client::{GameClient, Package};
 use std::net::UdpSocket;
@@ -77,13 +77,15 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button)
                     .with_system(attack_button)
                     .with_system(defend_button)
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
+                    // .with_system(spawn_player_monster)
+                    // .with_system(spawn_enemy_monster)
                 )
             .add_system_set(ConditionSet::new()
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                     // addl systems go here
+                    .with_system(spawn_player_monster)
+                    .with_system(spawn_enemy_monster)
                     .with_system(abort_button_handler)
                     .with_system(attack_button_handler)
                     .with_system(defend_button_handler)
@@ -135,6 +137,37 @@ impl Plugin for BattlePlugin {
                 .into())
             .add_exit_system(GameState::PeerBattle, despawn_battle);
     }
+}
+
+macro_rules! end_battle {
+    ($commands:expr, $game_progress:expr, $my_monster:expr, $enemy_monster:expr) => {
+        // remove the monster from the enemy stats
+        $game_progress.enemy_stats.remove(&$enemy_monster.5);
+        // reset selected monster back to the first one in our bag
+        let first_monster = $game_progress.monster_id_entity.get(&1).unwrap().clone();
+        $commands.entity($my_monster.5).remove::<SelectedMonster>();
+        $commands.entity(first_monster).insert(SelectedMonster);
+        // the battle is over, remove enemy from monster anyways
+        $commands.entity($enemy_monster.5).remove::<Enemy>();
+        $commands.insert_resource(NextState(GameState::Playing));  
+    }
+}
+
+macro_rules! monster_level_up {
+    ($commands:expr, $game_progress:expr, $my_monster:expr, $up_by:expr) => {
+        info!("your monster level up!");
+        let mut stats = $game_progress.monster_entity_to_stats.get_mut(&$my_monster).unwrap();
+        stats.lvl.level += 1 * $up_by;
+        stats.hp.max_health += 10 * $up_by;
+        stats.hp.health = stats.hp.max_health as isize;
+        stats.stg.atk += 2 * $up_by;
+        stats.stg.crt += 5 * $up_by;
+        stats.def.def += 1 * $up_by;
+        // we have to remove the old stats and add the new one
+        // because we cannot change the stats in place
+        $commands.entity($my_monster).remove::<MonsterStats>();
+        $commands.entity($my_monster).insert_bundle(stats.clone());
+    };
 }
 
 pub(crate) fn pre_host(mut commands: Commands){
@@ -456,6 +489,7 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
 
     let (ct, _) = cameras.single();
 
+    // why doesn't this update
     let selected_type = selected_type_query.single();
 
     commands
@@ -478,7 +512,8 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
 
 pub(crate) fn spawn_enemy_monster(mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>
+    cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
+    selected_type_query: Query<(&Element), (Without<SelectedMonster>, With<Enemy>)>,
 ) {
 
     if cameras.is_empty() 
@@ -486,23 +521,34 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
         error!("No spawned camera...?");
     }
 
+    if selected_type_query.is_empty() {
+        error!("No selected monster...?");
+        return;
+    }
+
+    let selected_type = selected_type_query.single();
+
     let (ct, _) = cameras.single();
 
-    let monster_info = MonsterBundle {
-        ..default()
-    };
+    // This spawns a new monster that has nothing to do with battle
+    // The one fore battle is spawned in the player.rs when we collide with a monster tile
+    // let monster_info = MonsterStats {
+    //     ..default()
+    // };
 
-    let sprite_string = &get_monster_sprite_for_type(monster_info.clone().typing);
+
+    // let sprite_string = &get_monster_sprite_for_type(monster_info.clone().typing);
 
     commands.spawn_bundle(
         SpriteBundle {
-            texture: asset_server.load(sprite_string),
+            // texture: asset_server.load(sprite_string),
+            texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
             transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
             ..default()
     })
         .insert(EnemyMonster)
-        .insert(Monster)
-        .insert(monster_info.clone());
+        .insert(Monster);
+        // .insert(monster_info.clone());
 }
 
 // handles abort button for multplayer battles 
@@ -581,9 +627,12 @@ pub (crate) fn attack_button_handler (
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
     mut my_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves), (With<SelectedMonster>, Without<Enemy>)>,
+        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity), 
+        (With<SelectedMonster>, Without<Enemy>)>,
     mut enemy_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity), (Without<SelectedMonster>, With<Enemy>)>,
+        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity, Option<&Boss>), 
+        (Without<SelectedMonster>, With<Enemy>)>,
+    mut game_progress: ResMut<GameProgress>,
  ) {
 
     if(my_monster.is_empty() || enemy_monster.is_empty()) {
@@ -616,14 +665,40 @@ pub (crate) fn attack_button_handler (
 
                 if em.1.health <= 0 {
                     info!("Enemy monster defeated.");
-                    commands.entity(em.5).remove::<Enemy>();
-                    // pm.1.health = pm.1.max_health as isize;
-                    commands.insert_resource(NextState(GameState::Playing));         
+                    // at this point this monster is already "ours", we just need to register is with the resource
+                    // get the stats from the monster
+                    let new_monster_stats = game_progress.enemy_stats.get(&em.5).unwrap().clone();
+                    // remove the monster from the enemy stats
+                    game_progress.enemy_stats.remove(&em.5);
+                    // add the monster to the monster bag
+                    game_progress.new_monster(em.5, new_monster_stats);
+                    // TODO: see the discrepancy between the type we see and the type we get
+                    info!("new member type: {:?}", game_progress.monster_entity_to_stats.get(&em.5).unwrap().typing);
+                    // update game progress
+                    // check for boss
+                    if em.6.is_some() {
+                        info!("Boss defeated!");
+                        game_progress.win_boss();
+                        // if boss level up twice
+                        monster_level_up!(commands, game_progress, pm.5, 2);
+                        commands.entity(em.5).remove::<Boss>();
+                    } else {
+                        game_progress.win_battle();
+                        // if not boss level up once
+                        monster_level_up!(commands, game_progress, pm.5, 1);
+                    }
+                    end_battle!(commands, game_progress, pm, em);
                 } else if pm.1.health <= 0 {
-                    info!("Your monster was defeated.");
-                    commands.entity(em.5).remove::<Enemy>();
-                    // pm.1.health = pm.1.max_health as isize;
-                    commands.insert_resource(NextState(GameState::Playing));     
+                    let next_monster = game_progress.next_monster(pm.5);
+                    if next_monster.is_none() {
+                        info!("Your monster was defeated.");
+                        end_battle!(commands, game_progress, pm, em);
+                    } else {
+                        info!("Your monster was defeated. Switching to next monster.");
+                        // TODO: the discrepancy also leads to us not updating the monster
+                        commands.entity(pm.5).remove::<SelectedMonster>();
+                        commands.entity(*next_monster.unwrap()).insert(SelectedMonster); 
+                    }   
                 }
 
             }
@@ -664,8 +739,9 @@ pub (crate) fn defend_button_handler (
                 text.sections[0].value = "Defend".to_string();
                 *color = PRESSED_BUTTON.into();
 
-                let mut pm = my_monster.single_mut();
-                let mut em = enemy_monster.single_mut();
+                // let mut pm = my_monster.single_mut();
+                // let mut em = enemy_monster.single_mut();
+                // I just realized that we don't need to do anything here, at least for how this is set up now.
                 let mut enemy_action = rand::thread_rng().gen_range(0..=1);
                 info!("You defend!");
                 if enemy_action == 1 {
@@ -673,22 +749,22 @@ pub (crate) fn defend_button_handler (
                 } else {
                     info!("Enemy attacks!")
                 }
-                let turn_result = calculate_damage(&pm.2, &pm.3, 1, &em.2, &em.3, enemy_action);
+                // let turn_result = calculate_damage(&pm.2, &pm.3, 1, &em.2, &em.3, enemy_action);
 
-                pm.1.health -= turn_result.1;
-                em.1.health -= turn_result.0;
+                // pm.1.health -= turn_result.1;
+                // em.1.health -= turn_result.0;
 
-                if em.1.health <= 0 {
-                    info!("Enemy monster defeated");
-                    commands.entity(em.5).remove::<Enemy>();
-                    // pm.1.health = pm.1.max_health as isize;
-                    commands.insert_resource(NextState(GameState::Playing));         
-                } else if pm.1.health <= 0 {
-                    info!("Your monster was defeated");
-                    commands.entity(em.5).remove::<Enemy>();
-                    // pm.1.health = pm.1.max_health as isize;
-                    commands.insert_resource(NextState(GameState::Playing));     
-                }
+                // if em.1.health <= 0 {
+                //     info!("Enemy monster defeated");
+                //     commands.entity(em.5).remove::<Enemy>();
+                //     // pm.1.health = pm.1.max_health as isize;
+                //     commands.insert_resource(NextState(GameState::Playing));         
+                // } else if pm.1.health <= 0 {
+                //     info!("Your monster was defeated");
+                //     commands.entity(em.5).remove::<Enemy>();
+                //     // pm.1.health = pm.1.max_health as isize;
+                //     commands.insert_resource(NextState(GameState::Playing));     
+                // }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Defend".to_string();

@@ -19,7 +19,7 @@ pub(crate) const BASIC_ENEMY: &str = "monsters/stickdude.png";
 
 
 // Elemental types
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Debug)]
 pub(crate) enum Element {
     Scav,
     Growth,
@@ -34,8 +34,8 @@ pub(crate) enum Element {
 // stats, Components used for MonsterBundle
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Level{
-	pub max_level: u16,
-	pub level: u16,
+	pub max_level: usize,
+	pub level: usize,
 }
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Experience(u16);
@@ -89,10 +89,12 @@ pub(crate) struct Slot(u8);
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Enemy;
 
+#[derive(Component, Copy, Clone)]
+pub(crate) struct Boss;
 
 // bundle stores all relevant compnents of monsters 
 #[derive(Bundle, Component, Copy, Clone)]
-pub(crate) struct MonsterBundle{
+pub(crate) struct MonsterStats{
     // we need a &str that is texture of our monster
     // might need name as well
     pub typing: Element,
@@ -134,8 +136,8 @@ pub(crate) struct MonsterPartyBundle{
 // TODO: allow catching functionality by letting user choose after winning a battle to swap monster with one in party.
 
 // Slot and Enemy may be redundant, but slot == 0 && Enemy == false allows for display of non-party, non-fighting monsters.
-impl Default for MonsterBundle {
-    fn default() -> Self { MonsterBundle {
+impl Default for MonsterStats {
+    fn default() -> Self { MonsterStats {
         typing: rand::random(),
         lvl: Level {
 			max_level: 10,

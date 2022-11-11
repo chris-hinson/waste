@@ -146,11 +146,9 @@ pub(crate) fn setup_game(mut commands: Commands,
         });
 
     // Give the player a monster
-    let initial_monster_stats = MonsterBundle {
-        hp: Health{max_health: 20, health: 20},
-        ..Default::default()
-    };
-    let initial_monster = commands.spawn_bundle(initial_monster_stats.clone())
+    let initial_monster_stats = MonsterStats {..Default::default()};
+    let initial_monster = commands.spawn()
+        .insert_bundle(initial_monster_stats.clone())
         .insert(SelectedMonster).id();
     // initial_monster.insert(SelectedMonster);
     game_progress.new_monster(initial_monster.clone(), initial_monster_stats.clone());
