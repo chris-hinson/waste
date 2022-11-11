@@ -2,8 +2,9 @@ use std::char::MAX;
 
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
-use crate::GameState;
+use crate::{GameState, monster};
 use crate::backgrounds::{Tile, MonsterTile};
+use crate::monster::{MonsterBundle, MonsterPartyBundle, Enemy, SelectedMonster};
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -18,10 +19,6 @@ pub(crate) const MAX_LEVEL: u16 = 10;
 #[derive(Component)]
 pub(crate) struct Player{
 	pub(crate) current_chunk: (isize, isize),
-	pub(crate) max_health: u16,
-	pub(crate) health: u16,
-	pub(crate) max_level: u16,
-	pub(crate) level: u16,
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -149,6 +146,12 @@ pub(crate) fn move_player(
 				//println!("Collided with monster! Battle!");
 				// switches from Playing -> Battle state
 				// This is TERRIBLE but it KINDA WORKS
+				// commands.spawn_bundle(MonsterBundle {
+				// 	..Default::default()
+				// }).insert(SelectedMonster);
+				commands.spawn_bundle(MonsterBundle {
+					..Default::default()
+				}).insert(Enemy);
 				commands.entity(monster_tile).remove::<MonsterTile>();
 				commands.insert_resource(NextState(GameState::Battle));
 			}

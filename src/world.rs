@@ -1,7 +1,7 @@
 use {bevy::prelude::*};
 use bevy::ecs::entity;
 
-use crate::{Chunk, backgrounds::{WIN_W, WIN_H}};
+use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::MonsterBundle};
 use std::collections::HashMap;
 
 
@@ -48,64 +48,50 @@ impl WorldMap{
         
     }
 
-    pub(crate) fn get_east(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x+1, y));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_east(&self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x + 1, y)
     }
     
-    pub(crate) fn get_west(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x-1, y));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_west(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x - 1, y)
     }
     
-    pub(crate) fn get_north(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x, y+1));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_north(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x, y + 1)
     }
     
-    pub(crate) fn get_south(&mut self, x: isize, y: isize) -> Option<Entity>{
-        let id: Option<&usize> = self.chunk_ids.get(&(x, y-1));
-        if let Some(id) = id {
-            let entity: Option<&Entity> = self.chunks.get(id);
-            if let Some(entity) = entity {
-                Some(*entity)
-            }else{
-                None
-            }
-        }else{
-            None
-        }
+    pub(crate) fn get_south(&mut self, x: isize, y: isize) -> Option<Chunk>{
+        self.get_chunk(x, y - 1)
     }
 
 }
     
 pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
     (x as f32 * WIN_W, y as f32 * WIN_H)
+}
+
+pub(crate) struct GameProgress{
+    // the level of our player, which is also the level we should spawn the monsters
+    _current_level: usize,
+    // the number of monsters we have defeated before next level
+    _level_progress: usize,
+    // number of monsters defeated before the boss
+    _boss_progress: usize,
+    // level_progress needed to see the boss
+    _boss_level: usize,
+    // number of monsters defeated before the next level
+    _next_level: usize,
+}
+
+impl FromWorld for GameProgress {
+    fn from_world(world: &mut World) -> Self {
+        // I dont know yet, this is a big thing to do
+        return GameProgress{
+            _current_level: 0,
+            _level_progress: 0,
+            _boss_progress: 0,
+            _boss_level: 0,
+            _next_level: 0,
+        }
+    }
 }

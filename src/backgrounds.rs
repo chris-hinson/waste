@@ -122,14 +122,16 @@ pub(crate) fn expand_map(
     let player_chunk_pos = player.current_chunk;
     // These unwraps could panic if the player goes off the map?
     // Get the chunk the player is in
-    let player_chunk = world.get_chunk(player_chunk_pos.0, player_chunk_pos.1).unwrap();
+    let pc_x = player_chunk_pos.0;
+    let pc_y = player_chunk_pos.1;
+    let player_chunk = world.get_chunk(pc_x, pc_y).unwrap();
 
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
     let map_atlas_handle = texture_atlases.add(map_atlas.clone());
 
-    let east_chunk = world.chunk_ids.get(&(player_chunk_pos.0 + 1, player_chunk_pos.1));
+    let east_chunk = world.chunk_ids.get(&(pc_x + 1, pc_y));
     match east_chunk {
         Some(_) => (),
         None => {
@@ -233,3 +235,26 @@ pub(crate) fn expand_map(
         }
     }
 }
+
+macro_rules! set_seed_ {
+    ($x: expr, $y:expr, $dir:expr) => {
+        let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+        let player_north = world.get_north(x, y);
+        let player_south = world.get_south(x, y);
+        let player_east = world.get_east(x, y);
+        let player_west = world.get_west(x, y);
+        if dir = 0{ // when we go to the east
+            seed.push((chunk.tiles[i][MAP_WIDTH - 1], (i, MAP_WIDTH - 1)))
+            match player_north {
+                Some(chunk) => {
+                    for i in 0..MAP_WIDTH{
+                        seed.push((chunk.tiles[MAP_HEIGHT - 1][i], (MAP_HEIGHT - 1, i)));
+                    }
+                },
+                None => (),
+            } 
+
+        }    
+    };
+}
+    
