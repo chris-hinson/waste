@@ -166,6 +166,21 @@ pub(crate) fn expand_map(
             for i in 0..MAP_HEIGHT{
                 seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, 0)));
             }
+            // if world.get_chunk(x+1, y).is_some(){
+            //     for i in 0..MAP_HEIGHT{
+            //         seed.push((world.get_chunk(x+1, y).unwrap().tiles[i][0], (i, MAP_WIDTH - 1)));
+            //     }
+            // }
+            if world.get_chunk(x, y+1).is_some(){
+                for i in 0..MAP_WIDTH{
+                    seed.push((world.get_chunk(x, y+1).unwrap().tiles[0][i], (MAP_HEIGHT - 1, i)));
+                }
+            }
+            if world.get_chunk(x, y-1).is_some(){
+                for i in 0..MAP_WIDTH{
+                    seed.push((world.get_chunk(x, y-1).unwrap().tiles[MAP_HEIGHT - 1][i], (0, i)));
+                }
+            }
             let new_chunk = Chunk{
                 position: (x, y),
                 tiles: wfc(Some(seed)),
@@ -191,6 +206,21 @@ pub(crate) fn expand_map(
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
                 seed.push((player_chunk.tiles[0][i], (MAP_HEIGHT - 1, i)));
+            }
+            // if world.get_chunk(x, y+1).is_some(){
+            //     for i in 0..MAP_WIDTH{
+            //         seed.push((world.get_chunk(x, y+1).unwrap().tiles[0][i], (0, i)));
+            //     }
+            // }
+            if world.get_chunk(x+1, y).is_some(){
+                for i in 0..MAP_HEIGHT{
+                    seed.push((world.get_chunk(x+1, y).unwrap().tiles[i][0], (i, MAP_WIDTH - 1)));
+                }
+            }
+            if world.get_chunk(x-1, y).is_some(){
+                for i in 0..MAP_HEIGHT{
+                    seed.push((world.get_chunk(x-1, y).unwrap().tiles[i][MAP_WIDTH - 1], (i, 0)));
+                }
             }
             let new_chunk = Chunk{
                 position: (x, y),
@@ -218,6 +248,21 @@ pub(crate) fn expand_map(
             for i in 0..MAP_HEIGHT{
                 seed.push((player_chunk.tiles[i][0], (i, MAP_WIDTH-1)));
             }
+            // if world.get_chunk(x-1, y).is_some(){
+            //     for i in 0..MAP_HEIGHT{
+            //         seed.push((world.get_chunk(x-1, y).unwrap().tiles[i][MAP_WIDTH-1], (i, 0)));
+            //     }
+            // }
+            if world.get_chunk(x, y+1).is_some(){
+                for i in 0..MAP_WIDTH{
+                    seed.push((world.get_chunk(x, y+1).unwrap().tiles[0][i], (MAP_HEIGHT-1, i)));
+                }
+            }
+            if world.get_chunk(x, y-1).is_some(){
+                for i in 0..MAP_WIDTH{
+                    seed.push((world.get_chunk(x, y-1).unwrap().tiles[MAP_HEIGHT-1][i], (0, i)));
+                }
+            }
             let new_chunk = Chunk{
                 position: (x, y),
                 tiles: wfc(Some(seed)),
@@ -243,6 +288,21 @@ pub(crate) fn expand_map(
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
             for i in 0..MAP_WIDTH{
                 seed.push((player_chunk.tiles[MAP_HEIGHT-1][i], (0, i)));
+            }
+            // if world.get_chunk(x, y-1).is_some(){
+            //     for i in 0..MAP_WIDTH{
+            //         seed.push((world.get_chunk(x, y-1).unwrap().tiles[MAP_HEIGHT-1][i], (MAP_HEIGHT-1, i)));
+            //     }
+            // }
+            if world.get_chunk(x+1, y).is_some(){
+                for i in 0..MAP_HEIGHT{
+                    seed.push((world.get_chunk(x+1, y).unwrap().tiles[i][0], (i, MAP_WIDTH-1)));
+                }
+            }
+            if world.get_chunk(x-1, y).is_some(){
+                for i in 0..MAP_HEIGHT{
+                    seed.push((world.get_chunk(x-1, y).unwrap().tiles[i][MAP_WIDTH-1], (i, 0)));
+                }
             }
             let new_chunk = Chunk{
                 position: (x, y),
