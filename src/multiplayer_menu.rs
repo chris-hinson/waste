@@ -97,7 +97,8 @@ fn setup_mult(mut commands: Commands,
         c_sx.send(test_pkg).unwrap();
 
     });
-    let response = game_client.udp_channel.rx.try_recv().unwrap();
+
+    let response = game_client.udp_channel.rx.recv().unwrap();
     println!("Player thread receiving this message: {}", response.message);
 
 	cameras.for_each(|camera| {
