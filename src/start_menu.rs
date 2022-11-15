@@ -144,13 +144,10 @@ pub (crate) fn credits_button_handler(
 				let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
 				battle_thread_sx.send(response_back);
 
-
 				// match game_client.udp_channel.rx.try_recv() {
 				// 	Ok(pkg_response) => println!("{:?}", pkg_response.message),
 				// 	Err(e) => println!("try_recv function failed: {e:?}"),
 				// }
-
-				
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Credits".to_string();
@@ -219,7 +216,6 @@ fn setup_menu(mut commands: Commands,
 			rx
 		},
 });
-	info!("should've created game client");
  // -----------------------------------------------------------------------------------------------------------
 
 	// creates the channel for the main game thread

@@ -97,10 +97,17 @@ fn setup_mult(mut commands: Commands,
 
         c_sx.send(test_pkg).unwrap();
 
+        let acknowledgement = rx.recv().unwrap();
+        info!("Here is the confirmation from main to thread: {}", acknowledgement);
+
     });
 
     let response = game_client.udp_channel.rx.recv().unwrap();
     println!("Player thread receiving this message: {}", response.message);
+
+    let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
+    let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
+    thread_sender.send(acknowledgement_pkg).unwrap();
 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
@@ -301,7 +308,6 @@ pub (crate) fn client_button_handler(
         (Changed<Interaction>, With<ClientButton>),
     >,
     mut text_query: Query<&mut Text>,
-    // game_channel: Res<GameChannel>,
     mut game_client: ResMut<GameClient>,
     mut commands: Commands
 ) {
