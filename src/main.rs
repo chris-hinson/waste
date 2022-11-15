@@ -58,14 +58,14 @@ use multiplayer_menu::*;
 
 // END CUSTOM MODULES
 
-pub(crate) struct GameChannel {
-    // channel set for main thread/sending/receiving data
-    pub(crate) gsx: Sender<Package>,
-    pub(crate) grx: Receiver<Package>,
-}
+// pub(crate) struct GameChannel {
+//     // channel set for main thread/sending/receiving data
+//     pub(crate) gsx: Sender<Package>,
+//     pub(crate) grx: Receiver<Package>,
+// }
 
-unsafe impl Send for GameChannel {}
-unsafe impl Sync for GameChannel {}
+// unsafe impl Send for GameChannel {}
+// unsafe impl Sync for GameChannel {}
 
 
 fn main() {

@@ -6,7 +6,7 @@ use local_ip_address::local_ip;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use rand::seq::SliceRandom;
-use crate::{GameState, GameChannel};
+use crate::{GameState, battle};
 use crate::game_client::*;
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
@@ -110,7 +110,9 @@ pub (crate) fn credits_button_handler(
         (Changed<Interaction>, With<CreditsButton>),
     >,
     mut text_query: Query<&mut Text>,
-    mut commands: Commands
+    mut commands: Commands,
+	game_client: Res<GameClient>,
+	// game_channel: Res<GameChannel>,
 ) {
 
     for (interaction, mut color, children) in &mut interaction_query {
@@ -120,6 +122,32 @@ pub (crate) fn credits_button_handler(
                 text.sections[0].value = "Credits".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Credits));
+
+				let c_sx = game_client.udp_channel.sx.clone();
+    
+				// create thread for player's battle communication 
+				std::thread::spawn(move || {
+					let (tx, rx): (Sender<Package>, Receiver<Package>) = std::sync::mpsc::channel();
+
+					let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+
+					c_sx.send(test_pkg).unwrap();
+
+					let response_from_game = rx.recv().unwrap();
+					println!("battle thread received confirmation here: {}", response_from_game.message);
+
+    			});
+
+				let res = game_client.udp_channel.rx.recv().unwrap();
+				let battle_thread_sx = res.sender.expect("Couldnt find sender");
+				println!("Game thread got this msg: {}", res.message);
+				let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
+				battle_thread_sx.send(response_back);
+
+				// match game_client.udp_channel.rx.try_recv() {
+				// 	Ok(pkg_response) => println!("{:?}", pkg_response.message),
+				// 	Err(e) => println!("try_recv function failed: {e:?}"),
+				// }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Credits".to_string();
@@ -172,30 +200,31 @@ fn setup_menu(mut commands: Commands,
 ){ 
 // -----------------------------------------------------------------------------------------------------------
 	let addr = get_addr();
+	println!("{}", addr);
     let udp_socket = UdpSocket::bind(addr).unwrap();
+	udp_socket.set_nonblocking(true).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
 
     commands.insert_resource(GameClient {
-        socket: Socket {
+        socket: SocketInfo {
             addr,
             udp_socket,
         },
         player_type: crate::game_client::PlayerType::Client,
         udp_channel: UdpChannel {
             sx,
-            rx
-        },
+			rx
+		},
 });
-	info!("should've created game client");
  // -----------------------------------------------------------------------------------------------------------
 
 	// creates the channel for the main game thread
- 	let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
-	//create entity for the main game thread's sender + receiver
-    commands.insert_resource(GameChannel {
-        gsx,
-        grx
-    });
+ 	// let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
+	// //create entity for the main game thread's sender + receiver
+    // commands.insert_resource(GameChannel {
+    //     gsx,
+    //     grx
+    // });
  // -----------------------------------------------------------------------------------------------------------
 
 
