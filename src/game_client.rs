@@ -1,3 +1,4 @@
+use std::fmt;
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -36,6 +37,12 @@ impl Package {
             message,
             sender,
         }
+    }
+}
+
+impl fmt::Display for Package {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
     }
 }
 
