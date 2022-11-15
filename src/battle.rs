@@ -2,7 +2,7 @@
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::monster::{MonsterBundle, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves};
-use crate::{GameState, player, GameChannel};
+use crate::{GameState, player};
 use crate::game_client::{GameClient, Package};
 use std::net::UdpSocket;
 use std::sync::mpsc::{Sender, Receiver, self};
@@ -154,7 +154,7 @@ pub(crate) fn setup_battle(mut commands: Commands,
                            asset_server: Res<AssetServer>,
                            cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
                             Without<Player>, Without<Tile>)>,
-                            game_channel: Res<GameChannel>,
+                            // game_channel: Res<GameChannel>,
                             game_client: Res<GameClient>,
 ) { 
 
@@ -186,7 +186,7 @@ pub(crate) fn setup_battle(mut commands: Commands,
 }
 
 pub(crate) fn battle_pre_check (
-    game_channel: Res<GameChannel>,
+    // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>,
     mut commands: Commands
 ) {
@@ -210,7 +210,7 @@ pub(crate) fn battle_pre_check (
 // -----------------------------------------------------------------------------------------------------------
 
 pub(crate) fn battle_thread (
-    game_channel: Res<GameChannel>,
+    // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>,
     mut commands: Commands
 ) {

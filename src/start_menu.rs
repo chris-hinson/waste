@@ -6,7 +6,7 @@ use local_ip_address::local_ip;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use rand::seq::SliceRandom;
-use crate::{GameState, GameChannel, battle};
+use crate::{GameState, battle};
 use crate::game_client::*;
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
@@ -111,7 +111,8 @@ pub (crate) fn credits_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	game_client: Res<GameClient>
+	game_client: Res<GameClient>,
+	// game_channel: Res<GameChannel>,
 ) {
 
     for (interaction, mut color, children) in &mut interaction_query {
@@ -204,29 +205,30 @@ fn setup_menu(mut commands: Commands,
 	let addr = get_addr();
 	println!("{}", addr);
     let udp_socket = UdpSocket::bind(addr).unwrap();
+	udp_socket.set_nonblocking(true).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
 
     commands.insert_resource(GameClient {
-        socket: Socket {
+        socket: SocketInfo {
             addr,
             udp_socket,
         },
         player_type: crate::game_client::PlayerType::Client,
         udp_channel: UdpChannel {
             sx,
-            rx
-        },
+			rx
+		},
 });
 	info!("should've created game client");
  // -----------------------------------------------------------------------------------------------------------
 
 	// creates the channel for the main game thread
- 	let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
-	//create entity for the main game thread's sender + receiver
-    commands.insert_resource(GameChannel {
-        gsx,
-        grx
-    });
+ 	// let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
+	// //create entity for the main game thread's sender + receiver
+    // commands.insert_resource(GameChannel {
+    //     gsx,
+    //     grx
+    // });
  // -----------------------------------------------------------------------------------------------------------
 
 

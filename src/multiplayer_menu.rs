@@ -3,10 +3,11 @@ use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::game_client::{GameClient, self, PlayerType, Package};
 use crate::{
-	GameState, GameChannel
+	GameState
 };
-use std::io;
+use std::{io, thread};
 use std::net::{UdpSocket, Ipv4Addr};
+use std::sync::mpsc::{Receiver, Sender, self};
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
@@ -81,9 +82,24 @@ fn despawn_mult_menu(mut commands: Commands,
 fn setup_mult(mut commands: Commands,
 	asset_server: Res<AssetServer>,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>,
-    game_channel: Res<GameChannel>,
+    // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>
 ){ 
+
+    let c_sx = game_client.udp_channel.sx.clone();
+    
+    // create thread for player's battle communication 
+    thread::spawn(move || {
+        let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
+
+        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+
+        c_sx.send(test_pkg).unwrap();
+
+    });
+    let response = game_client.udp_channel.rx.try_recv().unwrap();
+    println!("Player thread receiving this message: {}", response.message);
+
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
 	});
@@ -210,7 +226,7 @@ pub (crate) fn host_button_handler(
         (Changed<Interaction>, With<HostButton>),
     >,
     mut text_query: Query<&mut Text>,
-    game_channel: Res<GameChannel>,
+    // game_channel: Res<GameChannel>,
     mut game_client: ResMut<GameClient>,
     mut commands: Commands
 ) {
@@ -257,12 +273,12 @@ pub (crate) fn host_button_handler(
                 println!("printed this: {}", client_addr_port);
 
                 // sends msg from host to client following successful connection
-                let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
+                // let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
 
                 // Creates the soft connection btwn player 1 and player 2
                 game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
 
-                game_client.socket.udp_socket.send_to(b"MSG FROM HOST TO CAELA HERE PLEASE WORK", "10.4.27.34:9800");
+                game_client.socket.udp_socket.send(b"SENT MSG FROM HOST TO CLIENT");
 
             }
             Interaction::Hovered => {
@@ -283,7 +299,7 @@ pub (crate) fn client_button_handler(
         (Changed<Interaction>, With<ClientButton>),
     >,
     mut text_query: Query<&mut Text>,
-    game_channel: Res<GameChannel>,
+    // game_channel: Res<GameChannel>,
     mut game_client: ResMut<GameClient>,
     mut commands: Commands
 ) {
@@ -295,14 +311,16 @@ pub (crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
                 //commands.insert_resource(NextState(GameState::PrePeer));
-                info!("got here");
                 let mut buf = [0; 100];
-                let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf).expect("Didn't receive data");
-                let filled_buf = &mut buf[..number_of_bytes];
-                // match game_client.socket.udp_socket.recv(&mut buf) {
-                //     Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
-                //     Err(e) => println!("recv function failed: {e:?}"),
-                // }
+                // let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf)
+                //                                         .expect("Didn't receive data");
+                // let filled_buf = &mut buf[..number_of_bytes];
+                // info!("{:?}", filled_buf);
+            
+                match game_client.socket.udp_socket.recv(&mut buf) {
+                    Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
+                    Err(e) => println!("recv function failed: {e:?}"),
+                }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();
