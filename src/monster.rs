@@ -1,16 +1,22 @@
 // current implementation focuses on getting all essential data for monsters in game, will need further optimizations in here and functions later.
 
+use std::f32::consts::E;
+
 use bevy::{prelude::*};
 use iyes_loopless::prelude::*;
 use crate::GameState;
 use crate::camera::{SlidesCamera};
 use crate::player::{Player};
 use crate::backgrounds::{Tile};
-use rand::seq::SliceRandom;
+use rand::{
+    seq::SliceRandom,
+    distributions::{Distribution, Standard},
+};
 
 pub(crate) struct MonsterPlugin;
 // unused at the moment
-pub(crate) const BASIC_ENEMY: &str = "monsters/clean_monster.png";
+pub(crate) const BASIC_ENEMY: &str = "monsters/stickdude.png";
+
 
 // Elemental types
 #[derive(Component, Copy, Clone)]
@@ -130,7 +136,7 @@ pub(crate) struct MonsterPartyBundle{
 // Slot and Enemy may be redundant, but slot == 0 && Enemy == false allows for display of non-party, non-fighting monsters.
 impl Default for MonsterBundle {
     fn default() -> Self { MonsterBundle {
-        typing: Element::Clean,
+        typing: rand::random(),
         lvl: Level {
 			max_level: 10,
 			level: 1,
@@ -184,4 +190,66 @@ impl Default for MonsterBundle {
             
 //             //.with_children(|parent| {parent.spawn_bundle(MonsterBundle{ _slot: Slot(1), _enemy: Enemy(false), ..Default::default() });
 //             //parent.spawn_bundle(MonsterBundle{ _lvl: Level(0), ..Default::default()});});
-// }   
+// } 
+
+
+// =========================================== HELPERS ===============================================
+
+pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
+    match elm {
+        Element::Scav => String::from("monsters/stickdude.png"),
+        Element::Growth => String::from("monsters/stickdude.png"),
+        Element::Ember => String::from("monsters/ember_monster.png"),
+        Element::Flood => String::from("monsters/stickdude.png"),
+        Element::Rad => String::from("monsters/rad_monster.png"),
+        Element::Robot => String::from("monsters/robot_monster.png"),
+        Element::Clean => String::from("monsters/clean_monster.png"),
+        Element::Filth => String::from("monsters/stickdude.png"),
+    }
+}
+
+// Need to apparently implement distribution for our
+// elements enum to be able to pick randomly which type we want
+impl Distribution<Element> for Standard {
+    /// Get an iterator over random sample
+    // fn sample_iter<R>(self, rng: R) -> rand::distributions::DistIter<Self, R, Element>
+    // where
+    //     R: rand::Rng,
+    //     Self: Sized,
+    // {
+    //     rand::distributions::DistIter {
+    //         distr: self,
+    //         rng,
+    //         phantom: core::marker::PhantomData,
+    //     }
+    // }
+
+    // /// Map function to random distribution
+    // fn map<F, S>(self, func: F) -> rand::distributions::DistMap<Self, F, Element, S>
+    // where
+    //     F: Fn(Element) -> S,
+    //     Self: Sized,
+    // {
+    //     rand::distributions::DistMap {
+    //         distr: self,
+    //         func,
+    //         phantom: core::marker::PhantomData,
+    //     }
+    // }
+
+    /// Randomly sample the element enum 
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Element {
+        // Randomly generate a number from 0 to 7 then return an enum variant
+        // corresponding to that.
+        match rng.gen_range(0..=7) {
+            0 => Element::Scav,
+            1 => Element::Growth,
+            2 => Element::Ember,
+            3 => Element::Flood,
+            4 => Element::Rad,
+            5 => Element::Robot,
+            6 => Element::Clean,
+            _ => Element::Filth
+        }
+    }
+}

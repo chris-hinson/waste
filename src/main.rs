@@ -78,6 +78,7 @@ fn main() {
             ..default()
         })
         .init_resource::<WorldMap>()
+        .init_resource::<GameProgress>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
@@ -113,6 +114,7 @@ pub(crate) fn setup_game(mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Tile>)>,
+    mut game_progress: ResMut<GameProgress>
 ) {
     // Despawn other cameras
     cameras.for_each(|camera| {
@@ -144,10 +146,16 @@ pub(crate) fn setup_game(mut commands: Commands,
         });
 
     // Give the player a monster
-    commands.spawn_bundle(MonsterBundle {
+    let initial_monster_stats = MonsterBundle {
         hp: Health{max_health: 20, health: 20},
         ..Default::default()
-    }).insert(SelectedMonster);
+    };
+    let initial_monster = commands.spawn_bundle(initial_monster_stats.clone())
+        .insert(SelectedMonster).id();
+    // initial_monster.insert(SelectedMonster);
+    game_progress.new_monster(initial_monster.clone(), initial_monster_stats.clone());
+    
+    
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
