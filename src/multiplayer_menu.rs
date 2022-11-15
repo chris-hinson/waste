@@ -314,16 +314,16 @@ pub (crate) fn client_button_handler(
                 *color = PRESSED_BUTTON.into();
                 //commands.insert_resource(NextState(GameState::PrePeer));
                 let mut buf = [0; 100];
-                let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf)
-                                                        .expect("Didn't receive data");
-                let filled_buf = &mut buf[..number_of_bytes];
-                info!("{:?}", from_utf8(filled_buf));
+                // let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf)
+                //                                         .expect("Didn't receive data");
+                // let filled_buf = &mut buf[..number_of_bytes];
+                // info!("{:?}", from_utf8(filled_buf));
             
-                // match game_client.socket.udp_socket.recv(&mut buf) {
-                //     Ok(received) => println!("received {received} bytes {:?}", from_utf8(&buf[..received]).unwrap()
-                // ),
-                //     Err(e) => println!("recv function failed: {e:?}"),
-                // }
+                match game_client.socket.udp_socket.recv(&mut buf) {
+                    Ok(received) => println!("received {received} bytes {:?}", from_utf8(&buf[..received]).unwrap()
+                ),
+                    Err(e) => println!("recv function failed: {e:?}"),
+                }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();
