@@ -205,7 +205,7 @@ fn setup_menu(mut commands: Commands,
 	let addr = get_addr();
 	println!("{}", addr);
     let udp_socket = UdpSocket::bind(addr).unwrap();
-	//udp_socket.set_nonblocking(true).unwrap();
+	udp_socket.set_nonblocking(false).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
 
     commands.insert_resource(GameClient {
