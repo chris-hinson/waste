@@ -5,6 +5,7 @@ use crate::game_client::{GameClient, self, PlayerType, Package};
 use crate::{
 	GameState
 };
+use std::str::from_utf8;
 use std::{io, thread};
 use std::net::{UdpSocket, Ipv4Addr};
 use std::sync::mpsc::{Receiver, Sender, self};
@@ -319,7 +320,8 @@ pub (crate) fn client_button_handler(
                 // info!("{:?}", filled_buf);
             
                 match game_client.socket.udp_socket.recv(&mut buf) {
-                    Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
+                    Ok(received) => println!("received {received} bytes {:?}", from_utf8(&buf[..received]).unwrap()
+                ),
                     Err(e) => println!("recv function failed: {e:?}"),
                 }
             }
