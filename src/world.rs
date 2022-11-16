@@ -1,7 +1,7 @@
 use {bevy::prelude::*};
 use bevy::ecs::entity;
 
-use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::MonsterBundle};
+use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::MonsterStats};
 use std::collections::HashMap;
 
 
@@ -80,8 +80,8 @@ pub(crate) struct GameProgress{
     pub boss_progress: usize,
     // level_progress needed to see the boss
     pub boss_level: usize,
-    // number of monsters defeated before the next level
-    pub next_level: usize,
+    // if we have defeated the level boss
+    pub level_boss_awaken: bool,
     // keeps track of how many monsters we have
     // this is the our id independent from bevy's entity id
     pub num_monsters: usize,
@@ -95,19 +95,23 @@ pub(crate) struct GameProgress{
     // Entity to our id
     pub entity_monster_id: HashMap<Entity, usize>,
     // get MonsterBundle from entity
-    pub monster_entity_id_to_stats: HashMap<usize, MonsterBundle>,
+    pub monster_entity_to_stats: HashMap<Entity, MonsterStats>,
+    // all monsters' entity id to their stats
+    // to help us retrieve stats when we defeat them
+    pub enemy_stats: HashMap<Entity, MonsterStats>,
 }
 
 
 impl GameProgress {
-    pub fn new_monster(&mut self, entity: Entity, stats: MonsterBundle) {
+    pub fn new_monster(&mut self, entity: Entity, stats: MonsterStats) {
         let id = entity.id() as usize;
         self.num_monsters += 1;
         self.allied_monster_id.insert(self.num_monsters, id);
         self.id_allied_monster.insert(id, self.num_monsters);
         self.monster_id_entity.insert(self.num_monsters, entity);
         self.entity_monster_id.insert(entity, self.num_monsters);
-        self.monster_entity_id_to_stats.insert(id, stats);
+        self.monster_entity_to_stats.insert(entity, stats);
+        info!("you have {} monsters now.", self.num_monsters);
     }
 
     pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
@@ -115,7 +119,54 @@ impl GameProgress {
         let next_montser = self.monster_id_entity.get(&(*our_id.unwrap()+1));
         return next_montser;
     }
+
+    pub fn win_battle(&mut self){
+        self.level_progress += 1;
+        if self.level_progress == 5{
+            self.current_level += 1;
+            self.level_progress = 0;
+            self.level_boss_awaken = true;
+            info!("you have awakened the level boss!");
+        }
+        info!("You are now level {}, defeat {} monsters to advance to the next level",
+        self.current_level, 5-self.level_progress);
+    }
+
+    pub fn win_boss(&mut self){
+        self.boss_progress += 1;
+        self.level_boss_awaken = false;
+        if self.boss_progress == 5{
+            self.boss_level += 1;
+            self.boss_progress = 0;
+        }
+        info!("You have defeated {} bosses, defeat {} more bosses to win the game",
+        self.boss_level, 5-self.boss_progress);
+        if self.boss_level == 5{
+            info!("You have defeated all the bosses, you win!");
+            // win the game
+            // commands.insert_resource(NextState(GameState::Credits));
+        }
+    }
+
+    // can't do this because we don't have access to the commands
+    // pub fn monster_level_up(&mut self, entity: Entity, level: usize, mut commands: Commands) {
+    //     info!("your monster level up!");
+    //     let mut stats = self.monster_entity_to_stats.get_mut(&entity).unwrap();
+    //     stats.lvl.level += 1;
+    //     stats.hp.max_health += 10;
+    //     stats.hp.health = stats.hp.max_health as isize;
+    //     stats.stg.atk += 2;
+    //     stats.stg.crt += 5;
+    //     stats.def.def += 1;
+    //     // we have to remove the old stats and add the new one
+    //     // because we cannot change the stats in place
+    //     commands.entity(entity).remove::<MonsterStats>();
+    //     commands.entity(entity).insert(stats.clone());
+    // }
+
 }
+
+
 
 // We can reintroduce this once we want/need a fancy resource
 // impl FromWorld for GameProgress {
