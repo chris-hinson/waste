@@ -481,14 +481,14 @@ pub(crate) fn update_battle_stats(mut commands: Commands,
 pub(crate) fn spawn_player_monster(mut commands: Commands, 
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
-    selected_type_query: Query<(&Element), (With<SelectedMonster>, Without<Enemy>)>,
+    selected_monster_query: Query<(&Element, Entity), (With<SelectedMonster>, Without<Enemy>)>,
 ) {
     if cameras.is_empty() {
         error!("No spawned camera...?");
         return;
     }
 
-    if selected_type_query.is_empty() {
+    if selected_monster_query.is_empty() {
         error!("No selected monster...?");
         return;
     }
@@ -496,10 +496,11 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
     let (ct, _) = cameras.single();
 
     // why doesn't this update
-    let selected_type = selected_type_query.single();
+    let (selected_type, selected_monster) = selected_monster_query.single();
 
     commands
-    .spawn_bundle(
+    .entity(selected_monster)
+    .insert_bundle(
         SpriteBundle {
             sprite: Sprite {
                 flip_y: false,  // flips our little buddy, you guessed it, in the y direction
@@ -525,6 +526,7 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
     if cameras.is_empty() 
     {
         error!("No spawned camera...?");
+        return;
     }
 
     if selected_type_query.is_empty() {
@@ -701,8 +703,10 @@ pub (crate) fn attack_button_handler (
                         end_battle!(commands, game_progress, pm, em);
                     } else {
                         info!("Your monster was defeated. Switching to next monster.");
-                        // TODO: the discrepancy also leads to us not updating the monster
                         commands.entity(pm.5).remove::<SelectedMonster>();
+                        commands.entity(pm.5).remove_bundle::<SpriteBundle>();
+                        commands.entity(pm.5).remove::<PlayerMonster>();
+                        commands.entity(pm.5).remove::<Monster>();
                         commands.entity(*next_monster.unwrap()).insert(SelectedMonster); 
                     }   
                 }
@@ -912,7 +916,11 @@ pub(crate) fn despawn_battle(mut commands: Commands,
    }
 
    monster_query.for_each(|monster| {
-        commands.entity(monster).despawn();
+        commands.entity(monster)                       
+        .remove_bundle::<SpriteBundle>()
+        .remove::<PlayerMonster>()
+        .remove::<EnemyMonster>()
+        .remove::<Monster>();
    });
 
 
