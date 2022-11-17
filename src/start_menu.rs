@@ -256,7 +256,7 @@ fn setup_menu(
     
 
     commands.insert_resource(GameClient {
-        socket: SocketInfo { addr, udp_socket },
+        socket: SocketInfo { socket_addr, udp_socket },
         player_type: crate::game_client::PlayerType::Client,
         udp_channel: UdpChannel { sx, rx },
     });
