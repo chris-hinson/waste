@@ -1,4 +1,5 @@
 #![allow(unused)]
+use std::fmt::format;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
 use std::sync::mpsc::{Receiver, channel, Sender};
 use local_ip_address::local_ip;
@@ -199,15 +200,17 @@ fn setup_menu(mut commands: Commands,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>,
 ){ 
 // -----------------------------------------------------------------------------------------------------------
-	let addr = get_addr();
-	println!("{}", addr);
-    let udp_socket = UdpSocket::bind(addr).unwrap();
+	//hardcoded for localhost for now
+	let socket_addr = get_addr();
+	let connection_err_msg = format!("Could not bind to {}", socket_addr);
+	let udp_socket = UdpSocket::bind(socket_addr).expect(&connection_err_msg);
+	info!("Successfully binded host to {}", socket_addr);
 	udp_socket.set_nonblocking(true).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
 
     commands.insert_resource(GameClient {
         socket: SocketInfo {
-            addr,
+            socket_addr,
             udp_socket,
         },
         player_type: crate::game_client::PlayerType::Client,
@@ -216,17 +219,6 @@ fn setup_menu(mut commands: Commands,
 			rx
 		},
 });
- // -----------------------------------------------------------------------------------------------------------
-
-	// creates the channel for the main game thread
- 	// let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
-	// //create entity for the main game thread's sender + receiver
-    // commands.insert_resource(GameChannel {
-    //     gsx,
-    //     grx
-    // });
- // -----------------------------------------------------------------------------------------------------------
-
 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();

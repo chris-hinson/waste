@@ -1,7 +1,7 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::game_client::{GameClient, self, PlayerType, Package};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port};
 use crate::{
 	GameState
 };
@@ -251,43 +251,19 @@ pub (crate) fn host_button_handler(
                 // if player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
 
-                // get client IP
-                println!("Enter in client IP address.");
-                let mut client_ip_addr: String = String::new();
-                //placeholder value for scope purposes
-                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
-	            match io::stdin().read_line(&mut client_ip_addr) {
-		            Ok(_) => {
-                         client_ip_addr = client_ip_addr.trim().to_string();
-                         //let split_ip_addr: Vec<u8> = client_ip_addr.split(".").map(|val| val.parse().unwrap()).collect();
-                        
-                    }
-                    Err(_e) => {
-                        // some error handling
-                    }
-	            }
-                // get client port
-                println!("Enter in client port.");
-                let mut client_port: String = String::new();
-	            match io::stdin().read_line(&mut client_port){
-		            Ok(_) => {
-                        client_port = client_port.trim().to_string();
-                    }
-                    Err(_e) => {
-                        //some error handling
-                    }
-	            }
-
-                let client_addr_port = format!("{}:{}", client_ip_addr, client_port);
-                println!("printed this: {}", client_addr_port);
-
-                // sends msg from host to client following successful connection
-                // let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
+                let mut buf = [0; 2048];
+                match game_client.socket.udp_socket.recv(&mut buf) {
+                    Ok(received) => {
+                        println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
+                        buf = buf;
+                    },
+                    Err(e) => println!("recv function failed: {e:?}"),
+                }
 
                 // Creates the soft connection btwn player 1 and player 2
-                game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
+                // game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
 
-                game_client.socket.udp_socket.send(b"SENT MSG FROM HOST TO CLIENT");
+                // game_client.socket.udp_socket.send(b"SENT MSG FROM HOST TO CLIENT");
 
             }
             Interaction::Hovered => {
@@ -319,17 +295,39 @@ pub (crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
                 //commands.insert_resource(NextState(GameState::PrePeer));
-                let mut buf = [0; 100];
-                // let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf)
-                //                                         .expect("Didn't receive data");
-                // let filled_buf = &mut buf[..number_of_bytes];
-                // info!("{:?}", from_utf8(filled_buf));
-            
-                match game_client.socket.udp_socket.recv(&mut buf) {
-                    Ok(received) => println!("received {received} bytes {:?}", from_utf8(&buf[..received]).unwrap()
-                ),
-                    Err(e) => println!("recv function failed: {e:?}"),
-                }
+
+
+                // get host IP
+                println!("Enter in host IP address.");
+                let mut host_ip_addr: String = String::new();
+                //placeholder value for scope purposes
+                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
+	            match io::stdin().read_line(&mut host_ip_addr) {
+		            Ok(_) => {
+                         host_ip_addr = host_ip_addr.trim().to_string();
+                        
+                    }
+                    Err(_e) => {
+                        // some error handling
+                    }
+	            }
+                // get host port
+                println!("Enter in host port.");
+                let mut host_port: String = String::new();
+	            match io::stdin().read_line(&mut host_port){
+		            Ok(_) => {
+                        host_port = host_port.trim().to_string();
+                    }
+                    Err(_e) => {
+                        //some error handling
+                    }
+	            }
+
+                let host_addr_port = format!("{}:{}", host_ip_addr, host_port);
+                info!("printed this: {}", host_addr_port);
+
+                game_client.socket.udp_socket.connect(host_addr_port);
+                game_client.socket.udp_socket.send(b"test msg from client to host").expect("Error on send");        
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();
