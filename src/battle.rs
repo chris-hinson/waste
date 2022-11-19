@@ -191,7 +191,7 @@ pub(crate) fn setup_battle(mut commands: Commands,
                             game_client: Res<GameClient>,
 ) { 
 
-    //let temp 
+    // what is this??
     if cameras.is_empty() {
         // error!("No spawned camera...?");
     } else{
@@ -538,18 +538,8 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
 
     let (ct, _) = cameras.single();
 
-    // This spawns a new monster that has nothing to do with battle
-    // The one fore battle is spawned in the player.rs when we collide with a monster tile
-    // let monster_info = MonsterStats {
-    //     ..default()
-    // };
-
-
-    // let sprite_string = &get_monster_sprite_for_type(monster_info.clone().typing);
-
     commands.spawn_bundle(
         SpriteBundle {
-            // texture: asset_server.load(sprite_string),
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
             transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
             ..default()
