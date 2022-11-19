@@ -14,9 +14,6 @@ use rand::{
 };
 
 pub(crate) struct MonsterPlugin;
-// unused at the moment
-pub(crate) const BASIC_ENEMY: &str = "monsters/stickdude.png";
-
 
 // Elemental types
 #[derive(Component, Copy, Clone, Debug)]
@@ -202,11 +199,11 @@ pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
         Element::Scav => String::from("monsters/stickdude.png"),
         Element::Growth => String::from("monsters/stickdude.png"),
         Element::Ember => String::from("monsters/ember_monster.png"),
-        Element::Flood => String::from("monsters/stickdude.png"),
+        Element::Flood => String::from("monsters/flood_monster.png"),
         Element::Rad => String::from("monsters/rad_monster.png"),
         Element::Robot => String::from("monsters/robot_monster.png"),
         Element::Clean => String::from("monsters/clean_monster.png"),
-        Element::Filth => String::from("monsters/stickdude.png"),
+        Element::Filth => String::from("monsters/filth_monster.png"),
     }
 }
 
