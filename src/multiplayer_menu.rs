@@ -83,7 +83,6 @@ fn despawn_mult_menu(mut commands: Commands,
 fn setup_mult(mut commands: Commands,
 	asset_server: Res<AssetServer>,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>,
-    // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>
 ){ 
 
@@ -255,16 +254,14 @@ pub (crate) fn host_button_handler(
                 match game_client.socket.udp_socket.recv(&mut buf) {
                     Ok(received) => {
                         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
-                        buf = buf;
+                        commands.insert_resource(NextState(GameState::Battle));
                     },
-                    Err(e) => println!("recv function failed: {e:?}"),
+                    Err(e) => {
+                        info!("No message was received: {}", e)
+                    }
                 }
 
-                // Creates the soft connection btwn player 1 and player 2
-                // game_client.socket.udp_socket.connect(client_addr_port).expect("couldnt connect");
-
-                // game_client.socket.udp_socket.send(b"SENT MSG FROM HOST TO CLIENT");
-
+                
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();
@@ -327,7 +324,7 @@ pub (crate) fn client_button_handler(
                 info!("printed this: {}", host_addr_port);
 
                 game_client.socket.udp_socket.connect(host_addr_port);
-                game_client.socket.udp_socket.send(b"test msg from client to host").expect("Error on send");        
+                game_client.socket.udp_socket.send(b"test msg from client to host").expect("Error on send");
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();

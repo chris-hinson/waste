@@ -94,49 +94,49 @@ impl Plugin for BattlePlugin {
                     .with_system(battle_thread)
                 
                 .into())
-            .add_exit_system(GameState::Battle, despawn_battle)
-            .add_enter_system_set(GameState::HostBattle, 
-                SystemSet::new()
-                    .with_system(setup_battle)
-                    .with_system(battle_pre_check)
-                    .with_system(setup_battle_stats)
-                    .with_system(abort_button)
-                    .with_system(attack_button)
-                    .with_system(defend_button)
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
-                )
-            .add_system_set(ConditionSet::new()
-                // Run these systems only when in Battle state
-                .run_in_state(GameState::HostBattle)
-                    // addl systems go here
-                    .with_system(mult_abort_handler)
-                    .with_system(attack_button_handler)
-                    .with_system(defend_button_handler)
-                .into())
-            .add_enter_system(GameState::PreHost, pre_host)
-            .add_enter_system(GameState::PrePeer, pre_peer)
-            .add_exit_system(GameState::HostBattle, despawn_battle)
-            .add_enter_system_set(GameState::PeerBattle, 
-                SystemSet::new()
-                    .with_system(setup_battle)
-                    .with_system(battle_pre_check)
-                    .with_system(setup_battle_stats)
-                    .with_system(abort_button)
-                    .with_system(attack_button)
-                    .with_system(defend_button)
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
-                )
-            .add_system_set(ConditionSet::new()
-                // Run these systems only when in Battle state
-                .run_in_state(GameState::PeerBattle)
-                    // addl systems go here
-                    .with_system(mult_abort_handler)
-                    .with_system(attack_button_handler)
-                    .with_system(defend_button_handler)
-                .into())
-            .add_exit_system(GameState::PeerBattle, despawn_battle);
+            .add_exit_system(GameState::Battle, despawn_battle);
+            // .add_enter_system_set(GameState::HostBattle, 
+            //     SystemSet::new()
+            //         .with_system(setup_battle)
+            //         .with_system(battle_pre_check)
+            //         .with_system(setup_battle_stats)
+            //         .with_system(abort_button)
+            //         .with_system(attack_button)
+            //         .with_system(defend_button)
+            //         .with_system(spawn_player_monster)
+            //         .with_system(spawn_enemy_monster)
+            //     )
+            // .add_system_set(ConditionSet::new()
+            //     // Run these systems only when in Battle state
+            //     .run_in_state(GameState::HostBattle)
+            //         // addl systems go here
+            //         .with_system(mult_abort_handler)
+            //         .with_system(attack_button_handler)
+            //         .with_system(defend_button_handler)
+            //     .into())
+            // .add_enter_system(GameState::PreHost, pre_host)
+            // .add_enter_system(GameState::PrePeer, pre_peer)
+            // .add_exit_system(GameState::HostBattle, despawn_battle)
+            // .add_enter_system_set(GameState::PeerBattle, 
+            //     SystemSet::new()
+            //         .with_system(setup_battle)
+            //         .with_system(battle_pre_check)
+            //         .with_system(setup_battle_stats)
+            //         .with_system(abort_button)
+            //         .with_system(attack_button)
+            //         .with_system(defend_button)
+            //         .with_system(spawn_player_monster)
+            //         .with_system(spawn_enemy_monster)
+            //     )
+            // .add_system_set(ConditionSet::new()
+            //     // Run these systems only when in Battle state
+            //     .run_in_state(GameState::PeerBattle)
+            //         // addl systems go here
+            //         .with_system(mult_abort_handler)
+            //         .with_system(attack_button_handler)
+            //         .with_system(defend_button_handler)
+            //     .into())
+            // .add_exit_system(GameState::PeerBattle, despawn_battle);
     }
 }
 
@@ -185,15 +185,13 @@ pub(crate) fn pre_peer(mut commands: Commands){
 
 pub(crate) fn setup_battle(mut commands: Commands,
                            asset_server: Res<AssetServer>,
-                           cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
-                            Without<Player>, Without<Tile>)>,
-                            // game_channel: Res<GameChannel>,
+                           cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
                             game_client: Res<GameClient>,
 ) { 
 
     //let temp 
     if cameras.is_empty() {
-        // error!("No spawned camera...?");
+        error!("No spawned camera...?");
     } else{
 
     }
@@ -904,6 +902,7 @@ pub(crate) fn despawn_battle(mut commands: Commands,
 
    background_query.for_each(|background| {
         commands.entity(background).despawn();
+        info!("got here");
    });
 
    if monster_query.is_empty() 
