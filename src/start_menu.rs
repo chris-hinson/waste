@@ -123,26 +123,26 @@ pub (crate) fn credits_button_handler(
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Credits));
 
-				let c_sx = game_client.udp_channel.sx.clone();
+				// let c_sx = game_client.udp_channel.sx.clone();
     
-				// create thread for player's battle communication 
-				std::thread::spawn(move || {
-					let (tx, rx): (Sender<Package>, Receiver<Package>) = std::sync::mpsc::channel();
+				// // create thread for player's battle communication 
+				// std::thread::spawn(move || {
+				// 	let (tx, rx): (Sender<Package>, Receiver<Package>) = std::sync::mpsc::channel();
 
-					let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+				// 	let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
-					c_sx.send(test_pkg).unwrap();
+				// 	c_sx.send(test_pkg).unwrap();
 
-					let response_from_game = rx.recv().unwrap();
-					println!("battle thread received confirmation here: {}", response_from_game.message);
+				// 	let response_from_game = rx.recv().unwrap();
+				// 	println!("battle thread received confirmation here: {}", response_from_game.message);
 
-    			});
+    			// });
 
-				let res = game_client.udp_channel.rx.recv().unwrap();
-				let battle_thread_sx = res.sender.expect("Couldnt find sender");
-				println!("Game thread got this msg: {}", res.message);
-				let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
-				battle_thread_sx.send(response_back);
+				// let res = game_client.udp_channel.rx.recv().unwrap();
+				// let battle_thread_sx = res.sender.expect("Couldnt find sender");
+				// println!("Game thread got this msg: {}", res.message);
+				// let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
+				// battle_thread_sx.send(response_back);
 
 				// match game_client.udp_channel.rx.try_recv() {
 				// 	Ok(pkg_response) => println!("{:?}", pkg_response.message),

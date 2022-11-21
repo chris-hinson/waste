@@ -86,7 +86,6 @@ fn main() {
 		.add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
         .add_plugin(BattlePlugin)
-        // .add_plugin(MonsterPlugin)
         .add_plugin(MultMenuPlugin)
     .add_enter_system_set(GameState::StartPlaying, 
         // This system set is unconditional, as it is being added in an enter helper
@@ -102,11 +101,14 @@ fn main() {
             .with_system(move_camera)
             .with_system(animate_sprite)
             .with_system(expand_map)
+            .with_system(win_game)
         .into()
     )
     // Despawn game when exiting game state
-    // .add_exit_system(GameState::Playing, despawn_game)
-    //.add_exit_system(GameState::Playing, despawn_camera_temp)
+    .add_exit_system_set(GameState::Playing,
+        SystemSet::new()
+            .with_system(despawn_game)
+    )
     .run();
 }
 
@@ -186,4 +188,13 @@ pub(crate) fn despawn_game(mut commands: Commands,
     player_query.for_each(|player| {
         commands.entity(player).despawn();
     });
+}
+
+pub(crate) fn win_game(
+    mut commands: Commands,
+    mut game_progress: ResMut<GameProgress>,
+) {
+    if game_progress.num_boss_defeated == 5 {
+        commands.insert_resource(NextState(GameState::Credits));
+    }
 }
