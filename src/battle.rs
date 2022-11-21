@@ -1,7 +1,7 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::monster::{MonsterStats, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element, Boss};
+use crate::monster::{MonsterStats, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element, Boss, PartyMonster};
 use crate::{GameState, player};
 use crate::game_client::{GameClient, Package};
 use std::net::UdpSocket;
@@ -112,7 +112,6 @@ macro_rules! end_battle {
 
 macro_rules! monster_level_up {
     ($commands:expr, $game_progress:expr, $my_monster:expr, $up_by:expr) => {
-        info!("your monster level up!");
         let mut stats = $game_progress.monster_entity_to_stats.get_mut(&$my_monster).unwrap();
         stats.lvl.level += 1 * $up_by;
         stats.hp.max_health += 10 * $up_by;
@@ -501,6 +500,9 @@ pub (crate) fn attack_button_handler (
     mut enemy_monster: 
         Query<(&mut Health, &mut Strength, &mut Defense, &mut Moves, Entity, Option<&Boss>), 
         (Without<SelectedMonster>, With<Enemy>)>,
+    mut party_monsters:
+        Query<(Entity), 
+        (With<PartyMonster>, Without<SelectedMonster>, Without<Enemy>)>,
     mut game_progress: ResMut<GameProgress>,
  ) {
 
@@ -552,13 +554,14 @@ pub (crate) fn attack_button_handler (
                 enemy_health.health -= turn_result.0;
 
                 if enemy_health.health <= 0 {
-                    info!("Enemy monster defeated.");
+                    info!("Enemy monster defeated. Your monsters will level up!");
                     // at this point this monster is already "ours", we just need to register is with the resource
                     // get the stats from the monster
                     let new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
                     // remove the monster from the enemy stats
                     game_progress.enemy_stats.remove(&enemy_entity);
                     // add the monster to the monster bag
+                    commands.entity(enemy_entity).insert(PartyMonster);
                     game_progress.new_monster(enemy_entity, new_monster_stats);
                     // TODO: see the discrepancy between the type we see and the type we get
                     info!("new member type: {:?}", game_progress.monster_entity_to_stats.get(&enemy_entity).unwrap().typing);
@@ -568,11 +571,17 @@ pub (crate) fn attack_button_handler (
                         info!("Boss defeated!");
                         game_progress.win_boss();
                         // if boss level up twice
-                        monster_level_up!(commands, game_progress, player_entity, 2);
+                        for pm_entity in party_monsters.iter_mut() {
+                            monster_level_up!(commands, game_progress, pm_entity, 1);
+                        }
+                        monster_level_up!(commands, game_progress, player_entity, 1);
                         commands.entity(enemy_entity).remove::<Boss>();
                     } else {
                         game_progress.win_battle();
                         // if not boss level up once
+                        for pm_entity in party_monsters.iter_mut() {
+                            monster_level_up!(commands, game_progress, pm_entity, 1);
+                        }
                         monster_level_up!(commands, game_progress, player_entity, 1);
                     }
                     end_battle!(commands, game_progress, player_entity, enemy_entity);
@@ -862,6 +871,8 @@ fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: 
             }
         }
     }
+
+    info!("Player deals {} damage, enemy deals {} damage...", result.0, result.1);
 
     return (result.0 as isize, result.1 as isize)
 }
