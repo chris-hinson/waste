@@ -152,19 +152,20 @@ pub(crate) fn move_player(
 				// The level_boss_awaken bool is by default false
 				// it will appear after we level up(defeat 5 monsters)
 				if !game_progress.level_boss_awaken {
+					// Normal monster
 					let enemy_stats = MonsterStats {
-						lvl: Level{level: 1+game_progress.current_level, max_level: 10},
+						lvl: Level { level: game_progress.current_level },
 						hp: Health{
-							health: ((1+game_progress.current_level)*10) as isize, 
-							max_health: (1+game_progress.current_level)*10
+							health: (game_progress.current_level*10) as isize, 
+							max_health: (game_progress.current_level)*10
 						},
 						stg: Strength{
-							atk: (1+game_progress.current_level)*2, 
-							crt: 25+game_progress.current_level*5, 
+							atk: (game_progress.current_level)*2, 
+							crt: game_progress.current_level*5, 
 							crt_dmg: 2
 						},
 						def: Defense{
-							def: 1+game_progress.current_level*1, 
+							def: game_progress.current_level*1, 
 							crt_res: 10
 						},
 						..Default::default()
@@ -174,20 +175,21 @@ pub(crate) fn move_player(
 						.insert(Enemy).id();
 					game_progress.enemy_stats.insert(enemy_entity, enemy_stats);
 				} else {
+					// Boss monster
 					let enemy_stats = MonsterStats {
-						lvl: Level{level: game_progress.current_level, max_level: 10},
+						lvl: Level { level: game_progress.current_level },
 						// So when we battle him, he has 100 hp
 						hp: Health{
-							health: ((5+game_progress.current_level)*100) as isize, 
-							max_health: game_progress.current_level*100
+							health: (game_progress.current_level*70) as isize, 
+							max_health: game_progress.current_level*70
 						},
 						stg: Strength{
-							atk: (game_progress.current_level*10), 
-							crt: 25+(game_progress.current_level*5), 
+							atk: (game_progress.current_level*2), 
+							crt: 5+(game_progress.current_level*5), 
 							crt_dmg: 2
 						},
 						def: Defense{
-							def: 5+(game_progress.current_level*2), 
+							def: (game_progress.current_level*1), 
 							crt_res: 10
 						},
 						..Default::default()

@@ -31,7 +31,6 @@ pub(crate) enum Element {
 // stats, Components used for MonsterBundle
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Level{
-	pub max_level: usize,
 	pub level: usize,
 }
 #[derive(Component, Copy, Clone)]
@@ -114,6 +113,9 @@ pub(crate) struct MonsterStats{
 // used for MonsterPartyBundle
 #[derive(Component, Clone, Copy)]
 pub(crate) struct SelectedMonster;
+// Denotes a monster that is in our party
+#[derive(Component, Clone, Copy)]
+pub(crate) struct PartyMonster;
 #[derive(Component)]
 pub(crate) struct MonsterTotal(u8);
 #[derive(Component)]
@@ -137,7 +139,6 @@ impl Default for MonsterStats {
     fn default() -> Self { MonsterStats {
         typing: rand::random(),
         lvl: Level {
-			max_level: 10,
 			level: 1,
 		},
         exp: Experience(0),
