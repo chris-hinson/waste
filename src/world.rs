@@ -70,16 +70,11 @@ pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
     (x as f32 * WIN_W, y as f32 * WIN_H)
 }
 
-#[derive(Default)]
 pub(crate) struct GameProgress{
     // the level of our player, which is also the level we should spawn the monsters
     pub current_level: usize,
-    // the number of monsters we have defeated before next level
-    pub level_progress: usize,
-    // number of monsters defeated before the boss
-    pub boss_progress: usize,
-    // level_progress needed to see the boss
-    pub boss_level: usize,
+    // number of bosses we have defeated
+    pub num_boss_defeated: usize,
     // if we have defeated the level boss
     pub level_boss_awaken: bool,
     // keeps track of how many monsters we have
@@ -121,27 +116,23 @@ impl GameProgress {
     }
 
     pub fn win_battle(&mut self){
-        self.level_progress += 1;
-        if self.level_progress == 5{
-            self.current_level += 1;
-            self.level_progress = 0;
+        self.current_level += 1;
+        if self.current_level % 5 == 0 {
+            // We hit a level appropriate to fight a boss
             self.level_boss_awaken = true;
-            info!("you have awakened the level boss!");
+            info!("You are now level {}. You have awakened a boss! Your next fight will be a boss fight...",
+                self.current_level);
+        } else {
+            info!("You are now level {}. Defeat {} more monsters to face the next boss!",
+                self.current_level,
+                5-(self.current_level%5));
         }
-        info!("You are now level {}, defeat {} monsters to advance to the next level",
-        self.current_level, 5-self.level_progress);
     }
 
     pub fn win_boss(&mut self){
-        self.boss_progress += 1;
-        self.level_boss_awaken = false;
-        if self.boss_progress == 5{
-            self.boss_level += 1;
-            self.boss_progress = 0;
-        }
-        info!("You have defeated {} bosses, defeat {} more bosses to win the game",
-        self.boss_level, 5-self.boss_progress);
-        if self.boss_level == 5{
+        self.num_boss_defeated += 1;
+        info!("You have defeated {} bosses.", self.num_boss_defeated);
+        if self.num_boss_defeated == 5{
             info!("You have defeated all the bosses, you win!");
             // win the game
             // commands.insert_resource(NextState(GameState::Credits));
@@ -166,7 +157,22 @@ impl GameProgress {
 
 }
 
-
+impl Default for GameProgress {
+    fn default() -> Self {
+        Self { 
+            current_level: 1 as usize, 
+            num_boss_defeated: Default::default(),
+            level_boss_awaken: Default::default(), 
+            num_monsters: Default::default(), 
+            allied_monster_id: Default::default(), 
+            id_allied_monster: Default::default(), 
+            monster_id_entity: Default::default(), 
+            entity_monster_id: Default::default(), 
+            monster_entity_to_stats: Default::default(), 
+            enemy_stats: Default::default() 
+        }
+    }
+}
 
 // We can reintroduce this once we want/need a fancy resource
 // impl FromWorld for GameProgress {
