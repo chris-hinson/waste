@@ -247,12 +247,6 @@ fn setup_menu(mut commands: Commands,
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
-			// 	position_type: PositionType::Absolute,
-			// 	position: UiRect {
-			// 	bottom: Val::Px(175.),
-			// 	left: Val::Px((WIN_W * 0.8) / 2.),
-			// 	..default()
-			// },
 			..default()
 		},
             color: NORMAL_BUTTON.into(),
@@ -285,7 +279,7 @@ fn setup_menu(mut commands: Commands,
 			align_items: AlignItems::Center,
 			position_type: PositionType::Absolute,
 			position: UiRect {
-				bottom: Val::Px(170.),
+				bottom: Val::Px(190.),
 				left: Val::Px((WIN_W * 0.825) / 2.),
 				..default()
 			},
@@ -321,7 +315,7 @@ fn setup_menu(mut commands: Commands,
 			align_items: AlignItems::Center,
 			position_type: PositionType::Absolute,
 			position: UiRect {
-				bottom: Val::Px(250.),
+				bottom: Val::Px(270.),
 				left: Val::Px((WIN_W * 0.75) / 2.),
 				..default()
 			},

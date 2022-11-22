@@ -39,7 +39,7 @@ pub(crate) struct ClientButton;
 #[derive(Component)]
 pub(crate) struct MultMenuUIElement;
 
-// Builds plugin called MainMenuPlugin
+// Builds plugin for multiplayer menu
 impl Plugin for MultMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app
@@ -245,7 +245,6 @@ pub (crate) fn host_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                //commands.insert_resource(NextState(GameState::PreHost));
                 
                 // if player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
@@ -254,14 +253,13 @@ pub (crate) fn host_button_handler(
                 match game_client.socket.udp_socket.recv(&mut buf) {
                     Ok(received) => {
                         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
-                        commands.insert_resource(NextState(GameState::Battle));
+                        commands.insert_resource(NextState(GameState::MultiplayerBattle));
                     },
                     Err(e) => {
                         info!("No message was received: {}", e)
                     }
                 }
-
-                
+                 
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();

@@ -21,7 +21,8 @@ pub (crate) enum GameState{
     HostBattle,
     PeerBattle,
     Credits,
-    MultiplayerMenu
+    MultiplayerMenu,
+    MultiplayerBattle
 }
 
 pub(crate) const TITLE: &str = "Waste";
@@ -39,6 +40,7 @@ mod battle;
 mod monster;
 mod world;
 mod multiplayer_menu;
+mod multiplayer_battle;
 mod game_client;
 
 
@@ -53,6 +55,7 @@ use wfc::*;
 use monster::*;
 use world::*;
 use multiplayer_menu::*;
+use multiplayer_battle::*;
 
 
 
@@ -88,6 +91,7 @@ fn main() {
         .add_plugin(BattlePlugin)
         // .add_plugin(MonsterPlugin)
         .add_plugin(MultMenuPlugin)
+        .add_plugin(MultBattlePlugin)
     .add_enter_system_set(GameState::StartPlaying, 
         // This system set is unconditional, as it is being added in an enter helper
         SystemSet::new()
