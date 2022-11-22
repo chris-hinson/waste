@@ -31,7 +31,8 @@ impl Plugin for CreditsPlugin {
                 .with_system(show_slide)
                 .with_system(handle_exit_slides)
             .into())
-        .add_exit_system(GameState::Credits, despawn_credits);
+        .add_exit_system(GameState::Credits, despawn_credits)
+        .add_exit_system(GameState::Credits, crate::teardown);
 	}
 }
 

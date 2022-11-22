@@ -61,6 +61,7 @@ use world::*;
 use multiplayer_menu::*;
 use multiplayer_battle::*;
 use game_client::*;
+use game_client::*;
 
 
 
@@ -118,6 +119,11 @@ fn main() {
             .with_system(handle_pause)
         .into()
     )
+    // Despawn game when exiting game state
+    // .add_exit_system_set(GameState::Playing,
+    //     SystemSet::new()
+    //         .with_system(despawn_game)
+    // )
     .run();
 }
 
