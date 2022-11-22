@@ -53,6 +53,7 @@ use wfc::*;
 use monster::*;
 use world::*;
 use multiplayer_menu::*;
+use game_client::*;
 
 
 
@@ -105,10 +106,10 @@ fn main() {
         .into()
     )
     // Despawn game when exiting game state
-    .add_exit_system_set(GameState::Playing,
-        SystemSet::new()
-            .with_system(despawn_game)
-    )
+    // .add_exit_system_set(GameState::Playing,
+    //     SystemSet::new()
+    //         .with_system(despawn_game)
+    // )
     .run();
 }
 
@@ -169,10 +170,16 @@ pub(crate) fn despawn_camera_temp(mut commands: Commands, camera_query: Query<En
     });
 }
 
-pub(crate) fn despawn_game(mut commands: Commands,
+/// Tear down ALL significant resources for the game, and despawn all relevant 
+/// in game entities. This should be used when bailing out of the credits state
+/// after beating the game, or when exiting multiplayer to move to singleplayer.*
+/// 
+/// *Multiplayer may need to add their own relevant resources or queries to despawn
+pub(crate) fn teardown(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,
     background_query: Query<Entity, With<Tile>>,
     player_query: Query<Entity, With<Player>>,
+    monster_query: Query<Entity, With<PartyMonster>>
 ) {
     // Despawn main camera
     camera_query.for_each(|camera| {
@@ -188,6 +195,22 @@ pub(crate) fn despawn_game(mut commands: Commands,
     player_query.for_each(|player| {
         commands.entity(player).despawn();
     });
+
+    // Despawn monsters
+    monster_query.for_each(|monster| {
+        commands.entity(monster).despawn();
+    });
+
+    // Remove the game client, as we will reinitialize it on
+    // next setup
+    commands.remove_resource::<GameClient>();
+    // Remove the old worldmap
+    commands.remove_resource::<WorldMap>();
+    // Remove the game progress resource
+    commands.remove_resource::<GameProgress>();
+    // Re-initialize the resources
+    commands.init_resource::<WorldMap>();
+    commands.init_resource::<GameProgress>();
 }
 
 pub(crate) fn win_game(

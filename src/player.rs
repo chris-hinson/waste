@@ -217,6 +217,7 @@ pub(crate) fn move_player(
 				for mut hp in monster_hp.iter_mut() {
 					hp.health = hp.max_health as isize;
 				}
+				game_progress.num_living_monsters = game_progress.num_monsters;
 				info!("Monster health restored.");
 				commands.entity(healing_tile).remove::<HealingTile>();
 			}
