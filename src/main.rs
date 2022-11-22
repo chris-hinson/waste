@@ -17,7 +17,7 @@ pub(crate) enum GameState {
     Credits,
     Help, //NEW
     MultiplayerMenu,
-    MultiplayerBattle
+    MultiplayerBattle,
 }
 
 pub(crate) const TITLE: &str = "Waste";
@@ -102,7 +102,6 @@ fn main() {
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
         .add_plugin(MultBattlePlugin)
-
         .add_enter_system_set(
             GameState::StartPlaying,
             // This system set is unconditional, as it is being added in an enter helper
