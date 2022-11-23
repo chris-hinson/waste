@@ -21,6 +21,7 @@ pub (crate) enum GameState{
     HostBattle,
     PeerBattle,
     Credits,
+    Help, //NEW
     MultiplayerMenu,
     MultiplayerBattle
 }

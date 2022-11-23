@@ -39,6 +39,10 @@ pub(crate) struct MultiplayerButton;
 #[derive(Component)]
 pub(crate) struct StartMenuUIElement;
 
+#[derive(Component)]
+pub(crate) struct HelpButton; //NEW
+
+
 //Builds plugin called MainMenuPlugin
 impl Plugin for MainMenuPlugin {
 	fn build(&self, app: &mut App) {
@@ -50,6 +54,7 @@ impl Plugin for MainMenuPlugin {
 				.with_system(start_button_handler)
 				.with_system(credits_button_handler)
 				.with_system(multiplayer_button_handler)
+				.with_system(help_button_handler) //NEW
 			.into())
 		.add_exit_system(GameState::Start, despawn_start_menu);
 	}
@@ -187,6 +192,36 @@ pub (crate) fn multiplayer_button_handler(
             }
             Interaction::None => {
                 text.sections[0].value = "Multiplayer".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub (crate) fn help_button_handler( //NEW
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<HelpButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut commands: Commands,
+	game_client: Res<GameClient>,
+) {
+
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Help".to_string();
+                *color = PRESSED_BUTTON.into();
+                commands.insert_resource(NextState(GameState::Help));
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Help".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Help".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -342,5 +377,40 @@ fn setup_menu(mut commands: Commands,
 		));
 	})
 	.insert(MultiplayerButton)
+	.insert(StartMenuUIElement);
+
+	// HELP BUTTON NEW
+	commands
+	.spawn_bundle(ButtonBundle {
+		style: Style {
+			size: Size::new(Val::Px(125.0), Val::Px(65.0)),
+			// center button
+			margin: UiRect::all(Val::Auto),
+			// horizontally center child text
+			justify_content: JustifyContent::Center,
+			// vertically center child text
+			align_items: AlignItems::Center,
+			position_type: PositionType::Absolute,
+			position: UiRect {
+				bottom: Val::Px(90.),
+				left: Val::Px((WIN_W * 0.900) / 2.),
+				..default()
+			},
+			..default()
+		},
+		color: NORMAL_BUTTON.into(),
+		..default()
+	})
+	.with_children(|parent| {
+		parent.spawn_bundle(TextBundle::from_section(
+			"Help",
+			TextStyle {
+				font: asset_server.load("buttons/joystix monospace.ttf"),
+				font_size: 40.0,
+				color: TEXT_COLOR,
+			},
+		));
+	})
+	.insert(HelpButton)
 	.insert(StartMenuUIElement);
 }
