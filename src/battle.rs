@@ -479,7 +479,7 @@ pub(crate) fn key_press_handler(
         enemy_boss) = enemy_monster.single_mut();
 
     if player_health.health <= 0 {
-        let next_monster = game_progress.next_monster(player_entity);
+        let next_monster = game_progress.next_monster_cyclic(player_entity);
         if next_monster.is_none() {
             info!("Your monster was defeated.");
             end_battle!(commands, game_progress, player_entity, enemy_entity);
@@ -557,7 +557,7 @@ pub(crate) fn key_press_handler(
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else if player_health.health <= 0 {
             game_progress.num_living_monsters -= 1;
-            let next_monster = game_progress.next_monster(player_entity);
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
             if next_monster.is_none() {
                 info!("Your monster was defeated.");
                 end_battle!(commands, game_progress, player_entity, enemy_entity);

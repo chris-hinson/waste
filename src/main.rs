@@ -80,6 +80,7 @@ fn main() {
         })
         .init_resource::<WorldMap>()
         .init_resource::<GameProgress>()
+        .init_resource::<ProcGen>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"

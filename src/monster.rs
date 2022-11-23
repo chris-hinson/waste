@@ -197,7 +197,7 @@ impl Default for MonsterStats {
 
 pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
     match elm {
-        Element::Scav => String::from("monsters/stickdude.png"),
+        Element::Scav => String::from("monsters/scav_monster.png"),
         Element::Growth => String::from("monsters/stickdude.png"),
         Element::Ember => String::from("monsters/ember_monster.png"),
         Element::Flood => String::from("monsters/flood_monster.png"),
