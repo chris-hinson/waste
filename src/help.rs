@@ -88,7 +88,7 @@ pub(crate) fn setup_help(mut commands: Commands,
         .insert(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                bottom: Val::Px(500.0),
+                bottom: Val::Px(550.0),
                 left: Val::Px(10.0),
                 ..default()
             },
@@ -128,7 +128,7 @@ pub(crate) fn setup_help(mut commands: Commands,
         .insert(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                bottom: Val::Px(300.0),
+                bottom: Val::Px(350.0),
                 left: Val::Px(300.0),
                 ..default()
             },
