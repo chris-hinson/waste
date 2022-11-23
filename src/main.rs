@@ -21,6 +21,7 @@ pub (crate) enum GameState{
     HostBattle,
     PeerBattle,
     Credits,
+    Help, //NEW
     MultiplayerMenu
 }
 
@@ -30,6 +31,7 @@ pub(crate) const TITLE: &str = "Waste";
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
 //mod statements:
 mod credits;
+mod help; //NEW
 mod backgrounds;
 mod player;
 mod camera;
@@ -44,6 +46,7 @@ mod game_client;
 
 //use statements:
 use credits::*;
+use help::*; // NEW
 use backgrounds::*;
 use player::*;
 use camera::*;
@@ -87,6 +90,7 @@ fn main() {
 		.add_loopless_state(GameState::Start)
 		.add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
+        .add_plugin(HelpPlugin)
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
     .add_enter_system_set(GameState::StartPlaying, 
