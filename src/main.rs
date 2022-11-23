@@ -21,7 +21,7 @@ pub (crate) enum GameState{
     HostBattle,
     PeerBattle,
     Credits,
-    Help, //NEW
+    Help, 
     MultiplayerMenu
 }
 
@@ -31,7 +31,7 @@ pub(crate) const TITLE: &str = "Waste";
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
 //mod statements:
 mod credits;
-mod help; //NEW
+mod help; 
 mod backgrounds;
 mod player;
 mod camera;
@@ -46,7 +46,7 @@ mod game_client;
 
 //use statements:
 use credits::*;
-use help::*; // NEW
+use help::*; 
 use backgrounds::*;
 use player::*;
 use camera::*;

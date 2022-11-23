@@ -19,7 +19,7 @@ pub(crate) struct MenuCamera;
 pub(crate) struct SlidesCamera;
 
 #[derive(Component)]
-pub(crate) struct HelpCamera; //NEW
+pub(crate) struct HelpCamera; 
 
 pub(crate) const CAMERA_Z_VALUE: f32 = 100.;
 
