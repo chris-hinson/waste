@@ -46,7 +46,6 @@ pub(crate) fn setup_help(mut commands: Commands,
 			},
         ))
         .insert(Style {
-            align_self: AlignSelf::FlexEnd,
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(700.0),
@@ -67,7 +66,6 @@ pub(crate) fn setup_help(mut commands: Commands,
 			},
         ))
         .insert(Style {
-            align_self: AlignSelf::FlexEnd,
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(600.0),
@@ -88,7 +86,6 @@ pub(crate) fn setup_help(mut commands: Commands,
 			},
         ))
         .insert(Style {
-            align_self: AlignSelf::FlexEnd,
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(500.0),
@@ -109,7 +106,6 @@ pub(crate) fn setup_help(mut commands: Commands,
 			},
         ))
         .insert(Style {
-            align_self: AlignSelf::FlexEnd,
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(400.0),
@@ -130,7 +126,6 @@ pub(crate) fn setup_help(mut commands: Commands,
 			},
         ))
         .insert(Style {
-            align_self: AlignSelf::FlexEnd,
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(300.0),
