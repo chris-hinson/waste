@@ -40,7 +40,7 @@ pub(crate) struct MultiplayerButton;
 pub(crate) struct StartMenuUIElement;
 
 #[derive(Component)]
-pub(crate) struct HelpButton; //NEW
+pub(crate) struct HelpButton; 
 
 
 //Builds plugin called MainMenuPlugin
@@ -54,7 +54,7 @@ impl Plugin for MainMenuPlugin {
 				.with_system(start_button_handler)
 				.with_system(credits_button_handler)
 				.with_system(multiplayer_button_handler)
-				.with_system(help_button_handler) //NEW
+				.with_system(help_button_handler) 
 			.into())
 		.add_exit_system(GameState::Start, despawn_start_menu);
 	}
@@ -198,7 +198,7 @@ pub (crate) fn multiplayer_button_handler(
     }
 }
 
-pub (crate) fn help_button_handler( //NEW
+pub (crate) fn help_button_handler( 
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &Children),
         (Changed<Interaction>, With<HelpButton>),
@@ -379,7 +379,7 @@ fn setup_menu(mut commands: Commands,
 	.insert(MultiplayerButton)
 	.insert(StartMenuUIElement);
 
-	// HELP BUTTON NEW
+	// HELP BUTTON 
 	commands
 	.spawn_bundle(ButtonBundle {
 		style: Style {
