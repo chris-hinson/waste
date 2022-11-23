@@ -1,5 +1,5 @@
 use crate::player::{Player};
-use crate::wfc::wfc;
+use crate::wfc::{wfc, ProcGen};
 use bevy::prelude::*;
 use crate::world::{WorldMap, logical_to_rendering};
 
@@ -111,11 +111,14 @@ pub(crate) fn init_background(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut world: ResMut<WorldMap>,
+    procgen: Res<ProcGen>,
 ) {
+
+    let rules = procgen.rules.clone();
 
     let starting_chunk = Chunk{
         position: (0, 0),
-        tiles: wfc(None),
+        tiles: wfc(None, rules),
     };
 
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
@@ -134,12 +137,15 @@ pub(crate) fn expand_map(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut world: ResMut<WorldMap>,
+    procgen: Res<ProcGen>,
     mut player_query: Query<&mut Player>,
 ){
     // check for collision
     if player_query.is_empty(){
         error!("Couldn't find player");
     }
+
+    let rules = procgen.rules.clone();
 
     let player = player_query.single_mut();
     let player_chunk_pos = player.current_chunk;
@@ -183,7 +189,7 @@ pub(crate) fn expand_map(
             // }
             let new_chunk = Chunk{
                 position: (x, y),
-                tiles: wfc(Some(seed)),
+                tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
             };
             // info!("New chunk generated at {:?}", new_chunk.position);
@@ -224,7 +230,7 @@ pub(crate) fn expand_map(
             // }
             let new_chunk = Chunk{
                 position: (x, y),
-                tiles: wfc(Some(seed)),
+                tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
             };
             // info!("New chunk generated at {:?}", new_chunk.position);
@@ -265,7 +271,7 @@ pub(crate) fn expand_map(
             // }
             let new_chunk = Chunk{
                 position: (x, y),
-                tiles: wfc(Some(seed)),
+                tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
             };
             // info!("New chunk generated at {:?}", new_chunk.position);
@@ -306,7 +312,7 @@ pub(crate) fn expand_map(
             // }
             let new_chunk = Chunk{
                 position: (x, y),
-                tiles: wfc(Some(seed)),
+                tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
             };
             // info!("New chunk generated at {:?}", new_chunk.position);
