@@ -90,9 +90,7 @@ impl Plugin for BattlePlugin {
                     .with_system(abort_button_handler)
                     .with_system(attack_button_handler)
                     .with_system(defend_button_handler)
-                    .with_system(update_battle_stats)
-                    .with_system(battle_thread)
-                
+                    .with_system(update_battle_stats)                
                 .into())
             .add_exit_system(GameState::Battle, despawn_battle);
     }
@@ -160,52 +158,7 @@ pub(crate) fn setup_battle(mut commands: Commands,
         ..default()
     })
         .insert(BattleBackground);
-}
-
-pub(crate) fn battle_pre_check (
-    // game_channel: Res<GameChannel>,
-    game_client: Res<GameClient>,
-    mut commands: Commands
-) {
-    // -----------------------------------------------------------------------------------------------------------
-   
-    // game_client.udp_channel.sx.send(Package::new(String::from("START OF BATTLE: P2P MESSAGE"), Some(game_client.udp_channel.sx.clone())));
-    // game_client.socket.udp_socket.send(b"MSG");
-    // let mut buf = [0; 100];
-    // match game_client.socket.udp_socket.recv(&mut buf) {
-    //     Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
-    //     Err(e) => println!("recv function failed: {e:?}"),
-    // }
-    
-    // blocks execution until confirmation that message is received from main. Will not need in future 
-    // but thought it would be good to have a sanity check until I get everything works smoothly
-    // let received_pkg = game_client.udp_channel.rx.recv().unwrap();
-    // info!("{}: {:?}", received_pkg.message, received_pkg.sender.expect("Ooops, can't get the sender"));
-}   
-
-
-// -----------------------------------------------------------------------------------------------------------
-
-pub(crate) fn battle_thread (
-    // game_channel: Res<GameChannel>,
-    game_client: Res<GameClient>,
-    mut commands: Commands
-) {
-
-    // let c_sx = game_client.udp_channel.sx.clone();
-    
-    // // create thread for player's battle communication 
-    // thread::spawn(move || {
-    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
-
-    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
-
-    //     c_sx.send(test_pkg).unwrap();
-
-    // });
-    // let response = game_client.udp_channel.rx.try_recv().unwrap();
-    // println!("Player thread receiving this message: {}", response.message);
-}
+} 
 
 pub(crate) fn setup_battle_stats(mut commands: Commands, 
 	asset_server: Res<AssetServer>,
