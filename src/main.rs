@@ -42,6 +42,7 @@ mod monster;
 mod world;
 mod multiplayer_menu;
 mod game_client;
+mod quests;
 
 
 //use statements:
@@ -57,6 +58,7 @@ use monster::*;
 use world::*;
 use multiplayer_menu::*;
 use game_client::*;
+use quests::*;
 
 
 
@@ -126,7 +128,10 @@ pub(crate) fn setup_game(mut commands: Commands,
     });
 
     // done so that this camera doesn't mess with any UI cameras for start or pause menu
-	let camera = Camera2dBundle::default();
+	let camera = Camera2dBundle {
+        transform: Transform::from_xyz(0., 0., 1000.),
+        ..default()
+    };
     commands.spawn_bundle(camera).insert(MainCamera);
 
     let texture_handle = asset_server.load("characters/sprite_movement.png");
@@ -180,7 +185,8 @@ pub(crate) fn teardown(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,
     background_query: Query<Entity, With<Tile>>,
     player_query: Query<Entity, With<Player>>,
-    monster_query: Query<Entity, With<PartyMonster>>
+    monster_query: Query<Entity, With<PartyMonster>>,
+    npc_query: Query<Entity, With<NPC>>,
 ) {
     // Despawn main camera
     camera_query.for_each(|camera| {
@@ -200,6 +206,11 @@ pub(crate) fn teardown(mut commands: Commands,
     // Despawn monsters
     monster_query.for_each(|monster| {
         commands.entity(monster).despawn();
+    });
+
+    // Despawn NPCs
+    npc_query.for_each(|npc| {
+        commands.entity(npc).despawn();
     });
 
     // Remove the game client, as we will reinitialize it on
