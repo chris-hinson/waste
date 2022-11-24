@@ -13,7 +13,7 @@ use std::sync::mpsc::{Receiver, Sender};
 pub (crate) enum GameState{
 	Start,
 	Pause,
-    StartPlaying,
+    	StartPlaying,
 	Playing,
     Battle,
     PreHost,
@@ -31,6 +31,8 @@ pub(crate) const TITLE: &str = "Waste";
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
 //mod statements:
 mod credits;
+mod help; 
+mod pause;
 mod backgrounds;
 mod player;
 mod camera;
@@ -46,6 +48,8 @@ mod game_client;
 
 //use statements:
 use credits::*;
+use help::*;
+use pause::*; 
 use backgrounds::*;
 use player::*;
 use camera::*;
@@ -56,6 +60,7 @@ use monster::*;
 use world::*;
 use multiplayer_menu::*;
 use multiplayer_battle::*;
+use game_client::*;
 
 
 
@@ -82,14 +87,17 @@ fn main() {
         })
         .init_resource::<WorldMap>()
         .init_resource::<GameProgress>()
+        .init_resource::<TypeSystem>()
+        .init_resource::<ProcGen>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
 		.add_loopless_state(GameState::Start)
 		.add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
+        .add_plugin(HelpPlugin)
+        .add_plugin(PausePlugin)
         .add_plugin(BattlePlugin)
-        // .add_plugin(MonsterPlugin)
         .add_plugin(MultMenuPlugin)
         .add_plugin(MultBattlePlugin)
     .add_enter_system_set(GameState::StartPlaying, 
@@ -106,11 +114,10 @@ fn main() {
             .with_system(move_camera)
             .with_system(animate_sprite)
             .with_system(expand_map)
+            .with_system(win_game)
+            .with_system(handle_pause)
         .into()
     )
-    // Despawn game when exiting game state
-    // .add_exit_system(GameState::Playing, despawn_game)
-    //.add_exit_system(GameState::Playing, despawn_camera_temp)
     .run();
 }
 
@@ -153,7 +160,8 @@ pub(crate) fn setup_game(mut commands: Commands,
     let initial_monster_stats = MonsterStats {..Default::default()};
     let initial_monster = commands.spawn()
         .insert_bundle(initial_monster_stats.clone())
-        .insert(SelectedMonster).id();
+        .insert(SelectedMonster)
+        .insert(PartyMonster).id();
     // initial_monster.insert(SelectedMonster);
     game_progress.new_monster(initial_monster.clone(), initial_monster_stats.clone());
     
@@ -170,10 +178,16 @@ pub(crate) fn despawn_camera_temp(mut commands: Commands, camera_query: Query<En
     });
 }
 
-pub(crate) fn despawn_game(mut commands: Commands,
+/// Tear down ALL significant resources for the game, and despawn all relevant 
+/// in game entities. This should be used when bailing out of the credits state
+/// after beating the game, or when exiting multiplayer to move to singleplayer.*
+/// 
+/// *Multiplayer may need to add their own relevant resources or queries to despawn
+pub(crate) fn teardown(mut commands: Commands,
 	camera_query: Query<Entity,  With<MainCamera>>,
     background_query: Query<Entity, With<Tile>>,
     player_query: Query<Entity, With<Player>>,
+    monster_query: Query<Entity, With<PartyMonster>>
 ) {
     // Despawn main camera
     camera_query.for_each(|camera| {
@@ -189,4 +203,40 @@ pub(crate) fn despawn_game(mut commands: Commands,
     player_query.for_each(|player| {
         commands.entity(player).despawn();
     });
+
+    // Despawn monsters
+    monster_query.for_each(|monster| {
+        commands.entity(monster).despawn();
+    });
+
+    // Remove the game client, as we will reinitialize it on
+    // next setup
+    commands.remove_resource::<GameClient>();
+    // Remove the old worldmap
+    commands.remove_resource::<WorldMap>();
+    // Remove the game progress resource
+    commands.remove_resource::<GameProgress>();
+    // Re-initialize the resources
+    commands.init_resource::<WorldMap>();
+    commands.init_resource::<GameProgress>();
+}
+
+/// Mark that game has been completed and transition to credits.
+pub(crate) fn win_game(
+    mut commands: Commands,
+    mut game_progress: ResMut<GameProgress>,
+) {
+    if game_progress.num_boss_defeated == 5 {
+        commands.insert_resource(NextState(GameState::Credits));
+    }
+}
+
+pub(crate) fn handle_pause(
+    mut commands: Commands,
+	input: Res<Input<KeyCode>>,
+) {
+    if input.just_pressed(KeyCode::Escape) {
+        // Change to pause menu state
+        commands.insert_resource(NextState(GameState::Pause));
+    }
 }
