@@ -4,8 +4,9 @@ use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::world::GameProgress;
 use crate::{GameState, monster};
-use crate::backgrounds::{Tile, MonsterTile, HealingTile};
+use crate::backgrounds::{Tile, MonsterTile, HealingTile, ChestTile};
 use crate::monster::{MonsterStats, MonsterPartyBundle, Enemy, Boss, SelectedMonster, Health, Level, Strength, Defense};
+use rand::*;
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
 pub(crate) const PLAYER_SPEED: f32 = 480.;
@@ -96,6 +97,7 @@ pub(crate) fn move_player(
 	mut player: Query<&mut Transform, (With<Player>, Without<Tile>, Without<MonsterTile>)>,
 	monster_tiles: Query<(Entity, &Transform), (With<MonsterTile>, Without<Player>)>,
 	healing_tiles: Query<(Entity, &Transform), (With<HealingTile>, Without<Player>)>,
+	chest_tiles: Query<(Entity, &Transform), (With<ChestTile>, Without<Player>)>,
 	mut monster_hp: Query<&mut Health, Without<Enemy>>,
 	mut game_progress: ResMut<GameProgress>,
 ){
@@ -140,6 +142,7 @@ pub(crate) fn move_player(
 
 	// This is where we will check for collisions with monsters
 
+	// This is awful, can we do this without loops?
 	for (monster_tile, tile_pos) in monster_tiles.iter() {
 		let mt_position = tile_pos.translation;
 		let collision = collide(pt.translation, Vec2::splat(32.), mt_position, Vec2::splat(32.));
@@ -206,7 +209,7 @@ pub(crate) fn move_player(
 		}
 	}
 
-	// check for healing cacti
+	// check for healing tiles
 	for (healing_tile, tile_pos) in healing_tiles.iter() {
 		let ht_position = tile_pos.translation;
 		let collision = collide(pt.translation, Vec2::splat(32.), ht_position, Vec2::splat(32.));
@@ -220,6 +223,29 @@ pub(crate) fn move_player(
 				game_progress.num_living_monsters = game_progress.num_monsters;
 				info!("Monster health restored.");
 				commands.entity(healing_tile).remove::<HealingTile>();
+			}
+		}
+	}
+
+	// check for chest tiles
+	for (chest_tile, tile_pos) in chest_tiles.iter() {
+		let ht_position = tile_pos.translation;
+		let collision = collide(pt.translation, Vec2::splat(32.), ht_position, Vec2::splat(32.));
+		match collision {
+			None => {},
+			Some(_) => {
+				let item = rand::thread_rng().gen_range(0..=1) as usize;
+				let item_got = match item {
+					0 => "healing",
+					1 => "strength buff",
+					2 => "slowdown",
+					3 => "blinding",
+					4 => "debuff removal",
+					_ => "junk"
+				};
+				info!("You got a {} item.", item_got);
+				game_progress.player_inventory[item] += 1;
+				commands.entity(chest_tile).remove::<ChestTile>();
 			}
 		}
 	}
