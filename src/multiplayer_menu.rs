@@ -143,27 +143,21 @@ fn setup_mult(
     thread::spawn(move || {
         let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
-        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx));
-
     //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
-        let acknowledgement = rx.recv().unwrap();
-        info!(
-            "Here is the confirmation from main to thread: {}",
-            acknowledgement
-        );
-    });
+    //     c_sx.send(test_pkg).unwrap();
+
+    //     let acknowledgement = rx.recv().unwrap();
+    //     info!("Here is the confirmation from main to thread: {}", acknowledgement);
 
     // });
 
-    let acknowledgement_pkg = Package::new(
-        String::from("hey main got the msg!"),
-        Some(game_client.udp_channel.sx.clone()),
-    );
-    let thread_sender = response
-        .sender
-        .expect("Couldn't extract sender channel from thread");
-    thread_sender.send(acknowledgement_pkg).unwrap();
+    // let response = game_client.udp_channel.rx.recv().unwrap();
+    // println!("Player thread receiving this message: {}", response.message);
+
+    // let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
+    // let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
+    // thread_sender.send(acknowledgement_pkg).unwrap();
 
     cameras.for_each(|camera| {
         commands.entity(camera).despawn();
@@ -354,11 +348,9 @@ pub(crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
 
-                // if player clicks on client button, designate them as the client
+                // if player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Client;
-
                 commands.insert_resource(ClientMarker {}); 
-                
                 // get host IP
                 println!("Enter in host IP address.");
                 let mut host_ip_addr: String = String::new();
