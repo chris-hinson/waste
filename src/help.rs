@@ -118,7 +118,7 @@ pub(crate) fn setup_help(mut commands: Commands,
 
         commands
 	.spawn_bundle(TextBundle::from_section(
-			"A to attack, D to defend, q to quit",
+			"A to attack, D to defend, Q to quit",
 			TextStyle {
 				font: asset_server.load("buttons/joystix monospace.ttf"),
 				font_size: 30.0,

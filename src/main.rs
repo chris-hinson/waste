@@ -83,6 +83,7 @@ fn main() {
         })
         .init_resource::<WorldMap>()
         .init_resource::<GameProgress>()
+        .init_resource::<TypeSystem>()
         .init_resource::<ProcGen>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
@@ -110,11 +111,6 @@ fn main() {
             .with_system(win_game)
         .into()
     )
-    // Despawn game when exiting game state
-    // .add_exit_system_set(GameState::Playing,
-    //     SystemSet::new()
-    //         .with_system(despawn_game)
-    // )
     .run();
 }
 
@@ -218,6 +214,7 @@ pub(crate) fn teardown(mut commands: Commands,
     commands.init_resource::<GameProgress>();
 }
 
+/// Mark that game has been completed and transition to credits.
 pub(crate) fn win_game(
     mut commands: Commands,
     mut game_progress: ResMut<GameProgress>,
