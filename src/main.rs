@@ -32,6 +32,7 @@ pub(crate) const TITLE: &str = "Waste";
 //mod statements:
 mod credits;
 mod help; 
+mod pause;
 mod backgrounds;
 mod player;
 mod camera;
@@ -47,7 +48,8 @@ mod quests;
 
 //use statements:
 use credits::*;
-use help::*; 
+use help::*;
+use pause::*; 
 use backgrounds::*;
 use player::*;
 use camera::*;
@@ -94,6 +96,7 @@ fn main() {
 		.add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
         .add_plugin(HelpPlugin)
+        .add_plugin(PausePlugin)
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
     .add_enter_system_set(GameState::StartPlaying, 
@@ -111,6 +114,7 @@ fn main() {
             .with_system(animate_sprite)
             .with_system(expand_map)
             .with_system(win_game)
+            .with_system(handle_pause)
         .into()
     )
     .run();
@@ -232,5 +236,15 @@ pub(crate) fn win_game(
 ) {
     if game_progress.num_boss_defeated == 5 {
         commands.insert_resource(NextState(GameState::Credits));
+    }
+}
+
+pub(crate) fn handle_pause(
+    mut commands: Commands,
+	input: Res<Input<KeyCode>>,
+) {
+    if input.just_pressed(KeyCode::Escape) {
+        // Change to pause menu state
+        commands.insert_resource(NextState(GameState::Pause));
     }
 }
