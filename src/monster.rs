@@ -16,7 +16,7 @@ use rand::{
 pub(crate) struct MonsterPlugin;
 
 // Elemental types
-#[derive(Component, Copy, Clone, Debug)]
+#[derive(Component, Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Element {
     Scav,
     Growth,

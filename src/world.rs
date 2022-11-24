@@ -1,9 +1,13 @@
 use {bevy::prelude::*};
 use bevy::ecs::entity;
 
-use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::{MonsterStats, Element}};
+use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::{MonsterStats, Element}, quests::*};
 use std::collections::HashMap;
 
+/// Number of total consumable item types
+pub(crate) const NUM_ITEM_TYPES: usize = 2;
+/// Number of total buff/debuff types
+pub(crate) const NUM_STATUS_TYPES: usize = 3;
 
 #[derive(Default, Debug)]
 pub(crate) struct WorldMap{
@@ -105,6 +109,8 @@ pub(crate) struct GameProgress{
     /// Number of turns remaining with a given buff applied
     /// Strength Buff = 0, Slowness = 1, Blindness = 2
     pub(crate) turns_left_of_buff: Vec<usize>,
+    /// Active player quests
+    pub(crate) quests_active: Vec<Quest>,
 }
 
 
@@ -166,6 +172,41 @@ impl GameProgress {
             // commands.insert_resource(NextState(GameState::Credits));
         }
     }
+
+    /// Add a new active quest
+    pub(crate) fn add_active_quest(&mut self, quest: Quest) {
+        self.quests_active.push(quest);
+    }
+
+    /// Give the player the reward for the first matching quest found
+    /// 
+    /// @param typing: Element of the monster that was defeated
+    pub(crate) fn get_quest_rewards(&mut self, typing: Element) {
+        let num_quests = self.quests_active.len();
+        for i in 0..num_quests {
+            if self.quests_active[i].target == typing {
+                // They beat a quest
+                let reward = self.quests_active[i].reward;
+                let reward_amount = self.quests_active[i].reward_amount;
+                self.quests_active.remove(i);
+                self.player_inventory[reward] += reward_amount;
+                info!("Quest complete! You obtain {} {} items!", reward_amount, item_index_to_name(reward));
+                return;
+            }
+        }
+    }
+}
+
+/// Get the display name for an item index
+pub(crate) fn item_index_to_name(index: usize) -> &'static str {
+    match index {
+        0 => "healing",
+        1 => "strength buff",
+        2 => "slowdown",
+        3 => "blinding",
+        4 => "debuff removal",
+        _ => "junk"
+    }
 }
 
 impl Default for GameProgress {
@@ -183,7 +224,8 @@ impl Default for GameProgress {
             monster_entity_to_stats: Default::default(), 
             enemy_stats: Default::default(),
             player_inventory: vec![0; 9],
-            turns_left_of_buff: vec![0; 3]
+            turns_left_of_buff: vec![0; 3],
+            quests_active: Vec::new(),
         }
     }
 }
