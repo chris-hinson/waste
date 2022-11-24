@@ -348,9 +348,11 @@ pub(crate) fn client_button_handler(
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
 
-                // if player clicks on host button, designate them as the host
+                // if player clicks on client button, designate them as the client
                 game_client.player_type = PlayerType::Client;
+
                 commands.insert_resource(ClientMarker {}); 
+                
                 // get host IP
                 println!("Enter in host IP address.");
                 let mut host_ip_addr: String = String::new();
