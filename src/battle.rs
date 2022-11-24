@@ -15,6 +15,7 @@ use crate::backgrounds::Tile;
 use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
 use crate::player::Player;
 use crate::world::{GameProgress, TypeSystem};
+use crate::quests::*;
 use rand::*;
 
 const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
@@ -73,8 +74,7 @@ impl Plugin for BattlePlugin {
                     .with_system(update_battle_stats)
                     .with_system(key_press_handler)
                 .into())
-            .add_exit_system(GameState::Battle, despawn_battle)
-            .add_exit_system(GameState::HostBattle, despawn_battle); 
+            .add_exit_system(GameState::Battle, despawn_battle);
     }
 }
 
@@ -88,7 +88,8 @@ macro_rules! end_battle {
         $commands.entity(first_monster).insert(SelectedMonster);
         // the battle is over, remove enemy from monster anyways
         $commands.entity($enemy_monster).remove::<Enemy>();
-        $commands.insert_resource(NextState(GameState::Playing));  
+        $commands.insert_resource(NextState(GameState::Playing));
+        
     }
 }
 
@@ -459,12 +460,23 @@ pub(crate) fn key_press_handler(
         Query<(&mut Health, &mut Strength, &mut Defense, &mut Moves, Entity, &Element), 
         (With<PartyMonster>, Without<SelectedMonster>, Without<Enemy>)>,
     type_system: Res<TypeSystem>,
+    camera: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
+    asset_server: Res<AssetServer>,
 ){
 
     if(my_monster.is_empty() || enemy_monster.is_empty()) {
         info!("Monsters are missing!");
         commands.insert_resource(NextState(GameState::Playing));
+        return;
     }
+
+    if camera.is_empty() {
+        error!("No spawned camera?");
+        commands.insert_resource(NextState(GameState::Playing));
+        return;
+    }
+
+    let (transform, _) = camera.single();
 
     // Get player and enemy monster data out of the query
     let (mut player_health, 
@@ -557,6 +569,7 @@ pub(crate) fn key_press_handler(
             // check for boss
             if enemy_boss.is_some() {
                 info!("Boss defeated!");
+                game_progress.get_quest_rewards(*enemy_type);
                 game_progress.win_boss();
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
@@ -565,8 +578,23 @@ pub(crate) fn key_press_handler(
                 monster_level_up!(commands, game_progress, player_entity, 1);
                 monster_level_up!(commands, game_progress, enemy_entity, 1);
                 commands.entity(enemy_entity).remove::<Boss>();
+
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                info!("Someone appears in the dust!");
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.), 
+                        ..default()
+                    })
+                    .insert(NPC {
+                        transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.),
+                        quest: new_quest,
+                    });
             } else {
                 game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
                 // if not boss level up once
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.4, 1);
@@ -651,6 +679,7 @@ pub(crate) fn key_press_handler(
             if enemy_boss.is_some() {
                 info!("Boss defeated!");
                 game_progress.win_boss();
+                game_progress.get_quest_rewards(*enemy_type);
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.4, 1);
@@ -658,8 +687,22 @@ pub(crate) fn key_press_handler(
                 monster_level_up!(commands, game_progress, player_entity, 1);
                 monster_level_up!(commands, game_progress, enemy_entity, 1);
                 commands.entity(enemy_entity).remove::<Boss>();
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                info!("Someone appears in the dust!");
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.), 
+                        ..default()
+                    })
+                    .insert(NPC {
+                        transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.),
+                        quest: new_quest,
+                    });
             } else {
                 game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
                 // if not boss level up once
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.4, 1);

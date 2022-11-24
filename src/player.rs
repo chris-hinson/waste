@@ -2,7 +2,8 @@ use std::char::MAX;
 
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
-use crate::world::GameProgress;
+use crate::quests::NPC;
+use crate::world::{GameProgress, item_index_to_name};
 use crate::{GameState, monster};
 use crate::backgrounds::{Tile, MonsterTile, HealingTile, ChestTile};
 use crate::monster::{MonsterStats, MonsterPartyBundle, Enemy, Boss, SelectedMonster, Health, Level, Strength, Defense};
@@ -100,6 +101,7 @@ pub(crate) fn move_player(
 	chest_tiles: Query<(Entity, &Transform), (With<ChestTile>, Without<Player>)>,
 	mut monster_hp: Query<&mut Health, Without<Enemy>>,
 	mut game_progress: ResMut<GameProgress>,
+	npcs: Query<(Entity, &Transform, &NPC), (With<NPC>, Without<Player>, Without<MonsterTile>, Without<HealingTile>, Without<ChestTile>)>,
 ){
 	if player.is_empty() {
 		error!("Couldn't find a player to move...");
@@ -235,17 +237,24 @@ pub(crate) fn move_player(
 			None => {},
 			Some(_) => {
 				let item = rand::thread_rng().gen_range(0..=1) as usize;
-				let item_got = match item {
-					0 => "healing",
-					1 => "strength buff",
-					2 => "slowdown",
-					3 => "blinding",
-					4 => "debuff removal",
-					_ => "junk"
-				};
+				let item_got = item_index_to_name(item);
 				info!("You got a {} item.", item_got);
 				game_progress.player_inventory[item] += 1;
 				commands.entity(chest_tile).remove::<ChestTile>();
+			}
+		}
+	}
+
+	for (npc_entity, npc_pos, npc_data) in npcs.iter() {
+		let npc_position = npc_pos.translation;
+		let collision = collide(pt.translation, Vec2::splat(32.), npc_position, Vec2::splat(32.));
+		match collision {
+			None => {},
+			Some(_) => {
+				let quest = npc_data.quest;
+				info!("A new quest has been acquired: {:?}", quest);
+				game_progress.add_active_quest(quest);
+				commands.entity(npc_entity).despawn();
 			}
 		}
 	}
