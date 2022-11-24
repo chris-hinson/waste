@@ -16,10 +16,10 @@ use crate::backgrounds::{
 };
 
 const START_MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
-const TEXT_COLOR: Color = Color::rgb(0.9,0.9,0.9);
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
+pub(crate) const TEXT_COLOR: Color = Color::rgb(0.9,0.9,0.9);
+pub(crate) const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+pub(crate) const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+pub(crate) const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
 
 pub struct MainMenuPlugin;
 
