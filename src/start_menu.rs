@@ -112,7 +112,7 @@ pub (crate) fn credits_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	game_client: Res<GameClient>,
+	//game_client: Res<GameClient>,
 	// game_channel: Res<GameChannel>,
 ) {
 
@@ -123,32 +123,6 @@ pub (crate) fn credits_button_handler(
                 text.sections[0].value = "Credits".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Credits));
-
-				let c_sx = game_client.udp_channel.sx.clone();
-    
-				// create thread for player's battle communication 
-				std::thread::spawn(move || {
-					let (tx, rx): (Sender<Package>, Receiver<Package>) = std::sync::mpsc::channel();
-
-					let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
-
-					c_sx.send(test_pkg).unwrap();
-
-					let response_from_game = rx.recv().unwrap();
-					println!("battle thread received confirmation here: {}", response_from_game.message);
-
-    			});
-
-				let res = game_client.udp_channel.rx.recv().unwrap();
-				let battle_thread_sx = res.sender.expect("Couldnt find sender");
-				println!("Game thread got this msg: {}", res.message);
-				let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
-				battle_thread_sx.send(response_back);
-
-				// match game_client.udp_channel.rx.try_recv() {
-				// 	Ok(pkg_response) => println!("{:?}", pkg_response.message),
-				// 	Err(e) => println!("try_recv function failed: {e:?}"),
-				// }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Credits".to_string();
@@ -169,7 +143,7 @@ pub (crate) fn multiplayer_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	mut game_client: ResMut<GameClient>
+	//mut game_client: ResMut<GameClient>
 ) {
 
     for (interaction, mut color, children) in &mut interaction_query {
@@ -179,8 +153,6 @@ pub (crate) fn multiplayer_button_handler(
                 text.sections[0].value = "Multiplayer".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::MultiplayerMenu));
-
-				println!("{:?}", game_client.socket);
 
             }
             Interaction::Hovered => {
@@ -202,23 +174,32 @@ fn setup_menu(mut commands: Commands,
 // -----------------------------------------------------------------------------------------------------------
 	//hardcoded for localhost for now
 	let socket_addr = get_addr();
+    let socket_port = socket_addr.port();
 	let connection_err_msg = format!("Could not bind to {}", socket_addr);
 	let udp_socket = UdpSocket::bind(socket_addr).expect(&connection_err_msg);
+    let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
+    let ready_for_battle = false;
 	info!("Successfully binded host to {}", socket_addr);
 	udp_socket.set_nonblocking(true).unwrap();
-    let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
+    
 
     commands.insert_resource(GameClient {
-        socket: SocketInfo {
-            socket_addr,
-            udp_socket,
-        },
+		socket: SocketInfo {
+			socket_addr,
+			udp_socket,
+		},
+        // send_socket: SocketInfo {
+        //     socket_addr,
+        //     udp_socket,
+        // },
+		// receive_socket: SocketInfo { socket_addr: (), udp_socket: () },
         player_type: crate::game_client::PlayerType::Client,
         udp_channel: UdpChannel {
             sx,
 			rx
 		},
-});
+        ready_for_battle
+    });
 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();

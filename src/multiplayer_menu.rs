@@ -1,14 +1,15 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, UdpChannel, SocketInfo, get_addr, ClientMarker};
 use crate::{
 	GameState
 };
+use std::fmt::format;
 use std::str::from_utf8;
 use std::{io, thread};
 use std::net::{UdpSocket, Ipv4Addr};
-use std::sync::mpsc::{Receiver, Sender, self};
+use std::sync::mpsc::{Receiver, Sender, self, channel};
 use crate::camera::{MenuCamera};
 use crate::player::{Player};
 use crate::backgrounds::{
@@ -44,8 +45,10 @@ impl Plugin for MultMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app
 		.add_enter_system(GameState::MultiplayerMenu, setup_mult)
+        .add_system(message_checker
+            .run_if_resource_exists::<ClientMarker>())
 		.add_system_set(ConditionSet::new()
-			// Only run handlers on Start state
+			// Only run handlers in MultiplayerMenu state
 			.run_in_state(GameState::MultiplayerMenu)
 				.with_system(mult_options)
                 .with_system(host_button_handler)
@@ -53,6 +56,39 @@ impl Plugin for MultMenuPlugin {
 			.into())
 		.add_exit_system(GameState::MultiplayerMenu, despawn_mult_menu);
 	}
+}
+
+
+fn is_client(game_client: ResMut<GameClient>) -> bool {
+    if game_client.player_type == PlayerType::Client {
+        return true;
+    }
+    false
+}
+
+fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
+    if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
+        return true;
+    }
+    false
+}
+
+fn message_checker(game_client: ResMut<GameClient>, mut commands: Commands) {
+    let mut buf = [0; 2048];
+        match game_client.socket.udp_socket.recv(&mut buf) {
+            Ok(msg) => {
+                info!("got to message checker");
+                let val = String::from_utf8((&buf[0..msg]).to_vec()).unwrap();
+                info!("{}", val);
+                if val == "TRUE" {
+                    commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                }
+            },
+            Err(_e) => {
+                //error!("{}", _e);
+                
+            }
+        }
 }
 
 fn despawn_mult_menu(mut commands: Commands,
@@ -83,30 +119,31 @@ fn despawn_mult_menu(mut commands: Commands,
 fn setup_mult(mut commands: Commands,
 	asset_server: Res<AssetServer>,
 	cameras: Query<Entity, (With<Camera2d>, Without<MenuCamera>, Without<Player>, Without<Tile>)>,
-    game_client: Res<GameClient>
+    //game_client: Res<GameClient>
 ){ 
-
-    let c_sx = game_client.udp_channel.sx.clone();
     
-    // create thread for player's battle communication 
-    thread::spawn(move || {
-        let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
+    
+    // let c_sx = game_client.udp_channel.sx.clone();
+    
+    // // create thread for player's battle communication 
+    // thread::spawn(move || {
+    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
-        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
-        c_sx.send(test_pkg).unwrap();
+    //     c_sx.send(test_pkg).unwrap();
 
-        let acknowledgement = rx.recv().unwrap();
-        info!("Here is the confirmation from main to thread: {}", acknowledgement);
+    //     let acknowledgement = rx.recv().unwrap();
+    //     info!("Here is the confirmation from main to thread: {}", acknowledgement);
 
-    });
+    // });
 
-    let response = game_client.udp_channel.rx.recv().unwrap();
-    println!("Player thread receiving this message: {}", response.message);
+    // let response = game_client.udp_channel.rx.recv().unwrap();
+    // println!("Player thread receiving this message: {}", response.message);
 
-    let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
-    let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
-    thread_sender.send(acknowledgement_pkg).unwrap();
+    // let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
+    // let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
+    // thread_sender.send(acknowledgement_pkg).unwrap();
 
 	cameras.for_each(|camera| {
 		commands.entity(camera).despawn();
@@ -250,13 +287,22 @@ pub (crate) fn host_button_handler(
                 game_client.player_type = PlayerType::Host;
 
                 let mut buf = [0; 2048];
+                
                 match game_client.socket.udp_socket.recv(&mut buf) {
                     Ok(received) => {
                         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
+                        info!("GETS TO HOST BUTTON CLICKED");
+                        let client_info = from_utf8(&buf[..received]).unwrap().to_string();
+                        game_client.socket.udp_socket.connect(client_info);
+                        //game_client.ready_for_battle = true;
+                        // for z in 1..10 {
+                        let cloned = game_client.socket.udp_socket.try_clone().unwrap();
+                        cloned.send(b"TRUE");
+                        // }
                         commands.insert_resource(NextState(GameState::MultiplayerBattle));
                     },
                     Err(e) => {
-                        info!("No message was received: {}", e)
+                        //info!("No message was received: {}", e)
                     }
                 }
                  
@@ -289,9 +335,10 @@ pub (crate) fn client_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                //commands.insert_resource(NextState(GameState::PrePeer));
 
-
+                // if player clicks on host button, designate them as the host
+                game_client.player_type = PlayerType::Client;
+                commands.insert_resource(ClientMarker {}); 
                 // get host IP
                 println!("Enter in host IP address.");
                 let mut host_ip_addr: String = String::new();
@@ -300,10 +347,9 @@ pub (crate) fn client_button_handler(
 	            match io::stdin().read_line(&mut host_ip_addr) {
 		            Ok(_) => {
                          host_ip_addr = host_ip_addr.trim().to_string();
-                        
                     }
                     Err(_e) => {
-                        // some error handling
+                        error!("ERROR while reading in host's IP address: {}", _e);
                     }
 	            }
                 // get host port
@@ -314,7 +360,7 @@ pub (crate) fn client_button_handler(
                         host_port = host_port.trim().to_string();
                     }
                     Err(_e) => {
-                        //some error handling
+                        error!("ERROR while reading in host's port number: {}", _e);
                     }
 	            }
 
@@ -322,7 +368,8 @@ pub (crate) fn client_button_handler(
                 info!("printed this: {}", host_addr_port);
 
                 game_client.socket.udp_socket.connect(host_addr_port);
-                game_client.socket.udp_socket.send(b"test msg from client to host").expect("Error on send");
+                let client_info = game_client.socket.socket_addr.to_string();
+                game_client.socket.udp_socket.send(client_info.as_bytes()).expect("Error on send");
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();

@@ -2,12 +2,13 @@ use std::fmt;
 use std::net::{UdpSocket, SocketAddr, Ipv4Addr, IpAddr};
 use std::sync::mpsc::{Receiver, Sender};
 
-use bevy::prelude::{Query, Component, info, FromWorld};
+use bevy::prelude::{Query, Component, info, FromWorld, Commands};
 use local_ip_address::local_ip;
 use rand::seq::SliceRandom;
 
 const SIZE: usize = 50;
 
+#[derive(PartialEq)]
 pub(crate) enum PlayerType {
     Host,
     Client,
@@ -16,14 +17,19 @@ pub(crate) enum PlayerType {
 #[derive(Debug)]
 pub(crate) struct SocketInfo {
     pub(crate) socket_addr: SocketAddr,
-    pub(crate) udp_socket: UdpSocket
+    pub(crate) udp_socket: UdpSocket,
 }
 
 pub(crate) struct GameClient {
     pub(crate) socket: SocketInfo,
     pub(crate) player_type: PlayerType,
-    pub(crate) udp_channel: UdpChannel
+    pub(crate) udp_channel: UdpChannel,
+    pub(crate) ready_for_battle: bool,
 }
+
+/// this is inserted as a resource when the player selects "Join Game"
+/// since they want to be the client. this allows the client to move to the multiplayer battle stage
+pub(crate) struct ClientMarker {}
 
 #[derive(Debug)]
 pub(crate) struct Package {
@@ -53,6 +59,7 @@ pub(crate) struct UdpChannel {
 
 unsafe impl Send for UdpChannel {}
 unsafe impl Sync for UdpChannel {}
+
 
 pub(crate) fn get_randomized_port() -> i32 {
     let port_list = vec![9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
