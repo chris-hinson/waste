@@ -156,6 +156,7 @@ impl GameProgress {
 
     pub fn win_boss(&mut self){
         self.num_living_monsters = self.num_monsters;
+        self.current_level += 1;
         self.num_boss_defeated += 1;
         self.level_boss_awaken = false;
         info!("You have defeated {} bosses.", self.num_boss_defeated);

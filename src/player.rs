@@ -183,8 +183,8 @@ pub(crate) fn move_player(
 						lvl: Level { level: game_progress.current_level },
 						// So when we battle him, he has 100 hp
 						hp: Health{
-							health: (game_progress.current_level*25) as isize, 
-							max_health: game_progress.current_level*25
+							health: (game_progress.current_level*50) as isize, 
+							max_health: game_progress.current_level*50
 						},
 						stg: Strength{
 							atk: (game_progress.current_level*2), 

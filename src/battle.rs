@@ -537,7 +537,10 @@ pub(crate) fn key_press_handler(
             info!("Enemy monster defeated. Your monsters will level up!");
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
-            let new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            let mut new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
             // remove the monster from the enemy stats
             game_progress.enemy_stats.remove(&enemy_entity);
             // add the monster to the monster bag
@@ -627,7 +630,10 @@ pub(crate) fn key_press_handler(
             info!("Enemy monster defeated. Your monsters will level up!");
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
-            let new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            let mut new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
             // remove the monster from the enemy stats
             game_progress.enemy_stats.remove(&enemy_entity);
             // add the monster to the monster bag
@@ -734,6 +740,7 @@ pub(crate) fn key_press_handler(
         // USE STRENGTH BUFF HANDLER
         // Check that we have a buff item
         if game_progress.player_inventory[1] > 0 {
+            info!("You used a strength buff. The next five turns you will deal extra damage.");
             // Decrement
             game_progress.player_inventory[1] -= 1;
             // Make it so we have turns left of this buff
