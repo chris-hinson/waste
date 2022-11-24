@@ -18,13 +18,21 @@ pub(crate) const OVERWORLD_TILESHEET: &str = "backgrounds/overworld_tilesheet.pn
 #[derive(Component)]
 pub(crate) struct Tile;
 
+/// Tile to start a battle
 #[derive(Component)]
 pub(crate) struct MonsterTile {
     pub(crate) transform: Transform,
 }
 
+/// Tile to automatically heal all monsters
 #[derive(Component)]
 pub(crate) struct HealingTile {
+    pub(crate) transform: Transform,
+}
+
+/// Tile to represent an item-giving chest
+#[derive(Component)]
+pub(crate) struct ChestTile { 
     pub(crate) transform: Transform,
 }
 
@@ -70,7 +78,7 @@ macro_rules! draw_chunk {
                             ..default()
                         },
                         sprite: TextureAtlasSprite {
-                            index: 4,
+                            index: tile,
                             ..default()
                         },
                         ..default()
@@ -79,7 +87,7 @@ macro_rules! draw_chunk {
                         transform: Transform::from_xyz(x, y, -1.),
                     });
             }
-            if tile == 32 {
+            if tile == 31 {
                 $commands
                     .spawn_bundle(SpriteSheetBundle {
                         texture_atlas: $map_atlas_handle.clone(),
@@ -88,12 +96,30 @@ macro_rules! draw_chunk {
                             ..default()
                         },
                         sprite: TextureAtlasSprite {
-                            index: 32,
+                            index: tile,
                             ..default()
                         },
                         ..default()
                     })
                     .insert(HealingTile {
+                        transform: Transform::from_xyz(x, y, -1.),
+                    });
+            }
+            if tile == 33 {
+                $commands
+                    .spawn_bundle(SpriteSheetBundle {
+                        texture_atlas: $map_atlas_handle.clone(),
+                        transform: Transform {
+                            translation: t,
+                            ..default()
+                        },
+                        sprite: TextureAtlasSprite {
+                            index: tile,
+                            ..default()
+                        },
+                        ..default()
+                    })
+                    .insert(ChestTile {
                         transform: Transform::from_xyz(x, y, -1.),
                     });
             }

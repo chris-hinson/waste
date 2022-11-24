@@ -72,32 +72,39 @@ pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
 
 pub(crate) struct GameProgress{
     /// the level of our player, which is also the level we should spawn the monsters
-    pub current_level: usize,
+    pub(crate) current_level: usize,
     /// number of bosses we have defeated
-    pub num_boss_defeated: usize,
+    pub(crate) num_boss_defeated: usize,
     /// if we have defeated the level boss
-    pub level_boss_awaken: bool,
+    pub(crate) level_boss_awaken: bool,
     /// keeps track of how many monsters we have
     /// this is the our id independent from bevy's entity id
-    pub num_monsters: usize,
+    pub(crate) num_monsters: usize,
     /// Number of monsters currently available in the party
     /// 
     /// Initialized to the same amount as num_monsters and as monsters die it is decremented
-    pub num_living_monsters: usize,
+    pub(crate) num_living_monsters: usize,
     /// keeps track of all monsters we currently have
     /// HashMap<our_id, bevy's entity id>
-    pub allied_monster_id: HashMap<usize, usize>,
+    pub(crate) allied_monster_id: HashMap<usize, usize>,
     /// back look up table
-    pub id_allied_monster: HashMap<usize, usize>,
+    pub(crate) id_allied_monster: HashMap<usize, usize>,
     /// our id to Entity
-    pub monster_id_entity: HashMap<usize, Entity>,
+    pub(crate) monster_id_entity: HashMap<usize, Entity>,
     /// Entity to our id
-    pub entity_monster_id: HashMap<Entity, usize>,
+    pub(crate) entity_monster_id: HashMap<Entity, usize>,
     /// get MonsterBundle from entity
-    pub monster_entity_to_stats: HashMap<Entity, MonsterStats>,
+    pub(crate) monster_entity_to_stats: HashMap<Entity, MonsterStats>,
     /// all monsters' entity id to their stats
     /// to help us retrieve stats when we defeat them
-    pub enemy_stats: HashMap<Entity, MonsterStats>,
+    pub(crate) enemy_stats: HashMap<Entity, MonsterStats>,
+    /// Number of items left of each type
+    /// Heal Item = 0, Strength Item = 1, Slow Item = 2, Blinding Item = 3
+    /// Debuff Removal Item = 4
+    pub(crate) player_inventory: Vec<usize>,
+    /// Number of turns remaining with a given buff applied
+    /// Strength Buff = 0, Slowness = 1, Blindness = 2
+    pub(crate) turns_left_of_buff: Vec<usize>,
 }
 
 
@@ -158,23 +165,6 @@ impl GameProgress {
             // commands.insert_resource(NextState(GameState::Credits));
         }
     }
-
-    // can't do this because we don't have access to the commands
-    // pub fn monster_level_up(&mut self, entity: Entity, level: usize, mut commands: Commands) {
-    //     info!("your monster level up!");
-    //     let mut stats = self.monster_entity_to_stats.get_mut(&entity).unwrap();
-    //     stats.lvl.level += 1;
-    //     stats.hp.max_health += 10;
-    //     stats.hp.health = stats.hp.max_health as isize;
-    //     stats.stg.atk += 2;
-    //     stats.stg.crt += 5;
-    //     stats.def.def += 1;
-    //     // we have to remove the old stats and add the new one
-    //     // because we cannot change the stats in place
-    //     commands.entity(entity).remove::<MonsterStats>();
-    //     commands.entity(entity).insert(stats.clone());
-    // }
-
 }
 
 impl Default for GameProgress {
@@ -190,7 +180,9 @@ impl Default for GameProgress {
             monster_id_entity: Default::default(), 
             entity_monster_id: Default::default(), 
             monster_entity_to_stats: Default::default(), 
-            enemy_stats: Default::default() 
+            enemy_stats: Default::default(),
+            player_inventory: vec![0; 9],
+            turns_left_of_buff: vec![0; 3]
         }
     }
 }
@@ -279,21 +271,3 @@ impl Default for TypeSystem{
         return TypeSystem { type_modifier: modifier_map};
     }
 }
-
-// We can reintroduce this once we want/need a fancy resource
-// impl FromWorld for GameProgress {
-//     fn from_world(world: &mut World) -> Self {
-//         // I dont know yet, this is a big thing to do
-//         return GameProgress{
-//             current_level: 0,
-//             level_progress: 0,
-//             boss_progress: 0,
-//             boss_level: 0,
-//             next_level: 0,
-//             num_monsters: 0,
-//             allied_monster_id: HashMap::new(),
-//             id_allied_monster: HashMap::new(),
-//             monster_entity_id_to_stats: HashMap::new(),
-//         }
-//     }
-// }

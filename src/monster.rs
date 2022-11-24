@@ -124,7 +124,7 @@ pub(crate) struct Fighting(bool);
 // selected would highlight which monster is currently displayed; if SelectedMonster(0) then no display.
 // fighting would inform of whether to spawn an enemy to fight as well.
 // SelectedMonster != 0 and Fighting = false; then just show mon
-// SelectedMonster !=0 and Fighting = true; then also display an Enemy monster
+// SelectedMonster != 0 and Fighting = true; then also display an Enemy monster
 // monsters are added to the Party non-literally currently, MonsterPartyBundle keeps track of selected monster, total monsters had, and if there is a fight to be aware of.
 #[derive(Bundle)]
 pub(crate) struct MonsterPartyBundle{
@@ -158,47 +158,13 @@ impl Default for MonsterStats {
         slot: Slot(0),
     } }
 }
-// TODO: implement randomized monster initialization, may be difficult to balance how leveling changes start values.
-
-// default is that you're fighting 
-// impl Default for MonsterPartyBundle {
-//     fn default() -> Self { MonsterPartyBundle {
-//         selected: SelectedMonster(0),
-//         monsters: MonsterTotal(1),
-//         fighting: Fighting(false),
-//     }
-// } }
-
-// TODO: save the party to a file somehow to be able to revisit your party when re-opening the game.
-// impl Plugin for MonsterPlugin {
-//     fn build(&self, app: &mut App){
-//         app.add_startup_system(spawn_initial_party);
-//     }
-// }
-
-// player has to have a monster in party, currently also spawns an enemy
-// implementation of Enemy Monsters needs further consideration, maybe switch to a Component Header to reduce Components down.
-
-// fn spawn_initial_party(mut commands: Commands
-//     ){
-//         commands.spawn()
-//             .insert_bundle(MonsterPartyBundle { ..Default::default()})
-//             .insert_bundle(MonsterBundle{_slot: Slot(1), enemy: Enemy(false), ..Default::default() })
-//             .insert_bundle(MonsterBundle{_slot: Slot(0), enemy: Enemy(true), ..Default::default() });
-
-//             // below is additional consideration into nesting bundles to allow for MonsterPartyBundle to also store the MonsterBundles but i was having issues, right now it just tracks the data for all monsterBundles spawned in game.
-            
-//             //.with_children(|parent| {parent.spawn_bundle(MonsterBundle{ _slot: Slot(1), _enemy: Enemy(false), ..Default::default() });
-//             //parent.spawn_bundle(MonsterBundle{ _lvl: Level(0), ..Default::default()});});
-// } 
-
 
 // =========================================== HELPERS ===============================================
 
 pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
     match elm {
         Element::Scav => String::from("monsters/scav_monster.png"),
-        Element::Growth => String::from("monsters/stickdude.png"),
+        Element::Growth => String::from("monsters/growth_monster.png"),
         Element::Ember => String::from("monsters/ember_monster.png"),
         Element::Flood => String::from("monsters/flood_monster.png"),
         Element::Rad => String::from("monsters/rad_monster.png"),
@@ -211,32 +177,6 @@ pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
 // Need to apparently implement distribution for our
 // elements enum to be able to pick randomly which type we want
 impl Distribution<Element> for Standard {
-    /// Get an iterator over random sample
-    // fn sample_iter<R>(self, rng: R) -> rand::distributions::DistIter<Self, R, Element>
-    // where
-    //     R: rand::Rng,
-    //     Self: Sized,
-    // {
-    //     rand::distributions::DistIter {
-    //         distr: self,
-    //         rng,
-    //         phantom: core::marker::PhantomData,
-    //     }
-    // }
-
-    // /// Map function to random distribution
-    // fn map<F, S>(self, func: F) -> rand::distributions::DistMap<Self, F, Element, S>
-    // where
-    //     F: Fn(Element) -> S,
-    //     Self: Sized,
-    // {
-    //     rand::distributions::DistMap {
-    //         distr: self,
-    //         func,
-    //         phantom: core::marker::PhantomData,
-    //     }
-    // }
-
     /// Randomly sample the element enum 
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Element {
         // Randomly generate a number from 0 to 7 then return an enum variant
