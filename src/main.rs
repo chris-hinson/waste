@@ -1,12 +1,10 @@
-#![allow(unused)]
+#![warn(unused)]
+#![warn(unsafe_code)]
+#![warn(unreachable_code)]
 use bevy::{prelude::*, window::PresentMode};
-use game_client::Package;
+
 use iyes_loopless::prelude::*;
 use std::convert::From;
-use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, Sender};
-
-
 
 // GAMEWIDE CONSTANTS
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -16,10 +14,6 @@ pub (crate) enum GameState{
     StartPlaying,
 	Playing,
     Battle,
-    PreHost,
-    PrePeer,
-    HostBattle,
-    PeerBattle,
     Credits,
     Help, 
     MultiplayerMenu
@@ -161,23 +155,16 @@ pub(crate) fn setup_game(mut commands: Commands,
     // Give the player a monster
     let initial_monster_stats = MonsterStats {..Default::default()};
     let initial_monster = commands.spawn()
-        .insert_bundle(initial_monster_stats.clone())
+        .insert_bundle(initial_monster_stats)
         .insert(SelectedMonster)
         .insert(PartyMonster).id();
     // initial_monster.insert(SelectedMonster);
-    game_progress.new_monster(initial_monster.clone(), initial_monster_stats.clone());
+    game_progress.new_monster(initial_monster, initial_monster_stats);
     
     
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
-}
-
-pub(crate) fn despawn_camera_temp(mut commands: Commands, camera_query: Query<Entity, With<MainCamera>>)
-{
-    camera_query.for_each(|camera| {
-        commands.entity(camera).despawn();
-    });
 }
 
 /// Tear down ALL significant resources for the game, and despawn all relevant 
@@ -232,7 +219,7 @@ pub(crate) fn teardown(mut commands: Commands,
 /// Mark that game has been completed and transition to credits.
 pub(crate) fn win_game(
     mut commands: Commands,
-    mut game_progress: ResMut<GameProgress>,
+    game_progress: ResMut<GameProgress>,
 ) {
     if game_progress.num_boss_defeated == 5 {
         commands.insert_resource(NextState(GameState::Credits));

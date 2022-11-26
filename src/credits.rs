@@ -63,7 +63,7 @@ pub(crate) fn setup_credits(mut commands: Commands,
         commands.spawn_bundle(SpriteBundle {
             texture: asset_server.load(slides[i]),
             visibility: Visibility {
-                is_visible: if i == 0 { true } else { false },
+                is_visible: i == 0,
             },
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
