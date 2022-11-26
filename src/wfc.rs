@@ -1,5 +1,3 @@
-
-
 use bevy::prelude::warn;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
@@ -11,7 +9,7 @@ use std::hash::Hash;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::thread;
-use std::{fs::File, fs::read_dir, io::Read};
+use std::{fs::read_dir, fs::File, io::Read};
 
 use rand::thread_rng;
 
@@ -33,7 +31,9 @@ pub(crate) struct ProcGen {
 
 impl Default for ProcGen {
     fn default() -> Self {
-        Self { rules: init_rules() }
+        Self {
+            rules: init_rules(),
+        }
     }
 }
 
@@ -47,13 +47,21 @@ pub(crate) fn init_rules() -> HashMap<usize, Rule> {
     // Check all inputs
     for input_file in all_inputs {
         // Run rulegen on the input file given
-        rulegen(input_file.unwrap().path().to_str().unwrap(), &mut rules, &mut freqs);
+        rulegen(
+            input_file.unwrap().path().to_str().unwrap(),
+            &mut rules,
+            &mut freqs,
+        );
     }
 
     rules
 }
 /// Apply rulegeneration to given rule and frequency set based on input read from infile
-pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mut HashMap<usize, usize>) {
+pub(crate) fn rulegen(
+    infile: &str,
+    rules: &mut HashMap<usize, Rule>,
+    freqs: &mut HashMap<usize, usize>,
+) {
     let mut file = File::open(infile).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
@@ -170,7 +178,10 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
 
 /// Generate a fixed (map) sized screen using wave function collapse
 /// and return a 2D vector of indexes into the texture atlas.
-pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<usize, Rule>) -> Vec<Vec<usize>> {
+pub(crate) fn wfc(
+    seeding: Option<Vec<(usize, (usize, usize))>>,
+    rules: HashMap<usize, Rule>,
+) -> Vec<Vec<usize>> {
     // let rules = rulegen("assets/backgrounds/wfc_inputs/input.txt");
 
     // Create the board with a specific height and width
@@ -208,7 +219,7 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<
                 );
                 // println!("solved on attempt {attempts}? {solvable:?}");
                 // println!("\n");
-                if ! solvable {
+                if !solvable {
                     board = Board::new(
                         (MAP_HEIGHT, MAP_WIDTH),
                         rules.clone(),
@@ -220,7 +231,10 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<
                 }
 
                 attempts += 1;
-                warn!("WFC could not collapse. Retrying, attempt {}.", attempts+1);
+                warn!(
+                    "WFC could not collapse. Retrying, attempt {}.",
+                    attempts + 1
+                );
             }
 
             // Put the board contents into the result
@@ -254,7 +268,6 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<
 struct Board {
     map: Vec<Vec<Tile>>,
     rules: HashMap<usize, Rule>,
-    remaining: usize, //tile_types: Vec<usize>,
 }
 
 impl Index<(usize, usize)> for Board {
@@ -293,12 +306,12 @@ impl Board {
                 match map.get_mut(seed.1 .0).and_then(|r| r.get_mut(seed.1 .1)) {
                     Some(v) => {
                         *v = Tile::set(v.coords, seed.0);
-                        
+
                         // Collect neighbors by hand, cannot call functions because they are only for
                         // existing boards.
                         let mut n = Neighbors::new();
                         let pos = v.coords;
-                        
+
                         // let north_idx = (pos.0 - 1, pos.1);
                         // let south_idx = (pos.0 + 1, pos.1);
                         // let west_idx = (pos.0, pos.1 - 1);
@@ -308,54 +321,45 @@ impl Board {
                         n.north = pos
                             .0
                             .checked_sub(1)
-                            .and_then(|e| map.get(e)).map(|f| f[pos.1].clone());
+                            .and_then(|e| map.get(e))
+                            .map(|f| f[pos.1].clone());
 
                         // South
                         n.south = pos
                             .0
                             .checked_add(1)
-                            .and_then(|e| map.get(e)).map(|f| f[pos.1].clone());
+                            .and_then(|e| map.get(e))
+                            .map(|f| f[pos.1].clone());
 
                         // West
                         n.west = pos
                             .1
                             .checked_sub(1)
-                            .and_then(|e| map[pos.0].get(e)).cloned();
+                            .and_then(|e| map[pos.0].get(e))
+                            .cloned();
 
                         // East
                         n.east = pos
                             .1
                             .checked_add(1)
-                            .and_then(|e| map[pos.0].get(e)).cloned();
+                            .and_then(|e| map[pos.0].get(e))
+                            .cloned();
 
                         // Do neighbor update
                         for neighbor in n {
                             map[neighbor.tile.coords.0][neighbor.tile.coords.1]
                                 .position
-                                .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
-                            // neighbor.tile
-                            //     .position
-                            //     .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
+                                .retain(|t| {
+                                    rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t)
+                                });
                         }
-                    },
+                    }
                     None => {}
                 }
             }
         }
 
-        // for row in map.iter() {
-        //     for col in row.iter() {
-        //         print!("{:?} ", col.entropy());
-        //     }
-        //     print!("\n");
-        // }
-        
-
-        Self {
-            map,
-            rules,
-            remaining: 0,
-        }
+        Self { map, rules }
     }
 
     // TODO: Very poor runtime, needs optimization.
@@ -364,33 +368,17 @@ impl Board {
     fn valid_position(&self) -> bool {
         for row in &self.map {
             for col in row {
-                // print!("{:?} ", col.entropy());
                 // Empty superpositions are invalid unless the tile has a concrete type
                 if col.position.is_empty() && col.t.is_none() {
                     return false;
                 }
-
-                // Only way we could be breaking adjacency rules is if this tile has a concrete position and one of its neighbors
-                // ALSO has a conrete position, which is not allowed beside it.
-                // We should NOT check this, because this simply SHOULDN'T BE ALLOWED TO EVER HAPPEN AT ALL
-                // if col.t.is_some() {
-                //     for n in self.get_neighbors(col.coords) {
-                //         if n.tile.t.is_some() {
-                //             if !self.rules[&n.tile.t.unwrap()].neighbor_rules[&n.anti_direction]
-                //                 .contains(&col.t.unwrap())
-                //             {
-                //                 return false;
-                //             }
-                //         }
-                //     }
-                // }
             }
-            // print!("\n");
         }
 
         true
     }
 
+    /// Check that the board is in a solved state to stop collapsing early
     fn is_solved(&self) -> bool {
         if !self.valid_position() {
             return false;
@@ -402,22 +390,23 @@ impl Board {
     /// Choose the tile on the board with the lowest entropy and return its coords within the map
     fn choose_tile_to_collapse(&self) -> (usize, usize) {
         // Find the minimum entropy of the board
-        let minimum = self.map.iter().flatten()
+        let minimum = self
+            .map
+            .iter()
+            .flatten()
             .min_by(|x, y| x.entropy().cmp(&y.entropy()))
             .unwrap()
-            .entropy(); 
+            .entropy();
 
         // Collect all tiles into a vector first, we'll operate on this because it's easier
-        let mut random_tiles: Vec<&Tile> = self.map.iter().flatten()
-            .collect::<Vec<&Tile>>();
+        let mut random_tiles: Vec<&Tile> = self.map.iter().flatten().collect::<Vec<&Tile>>();
 
         // Retain only tiles with the same entropy as the minimum
-        random_tiles
-            .retain(|tile| tile.entropy() == minimum);
-        
+        random_tiles.retain(|tile| tile.entropy() == minimum);
+
         // Shuffle these tiles up in case more than one tile matches
         random_tiles.shuffle(&mut thread_rng());
-        
+
         // Pick the first of this random ordering
         random_tiles[0].coords
     }
@@ -431,42 +420,48 @@ impl Board {
         n.north = pos
             .0
             .checked_sub(1)
-            .and_then(|e| self.map.get(e)).map(|f| f[pos.1].clone());
+            .and_then(|e| self.map.get(e))
+            .map(|f| f[pos.1].clone());
 
         //south
         n.south = pos
             .0
             .checked_add(1)
-            .and_then(|e| self.map.get(e)).map(|f| f[pos.1].clone());
+            .and_then(|e| self.map.get(e))
+            .map(|f| f[pos.1].clone());
 
         //west
         n.west = pos
             .1
             .checked_sub(1)
-            .and_then(|e| self.map[pos.0].get(e)).cloned();
+            .and_then(|e| self.map[pos.0].get(e))
+            .cloned();
 
         //east
         n.east = pos
             .1
             .checked_add(1)
-            .and_then(|e| self.map[pos.0].get(e)).cloned();
+            .and_then(|e| self.map[pos.0].get(e))
+            .cloned();
 
         n
     }
 
     /// Update the neighbors of this tile to reflect a change in our state.
-    /// 
+    ///
     /// Calls a `.retain()` on each neighbor's position to only keep subpositions
     /// that are members of our neighbor-ruleset.
     fn update_neighbors(&mut self, center_tile: (usize, usize), selected_pos: usize) {
         for neighbor in self.get_neighbors(center_tile) {
             // Major issue, this looks like the code to ACTUALLY update the tile's positions in our map,
-            // the above only affects a stack allocated tile that is destroyed when the function ends. 
-            // Yet, when we let the bottom code run, the game crashes almost 50% of the time because it cannot 
+            // the above only affects a stack allocated tile that is destroyed when the function ends.
+            // Yet, when we let the bottom code run, the game crashes almost 50% of the time because it cannot
             // find a valid state. This means that the backtracking algorithm straight up *doesn't work at all.*
             self.map[neighbor.tile.coords.0][neighbor.tile.coords.1]
                 .position
-                .retain(|t| self.rules[&selected_pos].neighbor_rules[&neighbor.direction].contains(t));
+                .retain(|t| {
+                    self.rules[&selected_pos].neighbor_rules[&neighbor.direction].contains(t)
+                });
         }
     }
 
@@ -552,7 +547,6 @@ struct Neighbors {
 
 struct NeighborIterElement {
     direction: Dir,
-    anti_direction: Dir,
     tile: Tile,
 }
 
@@ -563,29 +557,33 @@ impl IntoIterator for Neighbors {
     fn into_iter(self) -> Self::IntoIter {
         let mut neighbors: Vec<NeighborIterElement> = Vec::new();
 
-        if let Some(f) = self.north { neighbors.push(NeighborIterElement {
+        if let Some(f) = self.north {
+            neighbors.push(NeighborIterElement {
                 direction: Dir::NORTH,
-                anti_direction: Dir::SOUTH,
                 tile: f,
-            }); }
+            });
+        }
 
-        if let Some(f) = self.south { neighbors.push(NeighborIterElement {
+        if let Some(f) = self.south {
+            neighbors.push(NeighborIterElement {
                 direction: Dir::SOUTH,
-                anti_direction: Dir::NORTH,
                 tile: f,
-            }); }
+            });
+        }
 
-        if let Some(f) = self.east { neighbors.push(NeighborIterElement {
+        if let Some(f) = self.east {
+            neighbors.push(NeighborIterElement {
                 direction: Dir::EAST,
-                anti_direction: Dir::WEST,
                 tile: f,
-            }); }
+            });
+        }
 
-        if let Some(f) = self.west { neighbors.push(NeighborIterElement {
+        if let Some(f) = self.west {
+            neighbors.push(NeighborIterElement {
                 direction: Dir::WEST,
-                anti_direction: Dir::EAST,
                 tile: f,
-            }); }
+            });
+        }
 
         neighbors.into_iter()
     }
