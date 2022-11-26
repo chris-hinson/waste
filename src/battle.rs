@@ -1,26 +1,18 @@
-#![allow(unused)]
-use bevy::{prelude::*, ui::*};
-use iyes_loopless::prelude::*;
-use crate::monster::{MonsterStats, Enemy, Actions, Fighting, SelectedMonster, Health, Level, Strength, Defense, Move, Moves, get_monster_sprite_for_type, Element, Boss};
-use crate::{GameState, player};
-use crate::game_client::{GameClient, Package};
-use std::net::UdpSocket;
-use std::sync::mpsc::{Sender, Receiver, self};
-use std::thread;
 use crate::backgrounds::Tile;
-use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
+use crate::camera::{MenuCamera, SlidesCamera};
+use crate::monster::{
+    get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats,
+    PartyMonster, SelectedMonster, Strength,
+};
 use crate::player::Player;
-use crate::world::GameProgress;
+use crate::quests::*;
+use crate::world::{GameProgress, TypeSystem};
+use crate::GameState;
+use bevy::prelude::*;
+use iyes_loopless::prelude::*;
 use rand::*;
 
 const BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
-const ENEMY_MONSTER: &str = "monsters/clean_monster.png";
-const MONSTER: &str = "monsters/stickdude.png";
-
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
-
 
 #[derive(Component)]
 pub(crate) struct BattleBackground;
@@ -32,132 +24,70 @@ pub(crate) struct Monster;
 pub(crate) struct PlayerMonster;
 
 #[derive(Component)]
-pub (crate) struct EnemyMonster;
+pub(crate) struct EnemyMonster;
 
 // Unit structs to help identify the specific UI components for player's or enemy's monster health/level
 // since there may be many Text components
 #[derive(Component)]
-pub (crate) struct PlayerHealth;
+pub(crate) struct PlayerHealth;
 
 #[derive(Component)]
-pub (crate) struct EnemyHealth;
+pub(crate) struct EnemyHealth;
 
 #[derive(Component)]
-pub (crate) struct PlayerLevel;
+pub(crate) struct PlayerLevel;
 
 #[derive(Component)]
-pub (crate) struct EnemyLevel;
-
-#[derive(Component)]
-pub(crate) struct AbortButton;
-
-#[derive(Component)]
-pub(crate) struct AttackButton;
-
-#[derive(Component)]
-pub(crate) struct DefendButton;
+pub(crate) struct EnemyLevel;
 
 #[derive(Component)]
 pub(crate) struct BattleUIElement;
-
-struct UiAssets{
-	font: Handle<Font>,
-	button: Handle<Image>,
-	button_pressed: Handle<Image>,
-}
 
 pub(crate) struct BattlePlugin;
 
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_enter_system_set(GameState::Battle, 
-                SystemSet::new()
-                    .with_system(setup_battle)
-                    .with_system(setup_battle_stats)
-                    .with_system(abort_button)
-                    .with_system(attack_button)
-                    .with_system(defend_button)
-                    // .with_system(spawn_player_monster)
-                    // .with_system(spawn_enemy_monster)
-                )
-            .add_system_set(ConditionSet::new()
+        app.add_enter_system_set(
+            GameState::Battle,
+            SystemSet::new()
+                .with_system(setup_battle)
+                .with_system(setup_battle_stats),
+        )
+        .add_system_set(
+            ConditionSet::new()
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
-                    // addl systems go here
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
-                    .with_system(abort_button_handler)
-                    .with_system(attack_button_handler)
-                    .with_system(defend_button_handler)
-                    .with_system(update_battle_stats)
-                    .with_system(battle_thread)
-                
-                .into())
-            .add_exit_system(GameState::Battle, despawn_battle)
-            .add_enter_system_set(GameState::HostBattle, 
-                SystemSet::new()
-                    .with_system(setup_battle)
-                    .with_system(battle_pre_check)
-                    .with_system(setup_battle_stats)
-                    .with_system(abort_button)
-                    .with_system(attack_button)
-                    .with_system(defend_button)
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
-                )
-            .add_system_set(ConditionSet::new()
-                // Run these systems only when in Battle state
-                .run_in_state(GameState::HostBattle)
-                    // addl systems go here
-                    .with_system(mult_abort_handler)
-                    .with_system(attack_button_handler)
-                    .with_system(defend_button_handler)
-                .into())
-            .add_enter_system(GameState::PreHost, pre_host)
-            .add_enter_system(GameState::PrePeer, pre_peer)
-            .add_exit_system(GameState::HostBattle, despawn_battle)
-            .add_enter_system_set(GameState::PeerBattle, 
-                SystemSet::new()
-                    .with_system(setup_battle)
-                    .with_system(battle_pre_check)
-                    .with_system(setup_battle_stats)
-                    .with_system(abort_button)
-                    .with_system(attack_button)
-                    .with_system(defend_button)
-                    .with_system(spawn_player_monster)
-                    .with_system(spawn_enemy_monster)
-                )
-            .add_system_set(ConditionSet::new()
-                // Run these systems only when in Battle state
-                .run_in_state(GameState::PeerBattle)
-                    // addl systems go here
-                    .with_system(mult_abort_handler)
-                    .with_system(attack_button_handler)
-                    .with_system(defend_button_handler)
-                .into())
-            .add_exit_system(GameState::PeerBattle, despawn_battle);
+                // addl systems go here
+                .with_system(spawn_player_monster)
+                .with_system(spawn_enemy_monster)
+                .with_system(update_battle_stats)
+                .with_system(key_press_handler)
+                .into(),
+        )
+        .add_exit_system(GameState::Battle, despawn_battle);
     }
 }
 
 macro_rules! end_battle {
     ($commands:expr, $game_progress:expr, $my_monster:expr, $enemy_monster:expr) => {
         // remove the monster from the enemy stats
-        $game_progress.enemy_stats.remove(&$enemy_monster.5);
+        $game_progress.enemy_stats.remove(&$enemy_monster);
         // reset selected monster back to the first one in our bag
-        let first_monster = $game_progress.monster_id_entity.get(&1).unwrap().clone();
-        $commands.entity($my_monster.5).remove::<SelectedMonster>();
+        let first_monster = $game_progress.monster_id_entity.get(&0).unwrap().clone();
+        $commands.entity($my_monster).remove::<SelectedMonster>();
         $commands.entity(first_monster).insert(SelectedMonster);
         // the battle is over, remove enemy from monster anyways
-        $commands.entity($enemy_monster.5).remove::<Enemy>();
-        $commands.insert_resource(NextState(GameState::Playing));  
-    }
+        $commands.entity($enemy_monster).remove::<Enemy>();
+        $commands.insert_resource(NextState(GameState::Playing));
+    };
 }
 
 macro_rules! monster_level_up {
     ($commands:expr, $game_progress:expr, $my_monster:expr, $up_by:expr) => {
-        info!("your monster level up!");
-        let mut stats = $game_progress.monster_entity_to_stats.get_mut(&$my_monster).unwrap();
+        let mut stats = $game_progress
+            .monster_entity_to_stats
+            .get_mut(&$my_monster)
+            .unwrap();
         stats.lvl.level += 1 * $up_by;
         stats.hp.max_health += 10 * $up_by;
         stats.hp.health = stats.hp.max_health as isize;
@@ -171,119 +101,62 @@ macro_rules! monster_level_up {
     };
 }
 
-pub(crate) fn pre_host(mut commands: Commands){
-    let camera = Camera2dBundle::default();
-    commands.spawn_bundle(camera).insert(MainCamera);
-    commands.insert_resource(NextState(GameState::HostBattle));
-}
-
-pub(crate) fn pre_peer(mut commands: Commands){
-    let camera = Camera2dBundle::default();
-    commands.spawn_bundle(camera).insert(MainCamera);
-    commands.insert_resource(NextState(GameState::PeerBattle));
-}
-
-pub(crate) fn setup_battle(mut commands: Commands,
-                           asset_server: Res<AssetServer>,
-                           cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
-                            Without<Player>, Without<Tile>)>,
-                            // game_channel: Res<GameChannel>,
-                            game_client: Res<GameClient>,
-) { 
-
-    //let temp 
+pub(crate) fn setup_battle(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<
+        (&Transform, Entity),
+        (
+            With<Camera2d>,
+            Without<MenuCamera>,
+            Without<SlidesCamera>,
+            Without<Player>,
+            Without<Tile>,
+        ),
+    >,
+) {
+    // what is this??
     if cameras.is_empty() {
-        // error!("No spawned camera...?");
-    } else{
-
+        error!("No spawned camera...?");
+        return;
     }
     let (ct, _) = cameras.single();
-
-    // commands.spawn_bundle(MonsterBundle {
-    //     ..Default::default()
-    // }).insert(SelectedMonster);
-    // commands.spawn_bundle(MonsterBundle {
-    //     ..Default::default()
-    // }).insert(Enemy);
 
     // Backgrounds overlayed on top of the game world (to prevent the background
     // from being despawned and needing regenerated by WFC).
     // Main background is on -1, so layer this at 0.
     // Monsters can be layered at 1. and buttons/other UI can be 2.
-    commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load(BATTLE_BACKGROUND),
-        transform: Transform::from_xyz(ct.translation.x, ct.translation.y, 0.),
-        ..default()
-    })
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture: asset_server.load(BATTLE_BACKGROUND),
+            transform: Transform::from_xyz(ct.translation.x, ct.translation.y, 0.),
+            ..default()
+        })
         .insert(BattleBackground);
 }
 
-pub(crate) fn battle_pre_check (
-    // game_channel: Res<GameChannel>,
-    game_client: Res<GameClient>,
-    mut commands: Commands
-) {
-    // -----------------------------------------------------------------------------------------------------------
-   
-    // game_client.udp_channel.sx.send(Package::new(String::from("START OF BATTLE: P2P MESSAGE"), Some(game_client.udp_channel.sx.clone())));
-    // game_client.socket.udp_socket.send(b"MSG");
-    // let mut buf = [0; 100];
-    // match game_client.socket.udp_socket.recv(&mut buf) {
-    //     Ok(received) => println!("received {received} bytes {:?}", &buf[..received]),
-    //     Err(e) => println!("recv function failed: {e:?}"),
-    // }
-    
-    // blocks execution until confirmation that message is received from main. Will not need in future 
-    // but thought it would be good to have a sanity check until I get everything works smoothly
-    // let received_pkg = game_client.udp_channel.rx.recv().unwrap();
-    // info!("{}: {:?}", received_pkg.message, received_pkg.sender.expect("Ooops, can't get the sender"));
-}   
-
-
 // -----------------------------------------------------------------------------------------------------------
 
-pub(crate) fn battle_thread (
-    // game_channel: Res<GameChannel>,
-    game_client: Res<GameClient>,
-    mut commands: Commands
-) {
-
-    // let c_sx = game_client.udp_channel.sx.clone();
-    
-    // // create thread for player's battle communication 
-    // thread::spawn(move || {
-    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
-
-    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
-
-    //     c_sx.send(test_pkg).unwrap();
-
-    // });
-    // let response = game_client.udp_channel.rx.try_recv().unwrap();
-    // println!("Player thread receiving this message: {}", response.message);
-}
-
-pub(crate) fn setup_battle_stats(mut commands: Commands, 
-	asset_server: Res<AssetServer>,
+pub(crate) fn setup_battle_stats(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut set: ParamSet<(
         Query<&mut Level, With<SelectedMonster>>,
         Query<&mut Level, With<Enemy>>,
-    )>, 
-){
-
+    )>,
+) {
     let mut my_lvl = 0;
     let mut enemy_lvl = 0;
-    for mut my_monster in set.p0().iter_mut() {
+    for my_monster in set.p0().iter_mut() {
         my_lvl = my_monster.level;
     }
 
-
-    for mut enemy_monster in set.p1().iter_mut() {
+    for enemy_monster in set.p1().iter_mut() {
         enemy_lvl = enemy_monster.level;
     }
 
-
-    commands.spawn_bundle(
+    commands
+        .spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
                 // health header for player's monster
@@ -296,15 +169,6 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                     },
                 ),
                 // health of player's monster
-                // TextSection::new(
-                //     my_hp.to_string(),
-                //     TextStyle {
-                //         font: asset_server.load("buttons/joystix monospace.ttf"),
-                //         font_size: 40.0,
-                //         color: Color::BLACK,
-                //     },
-                // )
-                // health of player's monster
                 TextSection::from_style(TextStyle {
                     font: asset_server.load("buttons/joystix monospace.ttf"),
                     font_size: 40.0,
@@ -312,21 +176,21 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                 }),
             ])
             .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        top: Val::Px(5.0),
-                        left: Val::Px(15.0),
-                        ..default()
-                    },
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(5.0),
+                    left: Val::Px(15.0),
                     ..default()
                 },
-            ),
+                ..default()
+            }),
         )
         .insert(PlayerHealth)
         .insert(BattleUIElement);
 
-        commands.spawn_bundle(
+    commands
+        .spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
                 // level header for player's monster
@@ -346,24 +210,24 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                         font_size: 40.0,
                         color: Color::BLACK,
                     },
-                )
+                ),
             ])
             .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        top: Val::Px(40.0),
-                        left: Val::Px(15.0),
-                        ..default()
-                    },
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(40.0),
+                    left: Val::Px(15.0),
                     ..default()
                 },
-            ),
+                ..default()
+            }),
         )
         .insert(PlayerLevel)
         .insert(BattleUIElement);
 
-        commands.spawn_bundle(
+    commands
+        .spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
                 // health header for enemy's monster
@@ -383,22 +247,22 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                 }),
             ])
             .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        top: Val::Px(5.0),
-                        right: Val::Px(15.0),
-                        ..default()
-                    },
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(5.0),
+                    right: Val::Px(15.0),
                     ..default()
                 },
-            ),
+                ..default()
+            }),
         )
         //.insert(MonsterBundle::default())
         .insert(EnemyHealth)
         .insert(BattleUIElement);
 
-        commands.spawn_bundle(
+    commands
+        .spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
                 // level header for player's monster
@@ -412,75 +276,65 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
                 ),
                 // level of player's monster
                 TextSection::new(
-                	enemy_lvl.to_string(),
+                    enemy_lvl.to_string(),
                     TextStyle {
                         font: asset_server.load("buttons/joystix monospace.ttf"),
                         font_size: 40.0,
                         color: Color::BLACK,
                     },
-                )
+                ),
             ])
             .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        top: Val::Px(40.0),
-                        right: Val::Px(15.0),
-                        ..default()
-                    },
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(40.0),
+                    right: Val::Px(15.0),
                     ..default()
                 },
-            ),
+                ..default()
+            }),
         )
         .insert(EnemyLevel)
         .insert(BattleUIElement);
-
 }
 
-pub(crate) fn update_battle_stats(mut commands: Commands, 
-	asset_server: Res<AssetServer>,
+pub(crate) fn update_battle_stats(
+    _commands: Commands,
+    _asset_server: Res<AssetServer>,
     mut set: ParamSet<(
         Query<&mut Health, With<SelectedMonster>>,
         Query<&mut Health, With<Enemy>>,
-    )>, 
+    )>,
     mut enemy_health_text_query: Query<&mut Text, (With<EnemyHealth>, Without<PlayerHealth>)>,
-    mut player_health_text_query: Query<&mut Text, (With<PlayerHealth>, Without<EnemyHealth>)>
-){
-
+    mut player_health_text_query: Query<&mut Text, (With<PlayerHealth>, Without<EnemyHealth>)>,
+) {
     let mut my_health = 0;
     let mut enemy_health = 0;
-    for mut my_monster in set.p0().iter_mut() {
+    for my_monster in set.p0().iter_mut() {
         my_health = my_monster.health;
     }
 
-    for mut enemy_monster in set.p1().iter_mut() {
+    for enemy_monster in set.p1().iter_mut() {
         enemy_health = enemy_monster.health;
     }
 
     for mut text in &mut enemy_health_text_query {
-        text.sections[1].value = format!("{}", enemy_health.to_string());
+        text.sections[1].value = format!("{}", enemy_health);
     }
 
     for mut text in &mut player_health_text_query {
-        text.sections[1].value = format!("{}", my_health.to_string());
+        text.sections[1].value = format!("{}", my_health);
     }
-
 }
 
-// pub(crate) fn update_battle_stats(
-//     mut query: Query<&mut Text, With<EnemyHealth>>,
-//     mut monster_query: Query<(&mut MonsterBundle)>,
-// ) {
-//     let mut monster = monster_query.single_mut();
-//     for mut text in &mut query {
-//         text.sections[1].value = format!("{}", &monster.hp.health.to_string());
-//     }
-// }
-
-
-pub(crate) fn spawn_player_monster(mut commands: Commands, 
+pub(crate) fn spawn_player_monster(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
+    cameras: Query<
+        (&Transform, Entity),
+        (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>),
+    >,
     selected_monster_query: Query<(&Element, Entity), (With<SelectedMonster>, Without<Enemy>)>,
 ) {
     if cameras.is_empty() {
@@ -499,32 +353,32 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
     let (selected_type, selected_monster) = selected_monster_query.single();
 
     commands
-    .entity(selected_monster)
-    .insert_bundle(
-        SpriteBundle {
+        .entity(selected_monster)
+        .remove_bundle::<SpriteBundle>()
+        .insert_bundle(SpriteBundle {
             sprite: Sprite {
-                flip_y: false,  // flips our little buddy, you guessed it, in the y direction
-                flip_x: true,   // guess what this does
+                flip_y: false, // flips our little buddy, you guessed it, in the y direction
+                flip_x: true,  // guess what this does
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
-            transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.), 
+            transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.),
             ..default()
-    })
-    .insert(PlayerMonster)
-    .insert(Monster);
-
+        })
+        .insert(PlayerMonster)
+        .insert(Monster);
 }
 
-
-pub(crate) fn spawn_enemy_monster(mut commands: Commands,
+pub(crate) fn spawn_enemy_monster(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
-    selected_type_query: Query<(&Element), (Without<SelectedMonster>, With<Enemy>)>,
+    cameras: Query<
+        (&Transform, Entity),
+        (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>),
+    >,
+    selected_type_query: Query<&Element, (Without<SelectedMonster>, With<Enemy>)>,
 ) {
-
-    if cameras.is_empty() 
-    {
+    if cameras.is_empty() {
         error!("No spawned camera...?");
         return;
     }
@@ -538,412 +392,467 @@ pub(crate) fn spawn_enemy_monster(mut commands: Commands,
 
     let (ct, _) = cameras.single();
 
-    // This spawns a new monster that has nothing to do with battle
-    // The one fore battle is spawned in the player.rs when we collide with a monster tile
-    // let monster_info = MonsterStats {
-    //     ..default()
-    // };
-
-
-    // let sprite_string = &get_monster_sprite_for_type(monster_info.clone().typing);
-
-    commands.spawn_bundle(
-        SpriteBundle {
-            // texture: asset_server.load(sprite_string),
+    commands
+        .spawn_bundle(SpriteBundle {
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
-            transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.), 
+            transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 1.),
             ..default()
-    })
+        })
         .insert(EnemyMonster)
         .insert(Monster);
-        // .insert(monster_info.clone());
+    // .insert(monster_info.clone());
 }
 
-// handles abort button for multplayer battles 
-pub (crate) fn mult_abort_handler (
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<AbortButton>),
-    >,
-    mut text_query: Query<&mut Text>,
-    mut commands: Commands
-) {
-
-    for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
-        match *interaction {
-            Interaction::Clicked => {
-                text.sections[0].value = "Abort".to_string();
-                *color = PRESSED_BUTTON.into();
-                commands.insert_resource(NextState(GameState::Start));
-            }
-            Interaction::Hovered => {
-                text.sections[0].value = "Abort".to_string();
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                text.sections[0].value = "Abort".to_string();
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-pub (crate) fn abort_button_handler(
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<AbortButton>),
-    >,
-    mut text_query: Query<&mut Text>,
+pub(crate) fn despawn_battle(
     mut commands: Commands,
-    mut enemy_monster: 
-        Query<Entity, (Without<SelectedMonster>, With<Enemy>)>,
-
-) { 
-    let mut em = enemy_monster.single_mut();
-
-    for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
-        match *interaction {
-            Interaction::Clicked => {
-                text.sections[0].value = "Abort".to_string();
-                *color = PRESSED_BUTTON.into();
-                // This is gonna cause us problems as is, until we modify
-                // states so that the initial transition from Start -> StartPlaying (a new state)
-                // is the only one that spawns the world. In this paradigm,
-                // it will regenerate the whole world as if it just started.
-                commands.entity(em).remove::<Enemy>();
-                commands.insert_resource(NextState(GameState::Playing));
-            }
-            Interaction::Hovered => {
-                text.sections[0].value = "Abort".to_string();
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                text.sections[0].value = "Abort".to_string();
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-pub (crate) fn attack_button_handler (
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<AttackButton>),
-    >,
-    mut text_query: Query<&mut Text>,
-    mut commands: Commands,
-    mut my_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity), 
-        (With<SelectedMonster>, Without<Enemy>)>,
-    mut enemy_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity, Option<&Boss>), 
-        (Without<SelectedMonster>, With<Enemy>)>,
-    mut game_progress: ResMut<GameProgress>,
- ) {
-
-    if(my_monster.is_empty() || enemy_monster.is_empty()) {
-        info!("Monsters are missing!");
-        commands.insert_resource(NextState(GameState::Playing));
-    }
-
-    for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
-        match *interaction {
-            Interaction::Clicked => {
-                text.sections[0].value = "Attack".to_string();
-                *color = PRESSED_BUTTON.into();
-                
-                let mut pm = my_monster.single_mut();
-                let mut em = enemy_monster.single_mut();
-                // Actions: 
-                // 0: attack 1: defend: 2: heal: 3: customize yourself
-                let mut enemy_action = rand::thread_rng().gen_range(0..=1);
-                info!("You attack!");
-                if enemy_action == 1 {
-                    info!("Enemy defends!")
-                } else {
-                    info!("Enemy attacks!")
-                }
-                let turn_result = calculate_damage(&pm.2, &pm.3, 0, &em.2, &em.3, enemy_action);
-
-                pm.1.health -= turn_result.1;
-                em.1.health -= turn_result.0;
-
-                if em.1.health <= 0 {
-                    info!("Enemy monster defeated.");
-                    // at this point this monster is already "ours", we just need to register is with the resource
-                    // get the stats from the monster
-                    let new_monster_stats = game_progress.enemy_stats.get(&em.5).unwrap().clone();
-                    // remove the monster from the enemy stats
-                    game_progress.enemy_stats.remove(&em.5);
-                    // add the monster to the monster bag
-                    game_progress.new_monster(em.5, new_monster_stats);
-                    // TODO: see the discrepancy between the type we see and the type we get
-                    info!("new member type: {:?}", game_progress.monster_entity_to_stats.get(&em.5).unwrap().typing);
-                    // update game progress
-                    // check for boss
-                    if em.6.is_some() {
-                        info!("Boss defeated!");
-                        game_progress.win_boss();
-                        // if boss level up twice
-                        monster_level_up!(commands, game_progress, pm.5, 2);
-                        commands.entity(em.5).remove::<Boss>();
-                    } else {
-                        game_progress.win_battle();
-                        // if not boss level up once
-                        monster_level_up!(commands, game_progress, pm.5, 1);
-                    }
-                    end_battle!(commands, game_progress, pm, em);
-                } else if pm.1.health <= 0 {
-                    let next_monster = game_progress.next_monster(pm.5);
-                    if next_monster.is_none() {
-                        info!("Your monster was defeated.");
-                        end_battle!(commands, game_progress, pm, em);
-                    } else {
-                        info!("Your monster was defeated. Switching to next monster.");
-                        commands.entity(pm.5).remove::<SelectedMonster>();
-                        commands.entity(pm.5).remove_bundle::<SpriteBundle>();
-                        commands.entity(pm.5).remove::<PlayerMonster>();
-                        commands.entity(pm.5).remove::<Monster>();
-                        commands.entity(*next_monster.unwrap()).insert(SelectedMonster); 
-                    }   
-                }
-
-            }
-            Interaction::Hovered => {
-                text.sections[0].value = "Attack".to_string();
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                text.sections[0].value = "Attack".to_string();
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-pub (crate) fn defend_button_handler (
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<DefendButton>),
-    >,
-    mut text_query: Query<&mut Text>,
-    mut commands: Commands,
-    mut my_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves), (With<SelectedMonster>, Without<Enemy>)>,
-    mut enemy_monster: 
-        Query<(&mut Level, &mut Health, &mut Strength, &mut Defense, &mut Moves, Entity), (Without<SelectedMonster>, With<Enemy>)>,
-) {
-
-    if(my_monster.is_empty() || enemy_monster.is_empty()) {
-        info!("Monsters are missing!");
-        commands.insert_resource(NextState(GameState::Playing));
-    }
-
-    for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
-        match *interaction {
-            Interaction::Clicked => {
-                text.sections[0].value = "Defend".to_string();
-                *color = PRESSED_BUTTON.into();
-
-                // let mut pm = my_monster.single_mut();
-                // let mut em = enemy_monster.single_mut();
-                // I just realized that we don't need to do anything here, at least for how this is set up now.
-                let mut enemy_action = rand::thread_rng().gen_range(0..=1);
-                info!("You defend!");
-                if enemy_action == 1 {
-                    info!("Enemy defends!")
-                } else {
-                    info!("Enemy attacks!")
-                }
-                // let turn_result = calculate_damage(&pm.2, &pm.3, 1, &em.2, &em.3, enemy_action);
-
-                // pm.1.health -= turn_result.1;
-                // em.1.health -= turn_result.0;
-
-                // if em.1.health <= 0 {
-                //     info!("Enemy monster defeated");
-                //     commands.entity(em.5).remove::<Enemy>();
-                //     // pm.1.health = pm.1.max_health as isize;
-                //     commands.insert_resource(NextState(GameState::Playing));         
-                // } else if pm.1.health <= 0 {
-                //     info!("Your monster was defeated");
-                //     commands.entity(em.5).remove::<Enemy>();
-                //     // pm.1.health = pm.1.max_health as isize;
-                //     commands.insert_resource(NextState(GameState::Playing));     
-                // }
-            }
-            Interaction::Hovered => {
-                text.sections[0].value = "Defend".to_string();
-                *color = HOVERED_BUTTON.into();
-            }
-            Interaction::None => {
-                text.sections[0].value = "Defend".to_string();
-                *color = NORMAL_BUTTON.into();
-            }
-        }
-    }
-}
-
-pub(crate) fn abort_button(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
-                // center button
-                margin: UiRect::all(Val::Auto),
-                // horizontally center child text
-                justify_content: JustifyContent::Center,
-                // vertically center child text
-                align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    bottom: Val::Px(100.0),
-                    left: Val::Px(100.0),
-                    ..default()
-                },
-                ..default()
-            },
-            color: NORMAL_BUTTON.into(),
-            ..default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle::from_section(
-                "Abort",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::rgb(0.9, 0.9, 0.9),
-                },
-            ));
-        })
-        .insert(AbortButton)
-        .insert(BattleUIElement);
-}
-
-pub(crate) fn attack_button(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
-                // center button
-                margin: UiRect::all(Val::Auto),
-                // horizontally center child text
-                justify_content: JustifyContent::Center,
-                // vertically center child text
-                align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    bottom: Val::Px(100.0),
-                    left: Val::Px(325.0),
-                    ..default()
-                },
-                ..default()
-            },
-            color: NORMAL_BUTTON.into(),
-            ..default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle::from_section(
-                "Attack",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::rgb(0.9, 0.9, 0.9),
-                },
-            ));
-        })
-        .insert(AttackButton)
-        .insert(BattleUIElement);
-}
-
-pub(crate) fn defend_button(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(175.0), Val::Px(65.0)),
-                // center button
-                margin: UiRect::all(Val::Auto),
-                // horizontally center child text
-                justify_content: JustifyContent::Center,
-                // vertically center child text
-                align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    bottom: Val::Px(100.0),
-                    left: Val::Px(550.0),
-                    ..default()
-                },
-                ..default()
-            },
-            color: NORMAL_BUTTON.into(),
-            ..default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle::from_section(
-                "Defend",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::rgb(0.9, 0.9, 0.9),
-                },
-            ));
-        })
-        .insert(DefendButton)
-        .insert(BattleUIElement);
-}
-
-pub(crate) fn despawn_battle(mut commands: Commands,
     background_query: Query<Entity, With<BattleBackground>>,
     monster_query: Query<Entity, With<Monster>>,
-    battle_ui_element_query: Query<Entity, With<BattleUIElement>>
+    battle_ui_element_query: Query<Entity, With<BattleUIElement>>,
 ) {
-    if background_query.is_empty() 
-    {
+    if background_query.is_empty() {
         error!("background is here!");
     }
 
-   background_query.for_each(|background| {
+    background_query.for_each(|background| {
         commands.entity(background).despawn();
-   });
+    });
 
-   if monster_query.is_empty() 
-   {
+    if monster_query.is_empty() {
         error!("monsters are here!");
-   }
-
-   monster_query.for_each(|monster| {
-        commands.entity(monster)                       
-        .remove_bundle::<SpriteBundle>()
-        .remove::<PlayerMonster>()
-        .remove::<EnemyMonster>()
-        .remove::<Monster>();
-   });
-
-
-   if battle_ui_element_query.is_empty() 
-    {
-    error!("ui elements are here!");
     }
 
-   battle_ui_element_query.for_each(|battle_ui_element| {
-        commands.entity(battle_ui_element).despawn_recursive();
-   });
+    monster_query.for_each(|monster| {
+        commands
+            .entity(monster)
+            .remove_bundle::<SpriteBundle>()
+            .remove::<PlayerMonster>()
+            .remove::<EnemyMonster>()
+            .remove::<Monster>();
+    });
 
+    if battle_ui_element_query.is_empty() {
+        error!("ui elements are here!");
+    }
+
+    battle_ui_element_query.for_each(|battle_ui_element| {
+        commands.entity(battle_ui_element).despawn_recursive();
+    });
 }
 
+/// Handler system to enact battle actions based on key presses
+pub(crate) fn key_press_handler(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    mut game_progress: ResMut<GameProgress>,
+    // placeholder for another resource dedicated to battle
+    mut my_monster: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>, Without<Enemy>),
+    >,
+    mut enemy_monster: Query<
+        (
+            &mut Health,
+            &mut Strength,
+            &mut Defense,
+            Entity,
+            Option<&Boss>,
+            &Element,
+        ),
+        (Without<SelectedMonster>, With<Enemy>),
+    >,
+    mut party_monsters: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<PartyMonster>, Without<SelectedMonster>, Without<Enemy>),
+    >,
+    type_system: Res<TypeSystem>,
+    camera: Query<
+        (&Transform, Entity),
+        (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>),
+    >,
+    asset_server: Res<AssetServer>,
+) {
+    if my_monster.is_empty() || enemy_monster.is_empty() {
+        info!("Monsters are missing!");
+        commands.insert_resource(NextState(GameState::Playing));
+        return;
+    }
 
-fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: usize, 
-    enemy_stg: &Strength, enemy_def: &Defense, enemy_action: usize) -> (isize, isize) {
-    if (player_action == 1 || enemy_action == 1) {
+    if camera.is_empty() {
+        error!("No spawned camera?");
+        commands.insert_resource(NextState(GameState::Playing));
+        return;
+    }
+
+    let (transform, _) = camera.single();
+
+    // Get player and enemy monster data out of the query
+    let (mut player_health, mut player_stg, player_def, player_entity, player_type) =
+        my_monster.single_mut();
+
+    let (mut enemy_health, enemy_stg, enemy_def, enemy_entity, enemy_boss, enemy_type) =
+        enemy_monster.single_mut();
+
+    if player_health.health <= 0 {
+        let next_monster = game_progress.next_monster_cyclic(player_entity);
+        if next_monster.is_none() {
+            info!("Your monster was defeated.");
+            end_battle!(commands, game_progress, player_entity, enemy_entity);
+        } else {
+            info!("Your monster was defeated. Switching to next monster.");
+            commands.entity(player_entity).remove::<SelectedMonster>();
+            commands
+                .entity(player_entity)
+                .remove_bundle::<SpriteBundle>();
+            commands.entity(player_entity).remove::<PlayerMonster>();
+            commands.entity(player_entity).remove::<Monster>();
+            commands
+                .entity(*next_monster.unwrap())
+                .insert(SelectedMonster);
+        }
+    }
+
+    if input.just_pressed(KeyCode::A) {
+        // ATTACK HANDLER
+        // Actions:
+        // 0: attack 1: defend: 2: elemental: 3: special
+        let enemy_action = rand::thread_rng().gen_range(0..=3);
+        info!("You attack!");
+
+        if enemy_action == 0 {
+            info!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            info!("Enemy defends!")
+        } else if enemy_action == 2 {
+            info!("Enemy uses an elemental attack!")
+        } else {
+            info!("Enemy uses its special ability!")
+        }
+
+        let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
+            info!("You will deal extra damage this turn.");
+            game_progress.turns_left_of_buff[0] -= 1;
+            game_progress.current_level
+        } else {
+            0
+        };
+
+        // Temporarily increase strength for the turn calculation
+        player_stg.atk += str_buff_damage;
+        let turn_result = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            0,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+        // Reset strength for next turn
+        player_stg.atk -= str_buff_damage;
+
+        player_health.health -= turn_result.1;
+        enemy_health.health -= turn_result.0;
+
+        if enemy_health.health <= 0 {
+            info!("Enemy monster defeated. Your monsters will level up!");
+            // at this point this monster is already "ours", we just need to register is with the resource
+            // get the stats from the monster
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
+            // remove the monster from the enemy stats
+            game_progress.enemy_stats.remove(&enemy_entity);
+            // add the monster to the monster bag
+            commands.entity(enemy_entity).insert(PartyMonster);
+            game_progress.new_monster(enemy_entity, new_monster_stats);
+            // TODO: see the discrepancy between the type we see and the type we get
+            info!(
+                "new member type: {:?}",
+                game_progress
+                    .monster_entity_to_stats
+                    .get(&enemy_entity)
+                    .unwrap()
+                    .typing
+            );
+            // update game progress
+            // check for boss
+            if enemy_boss.is_some() {
+                info!("Boss defeated!");
+                game_progress.get_quest_rewards(*enemy_type);
+                game_progress.win_boss();
+                // if boss level up twice
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+                commands.entity(enemy_entity).remove::<Boss>();
+
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                info!("Someone appears in the dust!");
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(
+                            transform.translation.x,
+                            transform.translation.y,
+                            0.,
+                        ),
+                        ..default()
+                    })
+                    .insert(NPC { quest: new_quest });
+            } else {
+                game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
+                // if not boss level up once
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+            }
+            end_battle!(commands, game_progress, player_entity, enemy_entity);
+        } else if player_health.health <= 0 {
+            game_progress.num_living_monsters -= 1;
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
+            if next_monster.is_none() {
+                info!("Your monster was defeated.");
+                end_battle!(commands, game_progress, player_entity, enemy_entity);
+            } else {
+                info!("Your monster was defeated. Switching to next monster.");
+                commands.entity(player_entity).remove::<SelectedMonster>();
+                commands
+                    .entity(player_entity)
+                    .remove_bundle::<SpriteBundle>();
+                commands.entity(player_entity).remove::<PlayerMonster>();
+                commands.entity(player_entity).remove::<Monster>();
+                commands
+                    .entity(*next_monster.unwrap())
+                    .insert(SelectedMonster);
+            }
+        }
+    } else if input.just_pressed(KeyCode::E) {
+        // ELEMENTAL ATTACK HANDLER
+        // Actions:
+        // 0: attack 1: defend: 2: elemental: 3: special
+        let enemy_action = rand::thread_rng().gen_range(0..=3);
+        info!("You use your type {:?} elemental attack!", player_type);
+
+        if enemy_action == 0 {
+            info!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            info!("Enemy defends!")
+        } else if enemy_action == 2 {
+            info!("Enemy uses an elemental attack!")
+        } else {
+            info!("Enemy uses its special ability!")
+        }
+
+        let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
+            info!("You will deal extra damage this turn.");
+            game_progress.turns_left_of_buff[0] -= 1;
+            game_progress.current_level
+        } else {
+            0
+        };
+
+        // Temporarily increase strength for the turn calculation
+        player_stg.atk += str_buff_damage;
+        let turn_result = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            2,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+        // Reset strength for next turn
+        player_stg.atk -= str_buff_damage;
+
+        player_health.health -= turn_result.1;
+        enemy_health.health -= turn_result.0;
+
+        if enemy_health.health <= 0 {
+            info!("Enemy monster defeated. Your monsters will level up!");
+            // at this point this monster is already "ours", we just need to register is with the resource
+            // get the stats from the monster
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
+            // remove the monster from the enemy stats
+            game_progress.enemy_stats.remove(&enemy_entity);
+            // add the monster to the monster bag
+            commands.entity(enemy_entity).insert(PartyMonster);
+            game_progress.new_monster(enemy_entity, new_monster_stats);
+            // TODO: see the discrepancy between the type we see and the type we get
+            info!(
+                "new member type: {:?}",
+                game_progress
+                    .monster_entity_to_stats
+                    .get(&enemy_entity)
+                    .unwrap()
+                    .typing
+            );
+            // update game progress
+            // check for boss
+            if enemy_boss.is_some() {
+                info!("Boss defeated!");
+                game_progress.win_boss();
+                game_progress.get_quest_rewards(*enemy_type);
+                // if boss level up twice
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+                commands.entity(enemy_entity).remove::<Boss>();
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                info!("Someone appears in the dust!");
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(
+                            transform.translation.x,
+                            transform.translation.y,
+                            0.,
+                        ),
+                        ..default()
+                    })
+                    .insert(NPC { quest: new_quest });
+            } else {
+                game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
+                // if not boss level up once
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+            }
+            end_battle!(commands, game_progress, player_entity, enemy_entity);
+        } else if player_health.health <= 0 {
+            game_progress.num_living_monsters -= 1;
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
+            if next_monster.is_none() {
+                info!("Your monster was defeated.");
+                end_battle!(commands, game_progress, player_entity, enemy_entity);
+            } else {
+                info!("Your monster was defeated. Switching to next monster.");
+                commands.entity(player_entity).remove::<SelectedMonster>();
+                commands
+                    .entity(player_entity)
+                    .remove_bundle::<SpriteBundle>();
+                commands.entity(player_entity).remove::<PlayerMonster>();
+                commands.entity(player_entity).remove::<Monster>();
+                commands
+                    .entity(*next_monster.unwrap())
+                    .insert(SelectedMonster);
+            }
+        }
+    } else if input.just_pressed(KeyCode::Q) {
+        // ABORT HANDLER
+        commands.entity(enemy_entity).remove::<Enemy>();
+        commands.insert_resource(NextState(GameState::Playing));
+    } else if input.just_pressed(KeyCode::D) {
+        // DEFEND HANDLER
+    } else if input.just_pressed(KeyCode::C) {
+        // CYCLE HANDLER
+        if my_monster.is_empty() {
+            error!("No monster spawned, cannot switch!");
+            return;
+        }
+        // They want to cycle their monster
+        let next_monster = game_progress.next_monster_cyclic(player_entity);
+        if next_monster.is_none() {
+            info!("No monster to cycle to.");
+        } else {
+            info!("Cycling to next monster in party.");
+            commands.entity(player_entity).remove::<SelectedMonster>();
+            commands
+                .entity(player_entity)
+                .remove_bundle::<SpriteBundle>();
+            commands.entity(player_entity).remove::<PlayerMonster>();
+            commands.entity(player_entity).remove::<Monster>();
+            commands
+                .entity(*next_monster.unwrap())
+                .insert(SelectedMonster);
+        }
+    } else if input.just_pressed(KeyCode::Key1) {
+        // USE HEAL ITEM HANDLER
+        // Must first check that they have enough healing items
+        if game_progress.player_inventory[0] > 0 {
+            // Remove the item, it is used now
+            game_progress.player_inventory[0] -= 1;
+
+            // Calculate heal amount
+            let heal_amount = (game_progress.current_level * 3) as isize;
+
+            // Heal whole party
+            for mut pm in party_monsters.iter_mut() {
+                // Check if this is a resurrection
+                if pm.0.health <= 0 {
+                    game_progress.num_living_monsters += 1;
+                }
+
+                // Clamped heal
+                if pm.0.health + heal_amount > pm.0.max_health as isize {
+                    pm.0.health = pm.0.max_health as isize;
+                } else {
+                    pm.0.health += heal_amount;
+                }
+            }
+
+            // Now heal selected monster
+            if player_health.health + heal_amount > player_health.max_health as isize {
+                player_health.health = player_health.max_health as isize;
+            } else {
+                player_health.health += heal_amount;
+            }
+
+            info!("{} health restored.", heal_amount);
+        }
+    } else if input.just_pressed(KeyCode::Key2) {
+        // USE STRENGTH BUFF HANDLER
+        // Check that we have a buff item
+        if game_progress.player_inventory[1] > 0 {
+            info!("You used a strength buff. The next five turns you will deal extra damage.");
+            // Decrement
+            game_progress.player_inventory[1] -= 1;
+            // Make it so we have turns left of this buff
+            game_progress.turns_left_of_buff[0] = 5;
+        }
+    }
+}
+
+fn calculate_turn(
+    player_stg: &Strength,
+    player_def: &Defense,
+    player_type: &Element,
+    player_action: usize,
+    enemy_stg: &Strength,
+    enemy_def: &Defense,
+    enemy_type: &Element,
+    enemy_action: usize,
+    type_system: TypeSystem,
+) -> (isize, isize) {
+    if player_action == 1 || enemy_action == 1 {
         // if either side defends this turn will not have any damage on either side
         return (0, 0);
     }
     // More actions can be added later, we can also consider decoupling the actions from the damage
-    let mut result = (0,0);
+    let mut result = (
+        0, // Your damage to enemy
+        0, // Enemy's damage to you
+    );
     // player attacks
     // If our attack is less than the enemy's defense, we do 0 damage
     if player_stg.atk <= enemy_def.def {
@@ -952,13 +861,12 @@ fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: 
         // if we have damage, we do that much damage
         // I've only implemented crits for now, dodge and element can follow
         result.0 = player_stg.atk - enemy_def.def;
-        if player_stg.crt <= enemy_def.crt_res {
-            result.0 = result.0;
-        } else {
+        if player_stg.crt > enemy_def.crt_res {
             // calculate crit chance and apply crit damage
-            let mut crit_chance = player_stg.crt - enemy_def.crt_res;
+            let crit_chance = player_stg.crt - enemy_def.crt_res;
             let crit = rand::thread_rng().gen_range(0..=100);
             if crit <= crit_chance {
+                info!("You had a critical strike!");
                 result.0 *= player_stg.crt_dmg;
             }
         }
@@ -968,16 +876,32 @@ fn calculate_damage(player_stg: &Strength, player_def: &Defense, player_action: 
         result.1 = 0;
     } else {
         result.1 = enemy_stg.atk - player_def.def;
-        if enemy_stg.crt <= player_def.crt_res {
-            result.1 = result.1;
-        } else {
-            let mut crit_chance = enemy_stg.crt - player_def.crt_res;
+        if enemy_stg.crt > player_def.crt_res {
+            let crit_chance = enemy_stg.crt - player_def.crt_res;
             let crit = rand::thread_rng().gen_range(0..=100);
             if crit <= crit_chance {
+                info!("Enemy had a critical strike!");
                 result.1 *= enemy_stg.crt_dmg;
             }
         }
     }
 
-    return (result.0 as isize, result.1 as isize)
+    if player_action == 2 {
+        result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+            * result.0 as f32)
+            .trunc() as usize;
+    }
+
+    if enemy_action == 2 {
+        result.1 = (type_system.type_modifier[*enemy_type as usize][*player_type as usize]
+            * result.1 as f32)
+            .trunc() as usize;
+    }
+
+    info!(
+        "Player deals {} damage, enemy deals {} damage...",
+        result.0, result.1
+    );
+
+    (result.0 as isize, result.1 as isize)
 }
