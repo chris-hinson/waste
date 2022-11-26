@@ -1,15 +1,13 @@
 [package]
-name = "waste"
+name = "udp_trial"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.8.1", features = ["dynamic"] }
-iyes_loopless = "0.7.1"
-rand = "0.8.5"
 local-ip-address = "0.4.9"
+bevy = { version = "0.8.1", features = ["dynamic"] }
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
@@ -18,4 +16,3 @@ opt-level = 1
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
-
