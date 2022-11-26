@@ -8,7 +8,12 @@ use iyes_loopless::prelude::*;
 pub(crate) struct HelpPlugin;
 
 #[derive(Component)]
+pub(crate) struct HelpBackground;
+
+#[derive(Component)]
 pub struct Text;
+
+const HELP_BACKGROUND: &str = "backgrounds/helpscreen.png";
 
 impl Plugin for HelpPlugin {
     fn build(&self, app: &mut App) {
@@ -46,6 +51,15 @@ pub(crate) fn setup_help(
     // Spawn help camera
     let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(HelpCamera);
+
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture: asset_server.load(HELP_BACKGROUND),
+            transform: Transform::from_xyz(0., 0., 0.),
+            ..default()
+        })
+        .insert(HelpBackground);
+
     commands
         .spawn_bundle(TextBundle::from_section(
             "HELP",
@@ -151,6 +165,7 @@ pub(crate) fn despawn_help(
     mut commands: Commands,
     camera_query: Query<Entity, With<HelpCamera>>,
     text_query: Query<Entity, With<Text>>,
+    background_query: Query<Entity, With<HelpBackground>>,
 ) {
     // Despawn credits camera
     camera_query.for_each(|camera| {
@@ -161,6 +176,10 @@ pub(crate) fn despawn_help(
     text_query.for_each(|text| {
         commands.entity(text).despawn();
     });
+
+    for bckg in background_query.iter() {
+        commands.entity(bckg).despawn();
+    }
 }
 
 fn handle_exit_help(mut commands: Commands, input: Res<Input<KeyCode>>) {
