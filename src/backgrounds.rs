@@ -1,7 +1,7 @@
-use crate::player::{Player};
+use crate::player::Player;
 use crate::wfc::{wfc, ProcGen};
+use crate::world::{logical_to_rendering, WorldMap};
 use bevy::prelude::*;
-use crate::world::{WorldMap, logical_to_rendering};
 
 pub(crate) const TILE_SIZE: f32 = 64.;
 pub(crate) const MAP_WIDTH: usize = 20;
@@ -20,21 +20,15 @@ pub(crate) struct Tile;
 
 /// Tile to start a battle
 #[derive(Component)]
-pub(crate) struct MonsterTile {
-    pub(crate) transform: Transform,
-}
+pub(crate) struct MonsterTile;
 
 /// Tile to automatically heal all monsters
 #[derive(Component)]
-pub(crate) struct HealingTile {
-    pub(crate) transform: Transform,
-}
+pub(crate) struct HealingTile;
 
 /// Tile to represent an item-giving chest
 #[derive(Component)]
-pub(crate) struct ChestTile { 
-    pub(crate) transform: Transform,
-}
+pub(crate) struct ChestTile;
 
 #[derive(Component, Debug, Clone)]
 pub(crate) struct Chunk {
@@ -44,32 +38,17 @@ pub(crate) struct Chunk {
 
 macro_rules! draw_chunk {
     ($chunk:expr, $commands:expr, $map_atlas_handle:expr) => {
-    // from center of the screen to half a tile from edge
-    // so the tile will never be "cut in half" by edge of screen
-    let rendering_center = logical_to_rendering($chunk.position.0, $chunk.position.1);
-    // info!("Rendering chunk at {:?}", rendering_center);
-    let mut x = rendering_center.0 + DRAW_START_X;
-    let mut y = rendering_center.1 + DRAW_START_Y;
+        // from center of the screen to half a tile from edge
+        // so the tile will never be "cut in half" by edge of screen
+        let rendering_center = logical_to_rendering($chunk.position.0, $chunk.position.1);
+        // info!("Rendering chunk at {:?}", rendering_center);
+        let mut x = rendering_center.0 + DRAW_START_X;
+        let mut y = rendering_center.1 + DRAW_START_Y;
 
-    for i in 0..$chunk.tiles.len() {
-        for j in 0..$chunk.tiles[i].len() {
-            let tile = $chunk.tiles[i][j];
-            let t = Vec3::new(x, y, -1.);
-            $commands
-                .spawn_bundle(SpriteSheetBundle {
-                    texture_atlas: $map_atlas_handle.clone(),
-                    transform: Transform {
-                        translation: t,
-                        ..default()
-                    },
-                    sprite: TextureAtlasSprite {
-                        index: tile,
-                        ..default()
-                    },
-                    ..default()
-                })
-                .insert(Tile);
-            if tile == 4 {
+        for i in 0..$chunk.tiles.len() {
+            for j in 0..$chunk.tiles[i].len() {
+                let tile = $chunk.tiles[i][j];
+                let t = Vec3::new(x, y, -1.);
                 $commands
                     .spawn_bundle(SpriteSheetBundle {
                         texture_atlas: $map_atlas_handle.clone(),
@@ -83,52 +62,61 @@ macro_rules! draw_chunk {
                         },
                         ..default()
                     })
-                    .insert(MonsterTile {
-                        transform: Transform::from_xyz(x, y, -1.),
-                    });
-            }
-            if tile == 31 {
-                $commands
-                    .spawn_bundle(SpriteSheetBundle {
-                        texture_atlas: $map_atlas_handle.clone(),
-                        transform: Transform {
-                            translation: t,
+                    .insert(Tile);
+                if tile == 4 {
+                    $commands
+                        .spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: $map_atlas_handle.clone(),
+                            transform: Transform {
+                                translation: t,
+                                ..default()
+                            },
+                            sprite: TextureAtlasSprite {
+                                index: tile,
+                                ..default()
+                            },
                             ..default()
-                        },
-                        sprite: TextureAtlasSprite {
-                            index: tile,
+                        })
+                        .insert(MonsterTile);
+                }
+                if tile == 31 {
+                    $commands
+                        .spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: $map_atlas_handle.clone(),
+                            transform: Transform {
+                                translation: t,
+                                ..default()
+                            },
+                            sprite: TextureAtlasSprite {
+                                index: tile,
+                                ..default()
+                            },
                             ..default()
-                        },
-                        ..default()
-                    })
-                    .insert(HealingTile {
-                        transform: Transform::from_xyz(x, y, -1.),
-                    });
-            }
-            if tile == 33 {
-                $commands
-                    .spawn_bundle(SpriteSheetBundle {
-                        texture_atlas: $map_atlas_handle.clone(),
-                        transform: Transform {
-                            translation: t,
+                        })
+                        .insert(HealingTile);
+                }
+                if tile == 33 {
+                    $commands
+                        .spawn_bundle(SpriteSheetBundle {
+                            texture_atlas: $map_atlas_handle.clone(),
+                            transform: Transform {
+                                translation: t,
+                                ..default()
+                            },
+                            sprite: TextureAtlasSprite {
+                                index: tile,
+                                ..default()
+                            },
                             ..default()
-                        },
-                        sprite: TextureAtlasSprite {
-                            index: tile,
-                            ..default()
-                        },
-                        ..default()
-                    })
-                    .insert(ChestTile {
-                        transform: Transform::from_xyz(x, y, -1.),
-                    });
-            }
+                        })
+                        .insert(ChestTile);
+                }
 
-            x += TILE_SIZE;
+                x += TILE_SIZE;
+            }
+            x = rendering_center.0 + DRAW_START_X;
+            y -= TILE_SIZE;
         }
-        x = rendering_center.0 + DRAW_START_X;
-        y -= TILE_SIZE;
-    }
     };
 }
 
@@ -139,10 +127,9 @@ pub(crate) fn init_background(
     mut world: ResMut<WorldMap>,
     procgen: Res<ProcGen>,
 ) {
-
     let rules = procgen.rules.clone();
 
-    let starting_chunk = Chunk{
+    let starting_chunk = Chunk {
         position: (0, 0),
         tiles: wfc(None, rules),
     };
@@ -151,7 +138,7 @@ pub(crate) fn init_background(
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
     let map_atlas_handle = texture_atlases.add(map_atlas);
-    
+
     let entity = commands.spawn().insert(starting_chunk.clone()).id();
     world.add_to_world(starting_chunk.clone(), entity, 0, 0);
 
@@ -165,9 +152,9 @@ pub(crate) fn expand_map(
     mut world: ResMut<WorldMap>,
     procgen: Res<ProcGen>,
     mut player_query: Query<&mut Player>,
-){
+) {
     // check for collision
-    if player_query.is_empty(){
+    if player_query.is_empty() {
         error!("Couldn't find player");
     }
 
@@ -191,11 +178,11 @@ pub(crate) fn expand_map(
         Some(_) => (),
         None => {
             // Prevent the system from trying to generate a chunk here again
-            let (x, y) = (player_chunk_pos.0+1, player_chunk_pos.1);
+            let (x, y) = (player_chunk_pos.0 + 1, player_chunk_pos.1);
             world.chunk_ids.insert((x, y), 0);
             // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
-            for i in 0..MAP_HEIGHT{
+            for i in 0..MAP_HEIGHT {
                 seed.push((player_chunk.tiles[i][MAP_WIDTH - 1], (i, 0)));
             }
             // if world.get_chunk(x+1, y).is_some(){
@@ -213,7 +200,7 @@ pub(crate) fn expand_map(
             //         seed.push((world.get_chunk(x, y-1).unwrap().tiles[MAP_HEIGHT - 1][i], (0, i)));
             //     }
             // }
-            let new_chunk = Chunk{
+            let new_chunk = Chunk {
                 position: (x, y),
                 tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
@@ -227,16 +214,18 @@ pub(crate) fn expand_map(
         }
     }
 
-    let south_chunk = world.chunk_ids.get(&(player_chunk_pos.0, player_chunk_pos.1+1));
+    let south_chunk = world
+        .chunk_ids
+        .get(&(player_chunk_pos.0, player_chunk_pos.1 + 1));
     match south_chunk {
         Some(_) => (),
         None => {
             // Prevent the system from trying to generate another chunk here while we're drawing this one
-            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1+1);
+            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1 + 1);
             world.chunk_ids.insert((x, y), 0);
             // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
-            for i in 0..MAP_WIDTH{
+            for i in 0..MAP_WIDTH {
                 seed.push((player_chunk.tiles[0][i], (MAP_HEIGHT - 1, i)));
             }
             // if world.get_chunk(x, y+1).is_some(){
@@ -254,7 +243,7 @@ pub(crate) fn expand_map(
             //         seed.push((world.get_chunk(x-1, y).unwrap().tiles[i][MAP_WIDTH - 1], (i, 0)));
             //     }
             // }
-            let new_chunk = Chunk{
+            let new_chunk = Chunk {
                 position: (x, y),
                 tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
@@ -268,17 +257,19 @@ pub(crate) fn expand_map(
         }
     }
 
-    let west_chunk = world.chunk_ids.get(&(player_chunk_pos.0-1, player_chunk_pos.1));
+    let west_chunk = world
+        .chunk_ids
+        .get(&(player_chunk_pos.0 - 1, player_chunk_pos.1));
     match west_chunk {
         Some(_) => (),
         None => {
             // Prevent the system from trying to generate another chunk here while we're drawing this one
-            let (x, y) = (player_chunk_pos.0-1, player_chunk_pos.1);
+            let (x, y) = (player_chunk_pos.0 - 1, player_chunk_pos.1);
             world.chunk_ids.insert((x, y), 0);
             // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
-            for i in 0..MAP_HEIGHT{
-                seed.push((player_chunk.tiles[i][0], (i, MAP_WIDTH-1)));
+            for i in 0..MAP_HEIGHT {
+                seed.push((player_chunk.tiles[i][0], (i, MAP_WIDTH - 1)));
             }
             // if world.get_chunk(x-1, y).is_some(){
             //     for i in 0..MAP_HEIGHT{
@@ -295,7 +286,7 @@ pub(crate) fn expand_map(
             //         seed.push((world.get_chunk(x, y-1).unwrap().tiles[MAP_HEIGHT-1][i], (0, i)));
             //     }
             // }
-            let new_chunk = Chunk{
+            let new_chunk = Chunk {
                 position: (x, y),
                 tiles: wfc(Some(seed), rules.clone()),
                 // tiles: wfc(None),
@@ -309,17 +300,19 @@ pub(crate) fn expand_map(
         }
     }
 
-    let north_chunk = world.chunk_ids.get(&(player_chunk_pos.0, player_chunk_pos.1-1));
-    match north_chunk{
-        Some(_) => {},
+    let north_chunk = world
+        .chunk_ids
+        .get(&(player_chunk_pos.0, player_chunk_pos.1 - 1));
+    match north_chunk {
+        Some(_) => {}
         None => {
             // Prevent the system from trying to generate another chunk here while we're drawing this one
-            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1-1);
+            let (x, y) = (player_chunk_pos.0, player_chunk_pos.1 - 1);
             world.chunk_ids.insert((x, y), 0);
             // Generate seeding vector
             let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
-            for i in 0..MAP_WIDTH{
-                seed.push((player_chunk.tiles[MAP_HEIGHT-1][i], (0, i)));
+            for i in 0..MAP_WIDTH {
+                seed.push((player_chunk.tiles[MAP_HEIGHT - 1][i], (0, i)));
             }
             // if world.get_chunk(x, y-1).is_some(){
             //     for i in 0..MAP_WIDTH{
@@ -336,7 +329,7 @@ pub(crate) fn expand_map(
             //         seed.push((world.get_chunk(x-1, y).unwrap().tiles[i][MAP_WIDTH-1], (i, 0)));
             //     }
             // }
-            let new_chunk = Chunk{
+            let new_chunk = Chunk {
                 position: (x, y),
                 tiles: wfc(Some(seed), rules),
                 // tiles: wfc(None),
@@ -367,9 +360,8 @@ pub(crate) fn expand_map(
 //                     }
 //                 },
 //                 None => (),
-//             } 
+//             }
 
-//         }    
+//         }
 //     };
 // }
-    

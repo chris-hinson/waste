@@ -1,6 +1,6 @@
 #![warn(unused)]
 #![warn(unsafe_code)]
-#![warn(unreachable_code)]
+#![deny(unreachable_code)]
 use bevy::{prelude::*, window::PresentMode};
 
 use iyes_loopless::prelude::*;
@@ -8,11 +8,11 @@ use std::convert::From;
 
 // GAMEWIDE CONSTANTS
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
-pub (crate) enum GameState{
-	Start,
-	Pause,
-    	StartPlaying,
-	Playing,
+pub(crate) enum GameState {
+    Start,
+    Pause,
+    StartPlaying,
+    Playing,
     Battle,
     Credits,
     Help, //NEW
@@ -25,16 +25,19 @@ pub(crate) const TITLE: &str = "Waste";
 
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
 //mod statements:
-mod credits;
-mod help; 
-mod pause;
 mod backgrounds;
-mod player;
+mod battle;
 mod camera;
+mod credits;
+mod game_client;
+mod help;
+mod monster;
+mod multiplayer_menu;
+mod pause;
+mod player;
+mod quests;
 mod start_menu;
 mod wfc;
-mod battle;
-mod monster;
 mod world;
 mod multiplayer_menu;
 mod multiplayer_battle;
@@ -43,20 +46,22 @@ mod quests;
 
 
 //use statements:
-use credits::*;
-use help::*;
-use pause::*; 
 use backgrounds::*;
-use player::*;
-use camera::*;
-use start_menu::*;
 use battle::*;
-use wfc::*;
+use camera::*;
+use credits::*;
+use game_client::*;
+use help::*;
 use monster::*;
+use multiplayer_menu::*;
+use pause::*;
+use player::*;
+use quests::*;
+use start_menu::*;
+use wfc::*;
 use world::*;
 use multiplayer_menu::*;
 use multiplayer_battle::*;
-use game_client::*;
 use game_client::*;
 use quests::*;
 
@@ -72,7 +77,6 @@ use quests::*;
 
 // unsafe impl Send for GameChannel {}
 // unsafe impl Sync for GameChannel {}
-
 
 fn main() {
     App::new()
@@ -90,40 +94,52 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
-		.add_loopless_state(GameState::Start)
-		.add_plugin(MainMenuPlugin)
+        .add_loopless_state(GameState::Start)
+        .add_plugin(MainMenuPlugin)
         .add_plugin(CreditsPlugin)
         .add_plugin(HelpPlugin)
         .add_plugin(PausePlugin)
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
         .add_plugin(MultBattlePlugin)
-    .add_enter_system_set(GameState::StartPlaying, 
-        // This system set is unconditional, as it is being added in an enter helper
-        SystemSet::new()
-            .with_system(init_background)
-            .with_system(setup_game)
-    )
-    .add_system_set(ConditionSet::new()
-        // These systems will only run in the condition that the game is in the state
-        // Playing
-        .run_in_state(GameState::Playing)
-            .with_system(move_player)
-            .with_system(move_camera)
-            .with_system(animate_sprite)
-            .with_system(expand_map)
-            .with_system(win_game)
-            .with_system(handle_pause)
-        .into()
-    )
-    .run();
+
+        .add_enter_system_set(
+            GameState::StartPlaying,
+            // This system set is unconditional, as it is being added in an enter helper
+            SystemSet::new()
+                .with_system(init_background)
+                .with_system(setup_game),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                // These systems will only run in the condition that the game is in the state
+                // Playing
+                .run_in_state(GameState::Playing)
+                .with_system(move_player)
+                .with_system(move_camera)
+                .with_system(animate_sprite)
+                .with_system(expand_map)
+                .with_system(win_game)
+                .with_system(handle_pause)
+                .into(),
+        )
+        .run();
 }
 
-pub(crate) fn setup_game(mut commands: Commands,
+pub(crate) fn setup_game(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    cameras: Query<Entity, (With<Camera2d>, Without<MainCamera>, Without<Player>, Without<Tile>)>,
-    mut game_progress: ResMut<GameProgress>
+    cameras: Query<
+        Entity,
+        (
+            With<Camera2d>,
+            Without<MainCamera>,
+            Without<Player>,
+            Without<Tile>,
+        ),
+    >,
+    mut game_progress: ResMut<GameProgress>,
 ) {
     // Despawn other cameras
     cameras.for_each(|camera| {
@@ -131,7 +147,7 @@ pub(crate) fn setup_game(mut commands: Commands,
     });
 
     // done so that this camera doesn't mess with any UI cameras for start or pause menu
-	let camera = Camera2dBundle {
+    let camera = Camera2dBundle {
         transform: Transform::from_xyz(0., 0., 1000.),
         ..default()
     };
@@ -143,7 +159,7 @@ pub(crate) fn setup_game(mut commands: Commands,
 
     // Draw the player
     commands
-        .spawn_bundle(SpriteSheetBundle { 
+        .spawn_bundle(SpriteSheetBundle {
             texture_atlas: texture_atlas_handle,
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
@@ -151,34 +167,37 @@ pub(crate) fn setup_game(mut commands: Commands,
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
         .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
-		//player stats init here:
-        .insert(Player{
+        //player stats init here:
+        .insert(Player {
             current_chunk: (0, 0),
-			//constants can be found in player.rs,
+            //constants can be found in player.rs,
         });
 
     // Give the player a monster
-    let initial_monster_stats = MonsterStats {..Default::default()};
-    let initial_monster = commands.spawn()
+    let initial_monster_stats = MonsterStats {
+        ..Default::default()
+    };
+    let initial_monster = commands
+        .spawn()
         .insert_bundle(initial_monster_stats)
         .insert(SelectedMonster)
-        .insert(PartyMonster).id();
+        .insert(PartyMonster)
+        .id();
     // initial_monster.insert(SelectedMonster);
     game_progress.new_monster(initial_monster, initial_monster_stats);
-    
-    
 
     // Finally, transition to normal playing state
     commands.insert_resource(NextState(GameState::Playing));
 }
 
-/// Tear down ALL significant resources for the game, and despawn all relevant 
+/// Tear down ALL significant resources for the game, and despawn all relevant
 /// in game entities. This should be used when bailing out of the credits state
 /// after beating the game, or when exiting multiplayer to move to singleplayer.*
-/// 
+///
 /// *Multiplayer may need to add their own relevant resources or queries to despawn
-pub(crate) fn teardown(mut commands: Commands,
-	camera_query: Query<Entity,  With<MainCamera>>,
+pub(crate) fn teardown(
+    mut commands: Commands,
+    camera_query: Query<Entity, With<MainCamera>>,
     background_query: Query<Entity, With<Tile>>,
     player_query: Query<Entity, With<Player>>,
     monster_query: Query<Entity, With<PartyMonster>>,
@@ -222,19 +241,13 @@ pub(crate) fn teardown(mut commands: Commands,
 }
 
 /// Mark that game has been completed and transition to credits.
-pub(crate) fn win_game(
-    mut commands: Commands,
-    game_progress: ResMut<GameProgress>,
-) {
+pub(crate) fn win_game(mut commands: Commands, game_progress: ResMut<GameProgress>) {
     if game_progress.num_boss_defeated == 5 {
         commands.insert_resource(NextState(GameState::Credits));
     }
 }
 
-pub(crate) fn handle_pause(
-    mut commands: Commands,
-	input: Res<Input<KeyCode>>,
-) {
+pub(crate) fn handle_pause(mut commands: Commands, input: Res<Input<KeyCode>>) {
     if input.just_pressed(KeyCode::Escape) {
         // Change to pause menu state
         commands.insert_resource(NextState(GameState::Pause));

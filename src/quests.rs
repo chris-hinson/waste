@@ -1,15 +1,15 @@
-use bevy::{prelude::*};
-use crate::{monster::*, world::{NUM_ITEM_TYPES}};
-use rand::{Rng};
+use crate::{monster::*, world::NUM_ITEM_TYPES};
+use bevy::prelude::*;
+use rand::Rng;
 
 pub(crate) const NPC_PATH: &str = "characters/npc_sprite.png";
 
-/// Component to mark quest-giving NPCs and store data associated 
+/// Component to mark quest-giving NPCs and store data associated
 /// with them, such as their X,Y location and the quest they are giving.
 #[derive(Component, Debug)]
 pub(crate) struct NPC {
-    pub(crate) transform: Transform,
-    pub(crate) quest: Quest
+    // pub(crate) transform: Transform,
+    pub(crate) quest: Quest,
 }
 
 /// Struct to store data for quests given by NPCs to the player
@@ -21,15 +21,6 @@ pub(crate) struct Quest {
 }
 
 impl Quest {
-    /// Create a new quest object with the given target monster and reward item
-    pub(crate) fn new(target: Element, reward: usize, reward_amount: usize) -> Self {
-        Self {
-            target,
-            reward,
-            reward_amount
-        }
-    }
-
     /// Create a new quest object with a random target monster and random reward
     pub(crate) fn random() -> Self {
         let target = rand::random();
@@ -38,7 +29,7 @@ impl Quest {
         Self {
             target,
             reward,
-            reward_amount
+            reward_amount,
         }
     }
 }

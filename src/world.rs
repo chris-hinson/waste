@@ -1,7 +1,11 @@
-use {bevy::prelude::*};
+use bevy::prelude::*;
 
-
-use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::{MonsterStats, Element}, quests::*};
+use crate::{
+    backgrounds::{WIN_H, WIN_W},
+    monster::{Element, MonsterStats},
+    quests::*,
+    Chunk,
+};
 use std::collections::HashMap;
 
 /// Number of total consumable item types
@@ -10,7 +14,7 @@ pub(crate) const NUM_ITEM_TYPES: usize = 2;
 // pub(crate) const NUM_STATUS_TYPES: usize = 3; // Commented out because it is currently unused
 
 #[derive(Default, Debug)]
-pub(crate) struct WorldMap{
+pub(crate) struct WorldMap {
     // the first usize is the chunk id
     // the tuple is chunks relative(logical) position
     pub(crate) positions: HashMap<usize, (isize, isize)>,
@@ -27,9 +31,8 @@ pub(crate) struct WorldMap{
     pub(crate) chunk_components: HashMap<usize, Chunk>,
 }
 
-
-impl WorldMap{
-    pub(crate) fn add_to_world(&mut self, chunk: Chunk, entity: Entity, x: isize, y: isize){
+impl WorldMap {
+    pub(crate) fn add_to_world(&mut self, chunk: Chunk, entity: Entity, x: isize, y: isize) {
         let id = entity.id();
         self.positions.insert(id as usize, (x, y));
         self.chunk_ids.insert((x, y), id as usize);
@@ -37,23 +40,22 @@ impl WorldMap{
         self.chunk_components.insert(id as usize, chunk);
     }
 
-    pub(crate) fn get_chunk(&self, x: isize, y: isize) -> Option<Chunk>{
+    pub(crate) fn get_chunk(&self, x: isize, y: isize) -> Option<Chunk> {
         let id = self.chunk_ids.get(&(x, y));
-        if let Some(id) = id{
+        if let Some(id) = id {
             let chunk = self.chunk_components.get(id);
             chunk.cloned()
-        }else {
+        } else {
             None
         }
-        
     }
 }
-    
-pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
+
+pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32) {
     (x as f32 * WIN_W, y as f32 * WIN_H)
 }
 
-pub(crate) struct GameProgress{
+pub(crate) struct GameProgress {
     /// the level of our player, which is also the level we should spawn the monsters
     pub(crate) current_level: usize,
     /// number of bosses we have defeated
@@ -64,7 +66,7 @@ pub(crate) struct GameProgress{
     /// this is the our id independent from bevy's entity id
     pub(crate) num_monsters: usize,
     /// Number of monsters currently available in the party
-    /// 
+    ///
     /// Initialized to the same amount as num_monsters and as monsters die it is decremented
     pub(crate) num_living_monsters: usize,
     /// keeps track of all monsters we currently have
@@ -92,7 +94,6 @@ pub(crate) struct GameProgress{
     pub(crate) quests_active: Vec<Quest>,
 }
 
-
 impl GameProgress {
     pub fn new_monster(&mut self, entity: Entity, stats: MonsterStats) {
         let id = entity.id() as usize;
@@ -108,7 +109,7 @@ impl GameProgress {
 
     // pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
     //     let our_id = self.entity_monster_id.get(&last_monster);
-        
+
     //     self.monster_id_entity.get(&(*our_id.unwrap()+1))
     // }
 
@@ -119,12 +120,17 @@ impl GameProgress {
         }
         let monster_id_entity_len = self.monster_id_entity.len();
         let our_id = self.entity_monster_id.get(&last_monster);
-        info!("Trying {} with length {}", ((*our_id.unwrap()+1) % monster_id_entity_len), monster_id_entity_len);
-        
-        self.monster_id_entity.get(&(((*our_id.unwrap()+1) % monster_id_entity_len)))
+        info!(
+            "Trying {} with length {}",
+            ((*our_id.unwrap() + 1) % monster_id_entity_len),
+            monster_id_entity_len
+        );
+
+        self.monster_id_entity
+            .get(&((*our_id.unwrap() + 1) % monster_id_entity_len))
     }
 
-    pub fn win_battle(&mut self){
+    pub fn win_battle(&mut self) {
         self.num_living_monsters = self.num_monsters;
         self.current_level += 1;
         if self.current_level % 5 == 0 {
@@ -133,19 +139,21 @@ impl GameProgress {
             info!("You are now level {}. You have awakened a boss! Your next fight will be a boss fight...",
                 self.current_level);
         } else {
-            info!("You are now level {}. Defeat {} more monsters to face the next boss!",
+            info!(
+                "You are now level {}. Defeat {} more monsters to face the next boss!",
                 self.current_level,
-                5-(self.current_level%5));
+                5 - (self.current_level % 5)
+            );
         }
     }
 
-    pub fn win_boss(&mut self){
+    pub fn win_boss(&mut self) {
         self.num_living_monsters = self.num_monsters;
         self.current_level += 1;
         self.num_boss_defeated += 1;
         self.level_boss_awaken = false;
         info!("You have defeated {} bosses.", self.num_boss_defeated);
-        if self.num_boss_defeated == 5{
+        if self.num_boss_defeated == 5 {
             info!("You have defeated all the bosses, you win!");
             // win the game
             // commands.insert_resource(NextState(GameState::Credits));
@@ -158,7 +166,7 @@ impl GameProgress {
     }
 
     /// Give the player the reward for the first matching quest found
-    /// 
+    ///
     /// @param typing: Element of the monster that was defeated
     pub(crate) fn get_quest_rewards(&mut self, typing: Element) {
         let num_quests = self.quests_active.len();
@@ -169,7 +177,11 @@ impl GameProgress {
                 let reward_amount = self.quests_active[i].reward_amount;
                 self.quests_active.remove(i);
                 self.player_inventory[reward] += reward_amount;
-                info!("Quest complete! You obtain {} {} items!", reward_amount, item_index_to_name(reward));
+                info!(
+                    "Quest complete! You obtain {} {} items!",
+                    reward_amount,
+                    item_index_to_name(reward)
+                );
                 return;
             }
         }
@@ -184,23 +196,23 @@ pub(crate) fn item_index_to_name(index: usize) -> &'static str {
         2 => "slowdown",
         3 => "blinding",
         4 => "debuff removal",
-        _ => "junk"
+        _ => "junk",
     }
 }
 
 impl Default for GameProgress {
     fn default() -> Self {
-        Self { 
-            current_level: 1_usize, 
+        Self {
+            current_level: 1_usize,
             num_boss_defeated: Default::default(),
-            level_boss_awaken: Default::default(), 
-            num_monsters: Default::default(), 
+            level_boss_awaken: Default::default(),
+            num_monsters: Default::default(),
             num_living_monsters: Default::default(),
-            allied_monster_id: Default::default(), 
-            id_allied_monster: Default::default(), 
-            monster_id_entity: Default::default(), 
-            entity_monster_id: Default::default(), 
-            monster_entity_to_stats: Default::default(), 
+            allied_monster_id: Default::default(),
+            id_allied_monster: Default::default(),
+            monster_id_entity: Default::default(),
+            entity_monster_id: Default::default(),
+            monster_entity_to_stats: Default::default(),
             enemy_stats: Default::default(),
             player_inventory: vec![0; 9],
             turns_left_of_buff: vec![0; 3],
@@ -209,13 +221,12 @@ impl Default for GameProgress {
     }
 }
 
-
 #[derive(Clone, Copy)]
 pub(crate) struct TypeSystem {
     pub type_modifier: [[f32; 8]; 8],
 }
 
-impl Default for TypeSystem{
+impl Default for TypeSystem {
     fn default() -> Self {
         let mut modifier_map: [[f32; 8]; 8] = [[1.0; 8]; 8];
         // Scav = 0
@@ -290,6 +301,8 @@ impl Default for TypeSystem{
         modifier_map[Element::Filth as usize][Element::Robot as usize] = 2.0;
         modifier_map[Element::Filth as usize][Element::Clean as usize] = 2.0;
         modifier_map[Element::Filth as usize][Element::Filth as usize] = 0.5;
-        TypeSystem { type_modifier: modifier_map}
+        TypeSystem {
+            type_modifier: modifier_map,
+        }
     }
 }
