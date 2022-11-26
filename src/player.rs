@@ -1,12 +1,12 @@
-use std::char::MAX;
+
 
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
 use crate::quests::NPC;
 use crate::world::{GameProgress, item_index_to_name};
-use crate::{GameState, monster};
+use crate::{GameState};
 use crate::backgrounds::{Tile, MonsterTile, HealingTile, ChestTile};
-use crate::monster::{MonsterStats, MonsterPartyBundle, Enemy, Boss, SelectedMonster, Health, Level, Strength, Defense};
+use crate::monster::{MonsterStats, Enemy, Boss, Health, Level, Strength, Defense};
 use rand::*;
 // original 8px/frame movement equalled 480 px/sec.
 // frame-independent movement is in px/second (480 px/sec.)
@@ -14,11 +14,6 @@ pub(crate) const PLAYER_SPEED: f32 = 480.;
 // We'll wanna replace these with animated sprite sheets later
 pub(crate) const ANIM_TIME: f32 = 0.15;
 pub(crate) const ANIM_FRAMES: usize = 4;
-pub(crate) const MAX_HEALTH: u16 = 10;
-pub(crate) const MAX_LEVEL: u16 = 10;
-
-
-
 #[derive(Component)]
 pub(crate) struct Player{
 	pub(crate) current_chunk: (isize, isize),
@@ -137,10 +132,10 @@ pub(crate) fn move_player(
 
 	// Most of these numbers come from debugging
 	// and seeing what works. 
-	pt.translation.x = pt.translation.x + x_vel;
+	pt.translation.x += x_vel;
 
 
-	pt.translation.y = pt.translation.y + y_vel;
+	pt.translation.y += y_vel;
 
 	// This is where we will check for collisions with monsters
 
@@ -170,13 +165,13 @@ pub(crate) fn move_player(
 							crt_dmg: 2
 						},
 						def: Defense{
-							def: game_progress.current_level*1, 
+							def: game_progress.current_level, 
 							crt_res: 10
 						},
 						..Default::default()
 					};
 					let enemy_entity = commands.spawn()
-						.insert_bundle(enemy_stats.clone())
+						.insert_bundle(enemy_stats)
 						.insert(Enemy).id();
 					game_progress.enemy_stats.insert(enemy_entity, enemy_stats);
 				} else {
@@ -194,13 +189,13 @@ pub(crate) fn move_player(
 							crt_dmg: 2
 						},
 						def: Defense{
-							def: (game_progress.current_level*1), 
+							def: game_progress.current_level, 
 							crt_res: 10
 						},
 						..Default::default()
 					};
 					let enemy_entity = commands.spawn()
-						.insert_bundle(enemy_stats.clone())
+						.insert_bundle(enemy_stats)
 						.insert(Boss)
 						.insert(Enemy).id();
 					game_progress.enemy_stats.insert(enemy_entity, enemy_stats);

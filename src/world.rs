@@ -1,5 +1,5 @@
 use {bevy::prelude::*};
-use bevy::ecs::entity;
+
 
 use crate::{Chunk, backgrounds::{WIN_W, WIN_H}, monster::{MonsterStats, Element}, quests::*};
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 /// Number of total consumable item types
 pub(crate) const NUM_ITEM_TYPES: usize = 2;
 /// Number of total buff/debuff types
-pub(crate) const NUM_STATUS_TYPES: usize = 3;
+// pub(crate) const NUM_STATUS_TYPES: usize = 3; // Commented out because it is currently unused
 
 #[derive(Default, Debug)]
 pub(crate) struct WorldMap{
@@ -41,33 +41,12 @@ impl WorldMap{
         let id = self.chunk_ids.get(&(x, y));
         if let Some(id) = id{
             let chunk = self.chunk_components.get(id);
-            if let Some(chunk) = chunk{
-                Some(chunk.clone())
-            }else {
-                None
-            }
+            chunk.cloned()
         }else {
             None
         }
         
     }
-
-    pub(crate) fn get_east(&self, x: isize, y: isize) -> Option<Chunk>{
-        self.get_chunk(x + 1, y)
-    }
-    
-    pub(crate) fn get_west(&mut self, x: isize, y: isize) -> Option<Chunk>{
-        self.get_chunk(x - 1, y)
-    }
-    
-    pub(crate) fn get_north(&mut self, x: isize, y: isize) -> Option<Chunk>{
-        self.get_chunk(x, y + 1)
-    }
-    
-    pub(crate) fn get_south(&mut self, x: isize, y: isize) -> Option<Chunk>{
-        self.get_chunk(x, y - 1)
-    }
-
 }
     
 pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32){
@@ -127,22 +106,22 @@ impl GameProgress {
         info!("you have {} monsters now.", self.num_monsters);
     }
 
-    pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
-        let our_id = self.entity_monster_id.get(&last_monster);
-        let next_montser = self.monster_id_entity.get(&(*our_id.unwrap()+1));
-        return next_montser;
-    }
+    // pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
+    //     let our_id = self.entity_monster_id.get(&last_monster);
+        
+    //     self.monster_id_entity.get(&(*our_id.unwrap()+1))
+    // }
 
     /// Cycle through available monsters
     pub fn next_monster_cyclic(&mut self, last_monster: Entity) -> Option<&Entity> {
-        if self.num_living_monsters <= 0 {
+        if self.num_living_monsters == 0 {
             return None;
         }
         let monster_id_entity_len = self.monster_id_entity.len();
         let our_id = self.entity_monster_id.get(&last_monster);
         info!("Trying {} with length {}", ((*our_id.unwrap()+1) % monster_id_entity_len), monster_id_entity_len);
-        let next_montser = self.monster_id_entity.get(&(((*our_id.unwrap()+1) % monster_id_entity_len)));
-        next_montser
+        
+        self.monster_id_entity.get(&(((*our_id.unwrap()+1) % monster_id_entity_len)))
     }
 
     pub fn win_battle(&mut self){
@@ -212,7 +191,7 @@ pub(crate) fn item_index_to_name(index: usize) -> &'static str {
 impl Default for GameProgress {
     fn default() -> Self {
         Self { 
-            current_level: 1 as usize, 
+            current_level: 1_usize, 
             num_boss_defeated: Default::default(),
             level_boss_awaken: Default::default(), 
             num_monsters: Default::default(), 
@@ -311,6 +290,6 @@ impl Default for TypeSystem{
         modifier_map[Element::Filth as usize][Element::Robot as usize] = 2.0;
         modifier_map[Element::Filth as usize][Element::Clean as usize] = 2.0;
         modifier_map[Element::Filth as usize][Element::Filth as usize] = 0.5;
-        return TypeSystem { type_modifier: modifier_map};
+        TypeSystem { type_modifier: modifier_map}
     }
 }

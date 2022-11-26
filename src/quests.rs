@@ -1,6 +1,6 @@
 use bevy::{prelude::*};
-use crate::{monster::*, world::{NUM_ITEM_TYPES, NUM_STATUS_TYPES}};
-use rand::{random, Rng};
+use crate::{monster::*, world::{NUM_ITEM_TYPES}};
+use rand::{Rng};
 
 pub(crate) const NPC_PATH: &str = "characters/npc_sprite.png";
 

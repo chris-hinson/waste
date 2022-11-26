@@ -150,7 +150,7 @@ pub(crate) fn setup_pause(mut commands: Commands,
 }
 
 pub(crate) fn despawn_pause(mut commands: Commands,
-    text_query: Query<Entity, With<Text>>,
+    _text_query: Query<Entity, With<Text>>,
     background_query: Query<Entity, With<BlankBackground>>,
     ui_elements: Query<Entity, With<PauseUIElement>>
 ) {
@@ -183,11 +183,11 @@ pub (crate) fn quit_button_handler(
         (Changed<Interaction>, With<QuitButton>),
     >,
     mut text_query: Query<&mut Text>,
-    mut commands: Commands,
+    _commands: Commands,
     mut exit: EventWriter<AppExit>
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        let _text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
         match *interaction {
             Interaction::Clicked => {
                 *color = PRESSED_BUTTON.into();
@@ -211,10 +211,10 @@ pub (crate) fn resume_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-    mut exit: EventWriter<AppExit>
+    _exit: EventWriter<AppExit>
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
+        let _text = text_query.get_mut(*children.iter().next().unwrap()).unwrap();
         match *interaction {
             Interaction::Clicked => {
                 *color = PRESSED_BUTTON.into();

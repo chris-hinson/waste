@@ -150,7 +150,7 @@ pub(crate) fn init_background(
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
-    let map_atlas_handle = texture_atlases.add(map_atlas.clone());
+    let map_atlas_handle = texture_atlases.add(map_atlas);
     
     let entity = commands.spawn().insert(starting_chunk.clone()).id();
     world.add_to_world(starting_chunk.clone(), entity, 0, 0);
@@ -184,7 +184,7 @@ pub(crate) fn expand_map(
     let map_handle = asset_server.load(OVERWORLD_TILESHEET);
     let map_atlas = TextureAtlas::from_grid(map_handle, Vec2::splat(TILE_SIZE), 7, 6);
 
-    let map_atlas_handle = texture_atlases.add(map_atlas.clone());
+    let map_atlas_handle = texture_atlases.add(map_atlas);
 
     let east_chunk = world.chunk_ids.get(&(pc_x + 1, pc_y));
     match east_chunk {
@@ -338,7 +338,7 @@ pub(crate) fn expand_map(
             // }
             let new_chunk = Chunk{
                 position: (x, y),
-                tiles: wfc(Some(seed), rules.clone()),
+                tiles: wfc(Some(seed), rules),
                 // tiles: wfc(None),
             };
             // info!("New chunk generated at {:?}", new_chunk.position);
@@ -351,25 +351,25 @@ pub(crate) fn expand_map(
     }
 }
 
-macro_rules! set_seed_ {
-    ($x: expr, $y:expr, $dir:expr) => {
-        let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
-        let player_north = world.get_north(x, y);
-        let player_south = world.get_south(x, y);
-        let player_east = world.get_east(x, y);
-        let player_west = world.get_west(x, y);
-        if dir = 0{ // when we go to the east
-            seed.push((chunk.tiles[i][MAP_WIDTH - 1], (i, MAP_WIDTH - 1)))
-            match player_north {
-                Some(chunk) => {
-                    for i in 0..MAP_WIDTH{
-                        seed.push((chunk.tiles[MAP_HEIGHT - 1][i], (MAP_HEIGHT - 1, i)));
-                    }
-                },
-                None => (),
-            } 
+// macro_rules! set_seed_ {
+//     ($x: expr, $y:expr, $dir:expr) => {
+//         let mut seed: Vec<(usize, (usize, usize))> = Vec::new();
+//         let player_north = world.get_north(x, y);
+//         let player_south = world.get_south(x, y);
+//         let player_east = world.get_east(x, y);
+//         let player_west = world.get_west(x, y);
+//         if dir = 0{ // when we go to the east
+//             seed.push((chunk.tiles[i][MAP_WIDTH - 1], (i, MAP_WIDTH - 1)))
+//             match player_north {
+//                 Some(chunk) => {
+//                     for i in 0..MAP_WIDTH{
+//                         seed.push((chunk.tiles[MAP_HEIGHT - 1][i], (MAP_HEIGHT - 1, i)));
+//                     }
+//                 },
+//                 None => (),
+//             } 
 
-        }    
-    };
-}
+//         }    
+//     };
+// }
     

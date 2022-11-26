@@ -205,7 +205,6 @@ pub (crate) fn help_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	game_client: Res<GameClient>,
 ) {
 
     for (interaction, mut color, children) in &mut interaction_query {

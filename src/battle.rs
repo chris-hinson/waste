@@ -1,18 +1,15 @@
-use bevy::{prelude::*, ui::*};
+use bevy::{prelude::*};
 use iyes_loopless::prelude::*;
 use crate::monster::{
     MonsterStats,
     Enemy, 
-    Actions, 
-    Fighting, 
     SelectedMonster, 
-    Health, Level, Strength, Defense, Move, Moves, 
+    Health, Level, Strength, Defense, Moves, 
     get_monster_sprite_for_type, 
     Element, Boss, PartyMonster};
-use crate::{GameState, player};
-use crate::game_client::{GameClient, Package};
+use crate::{GameState};
 use crate::backgrounds::Tile;
-use crate::camera::{MainCamera, MenuCamera, SlidesCamera};
+use crate::camera::{MenuCamera, SlidesCamera};
 use crate::player::Player;
 use crate::world::{GameProgress, TypeSystem};
 use crate::quests::*;
@@ -48,12 +45,6 @@ pub (crate) struct EnemyLevel;
 
 #[derive(Component)]
 pub(crate) struct BattleUIElement;
-
-struct UiAssets{
-	font: Handle<Font>,
-	button: Handle<Image>,
-	button_pressed: Handle<Image>,
-}
 
 pub(crate) struct BattlePlugin;
 
@@ -109,10 +100,11 @@ macro_rules! monster_level_up {
     };
 }
 
-pub(crate) fn setup_battle(mut commands: Commands,
-                           asset_server: Res<AssetServer>,
-                           cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
-                            game_client: Res<GameClient>,
+pub(crate) fn setup_battle(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,
+    Without<Player>, Without<Tile>)>,
 ) { 
 
     // what is this??
@@ -144,12 +136,12 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
 
     let mut my_lvl = 0;
     let mut enemy_lvl = 0;
-    for mut my_monster in set.p0().iter_mut() {
+    for my_monster in set.p0().iter_mut() {
         my_lvl = my_monster.level;
     }
 
 
-    for mut enemy_monster in set.p1().iter_mut() {
+    for enemy_monster in set.p1().iter_mut() {
         enemy_lvl = enemy_monster.level;
     }
 
@@ -299,8 +291,8 @@ pub(crate) fn setup_battle_stats(mut commands: Commands,
 
 }
 
-pub(crate) fn update_battle_stats(mut commands: Commands, 
-	asset_server: Res<AssetServer>,
+pub(crate) fn update_battle_stats(_commands: Commands, 
+	_asset_server: Res<AssetServer>,
     mut set: ParamSet<(
         Query<&mut Health, With<SelectedMonster>>,
         Query<&mut Health, With<Enemy>>,
@@ -311,20 +303,20 @@ pub(crate) fn update_battle_stats(mut commands: Commands,
 
     let mut my_health = 0;
     let mut enemy_health = 0;
-    for mut my_monster in set.p0().iter_mut() {
+    for my_monster in set.p0().iter_mut() {
         my_health = my_monster.health;
     }
 
-    for mut enemy_monster in set.p1().iter_mut() {
+    for enemy_monster in set.p1().iter_mut() {
         enemy_health = enemy_monster.health;
     }
 
     for mut text in &mut enemy_health_text_query {
-        text.sections[1].value = format!("{}", enemy_health.to_string());
+        text.sections[1].value = format!("{}", enemy_health);
     }
 
     for mut text in &mut player_health_text_query {
-        text.sections[1].value = format!("{}", my_health.to_string());
+        text.sections[1].value = format!("{}", my_health);
     }
 
 }
@@ -372,7 +364,7 @@ pub(crate) fn spawn_player_monster(mut commands: Commands,
 pub(crate) fn spawn_enemy_monster(mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>)>,
-    selected_type_query: Query<(&Element), (Without<SelectedMonster>, With<Enemy>)>,
+    selected_type_query: Query<&Element, (Without<SelectedMonster>, With<Enemy>)>,
 ) {
 
     if cameras.is_empty() 
@@ -460,7 +452,7 @@ pub(crate) fn key_press_handler(
     asset_server: Res<AssetServer>,
 ){
 
-    if(my_monster.is_empty() || enemy_monster.is_empty()) {
+    if my_monster.is_empty() || enemy_monster.is_empty() {
         info!("Monsters are missing!");
         commands.insert_resource(NextState(GameState::Playing));
         return;
@@ -477,16 +469,16 @@ pub(crate) fn key_press_handler(
     // Get player and enemy monster data out of the query
     let (mut player_health, 
         mut player_stg, 
-        mut player_def, 
-        player_moves, 
-        mut player_entity,
+        player_def, 
+        _player_moves, 
+        player_entity,
         player_type) = my_monster.single_mut();
 
     let (mut enemy_health,
-        mut enemy_stg,
-        mut enemy_def,
-        enemy_moves,
-        mut enemy_entity,
+        enemy_stg,
+        enemy_def,
+        _enemy_moves,
+        enemy_entity,
         enemy_boss,
         enemy_type) = enemy_monster.single_mut();
 
@@ -506,10 +498,10 @@ pub(crate) fn key_press_handler(
     }
 
     if input.just_pressed(KeyCode::A) {
-        /// ATTACK HANDLER
-        /// Actions: 
-        /// 0: attack 1: defend: 2: elemental: 3: special
-        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+        // ATTACK HANDLER
+        // Actions: 
+        // 0: attack 1: defend: 2: elemental: 3: special
+        let enemy_action = rand::thread_rng().gen_range(0..=3);
         info!("You attack!");
 
         if enemy_action == 0 {
@@ -533,13 +525,13 @@ pub(crate) fn key_press_handler(
         let turn_result = calculate_turn(
             &player_stg, 
             &player_def, 
-            &player_type,
+            player_type,
             0, 
             &enemy_stg, 
             &enemy_def, 
-            &enemy_type,
+            enemy_type,
             enemy_action,
-            type_system.clone());
+            *type_system);
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
@@ -550,7 +542,7 @@ pub(crate) fn key_press_handler(
             info!("Enemy monster defeated. Your monsters will level up!");
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
-            let mut new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
             // Clamp health down so we don't keep boss health
             new_monster_stats.hp.health = game_progress.current_level as isize * 10;
             new_monster_stats.hp.max_health = game_progress.current_level * 10;
@@ -615,10 +607,10 @@ pub(crate) fn key_press_handler(
             }   
         }
     } else if input.just_pressed(KeyCode::E) {
-        /// ELEMENTAL ATTACK HANDLER
-        /// Actions: 
-        /// 0: attack 1: defend: 2: elemental: 3: special
-        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+        // ELEMENTAL ATTACK HANDLER
+        // Actions: 
+        // 0: attack 1: defend: 2: elemental: 3: special
+        let enemy_action = rand::thread_rng().gen_range(0..=3);
         info!("You use your type {:?} elemental attack!", player_type);
 
         if enemy_action == 0 {
@@ -642,13 +634,13 @@ pub(crate) fn key_press_handler(
         let turn_result = calculate_turn(
             &player_stg, 
             &player_def, 
-            &player_type,
+            player_type,
             2, 
             &enemy_stg, 
             &enemy_def, 
-            &enemy_type,
+            enemy_type,
             enemy_action,
-            type_system.clone());
+            *type_system);
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
@@ -659,7 +651,7 @@ pub(crate) fn key_press_handler(
             info!("Enemy monster defeated. Your monsters will level up!");
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
-            let mut new_monster_stats = game_progress.enemy_stats.get(&enemy_entity).unwrap().clone();
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
             // Clamp health down so we don't keep boss health
             new_monster_stats.hp.health = game_progress.current_level as isize * 10;
             new_monster_stats.hp.max_health = game_progress.current_level * 10;
@@ -795,7 +787,7 @@ pub(crate) fn key_press_handler(
 
 fn calculate_turn(player_stg: &Strength, player_def: &Defense, player_type: &Element, player_action: usize, 
     enemy_stg: &Strength, enemy_def: &Defense, enemy_type: &Element, enemy_action: usize, type_system: TypeSystem) -> (isize, isize) {
-    if (player_action == 1 || enemy_action == 1) {
+    if player_action == 1 || enemy_action == 1 {
         // if either side defends this turn will not have any damage on either side
         return (0, 0);
     }
@@ -812,11 +804,9 @@ fn calculate_turn(player_stg: &Strength, player_def: &Defense, player_type: &Ele
         // if we have damage, we do that much damage
         // I've only implemented crits for now, dodge and element can follow
         result.0 = player_stg.atk - enemy_def.def;
-        if player_stg.crt <= enemy_def.crt_res {
-            result.0 = result.0;
-        } else {
+        if player_stg.crt > enemy_def.crt_res {
             // calculate crit chance and apply crit damage
-            let mut crit_chance = player_stg.crt - enemy_def.crt_res;
+            let crit_chance = player_stg.crt - enemy_def.crt_res;
             let crit = rand::thread_rng().gen_range(0..=100);
             if crit <= crit_chance {
                 info!("You had a critical strike!");
@@ -829,10 +819,8 @@ fn calculate_turn(player_stg: &Strength, player_def: &Defense, player_type: &Ele
         result.1 = 0;
     } else {
         result.1 = enemy_stg.atk - player_def.def;
-        if enemy_stg.crt <= player_def.crt_res {
-            result.1 = result.1;
-        } else {
-            let mut crit_chance = enemy_stg.crt - player_def.crt_res;
+        if enemy_stg.crt > player_def.crt_res {
+            let crit_chance = enemy_stg.crt - player_def.crt_res;
             let crit = rand::thread_rng().gen_range(0..=100);
             if crit <= crit_chance {
                 info!("Enemy had a critical strike!");
@@ -851,5 +839,5 @@ fn calculate_turn(player_stg: &Strength, player_def: &Defense, player_type: &Ele
 
     info!("Player deals {} damage, enemy deals {} damage...", result.0, result.1);
 
-    return (result.0 as isize, result.1 as isize)
+    (result.0 as isize, result.1 as isize)
 }
