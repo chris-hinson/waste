@@ -1,40 +1,70 @@
+#![warn(unused)]
+#![warn(unsafe_code)]
+#![deny(unreachable_code)]
 use bevy::{prelude::*, window::PresentMode};
+
+use iyes_loopless::prelude::*;
 use std::convert::From;
 
 // GAMEWIDE CONSTANTS
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
+pub(crate) enum GameState {
+    Start,
+    Pause,
+    StartPlaying,
+    Playing,
+    Battle,
+    Credits,
+    Help,
+    MultiplayerMenu,
+}
+
 pub(crate) const TITLE: &str = "Waste";
-pub(crate) const WIN_W: f32 = 1280.;
-pub(crate) const WIN_H: f32 = 720. ;
-pub(crate) const PLAYER_SPEED: f32 = 500.;
-pub(crate) const ACCEL_RATE: f32 = 100.;
-pub(crate) const TILE_SIZE: f32 = 64.;
+// END GAMEWIDE CONSTANTS
 
 // CUSTOM MODULE DEFINITIONS AND IMPORTS
-
-// Credit slides and systems
-mod credits;
-use credits::*;
-
-// Backgrounds and systems to scroll them
+//mod statements:
 mod backgrounds;
-use backgrounds::*;
-
-// Player and systems
-mod player;
-use player::*;
-
-// Camera related movement
+mod battle;
 mod camera;
-use camera::*;
-
+mod credits;
+mod game_client;
+mod help;
+mod monster;
+mod multiplayer_menu;
+mod pause;
+mod player;
+mod quests;
+mod start_menu;
 mod wfc;
+mod world;
+
+//use statements:
+use backgrounds::*;
+use battle::*;
+use camera::*;
+use credits::*;
+use game_client::*;
+use help::*;
+use monster::*;
+use multiplayer_menu::*;
+use pause::*;
+use player::*;
+use quests::*;
+use start_menu::*;
 use wfc::*;
+use world::*;
 
 // END CUSTOM MODULES
 
-#[derive(Component)]
-struct Tile;
+// pub(crate) struct GameChannel {
+//     // channel set for main thread/sending/receiving data
+//     pub(crate) gsx: Sender<Package>,
+//     pub(crate) grx: Receiver<Package>,
+// }
 
+// unsafe impl Send for GameChannel {}
+// unsafe impl Sync for GameChannel {}
 
 fn main() {
     App::new()
@@ -45,120 +75,167 @@ fn main() {
             present_mode: PresentMode::Fifo,
             ..default()
         })
+        .init_resource::<WorldMap>()
+        .init_resource::<GameProgress>()
+        .init_resource::<TypeSystem>()
+        .init_resource::<ProcGen>()
         .add_plugins(DefaultPlugins)
-        .add_startup_system(setup)
-        .add_system(show_slide)
-        .add_system(move_player)
-        .add_system(move_camera)
-
+        // Starts game at main menu
+        // Initial state should be "loopless"
+        .add_loopless_state(GameState::Start)
+        .add_plugin(MainMenuPlugin)
+        .add_plugin(CreditsPlugin)
+        .add_plugin(HelpPlugin)
+        .add_plugin(PausePlugin)
+        .add_plugin(BattlePlugin)
+        .add_plugin(MultMenuPlugin)
+        .add_enter_system_set(
+            GameState::StartPlaying,
+            // This system set is unconditional, as it is being added in an enter helper
+            SystemSet::new()
+                .with_system(init_background)
+                .with_system(setup_game),
+        )
+        .add_system_set(
+            ConditionSet::new()
+                // These systems will only run in the condition that the game is in the state
+                // Playing
+                .run_in_state(GameState::Playing)
+                .with_system(move_player)
+                .with_system(move_camera)
+                .with_system(animate_sprite)
+                .with_system(expand_map)
+                .with_system(win_game)
+                .with_system(handle_pause)
+                .into(),
+        )
         .run();
 }
 
-fn setup(
-    mut commands: Commands, 
+pub(crate) fn setup_game(
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
-	mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    cameras: Query<
+        Entity,
+        (
+            With<Camera2d>,
+            Without<MainCamera>,
+            Without<Player>,
+            Without<Tile>,
+        ),
+    >,
+    mut game_progress: ResMut<GameProgress>,
 ) {
-    // info!("Printing credits...");
-    commands.spawn_bundle(Camera2dBundle::default());
+    // Despawn other cameras
+    cameras.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
 
-    // TODO: What do we do to this so that it is only 
-    // displaying these slides when a menu button is pressed to go to credits?
-    // let slides = vec![
-    //     "credits/gavin_credit.png",
-    //     "credits/dan_credit.png",
-    //     "credits/camryn_credit.png",
-    //     "credits/caela_credit.png",
-    //     "credits/prateek_credit.png",
-    //     "credits/chase_credit.png",
-    //     "credits/nathan_credit.png",
-    //     "credits/chris_credit.png",
-    // ];
+    // done so that this camera doesn't mess with any UI cameras for start or pause menu
+    let camera = Camera2dBundle {
+        transform: Transform::from_xyz(0., 0., 1000.),
+        ..default()
+    };
+    commands.spawn_bundle(camera).insert(MainCamera);
 
-    // for i in 0..slides.len() {
-    //     commands.spawn_bundle(SpriteBundle {
-    //         texture: asset_server.load(slides[i]),
-    //         visibility: Visibility {
-    //             is_visible: if i == 0 { true } else { false },
-    //         },
-    //         transform: Transform::from_xyz(0., 0., 0.),
-    //         ..default()
-    //     });
-    // }
+    let texture_handle = asset_server.load("characters/sprite_movement.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 4, 4);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    // commands.spawn().insert(SlideTimer {
-    //     timer: Timer::from_seconds(5.0, true),
-    // });
-    // commands.spawn().insert(SlideDeck {
-    //     total_slides: slides.len(),
-    //     current_slide: 1,
-    // });
-    
-    // Draw a bunch of backgrounds
-    let starting_chuck = wfc(WIN_H as usize, WIN_W as usize);
-    // info!("{:?}", starting_chuck);
-
-    let map_handle = asset_server.load("overworld_tilesheet.png");
-	// let map_handle = asset_server.load("overworld_tilesheet.png");
-	let map_atlas = TextureAtlas::from_grid(map_handle, 
-		Vec2::splat(TILE_SIZE), 7, 6);
-
-	let map_atlas_len = map_atlas.textures.len();
-	let map_atlas_handle = texture_atlases.add(map_atlas.clone());
-
-	println!("Number of texture atlases: {}", map_atlas_len);
-
-	// from center of the screen to half a tile from edge
-	// so the tile will never be "cut in half" by edge of screen
-	let x_bound = WIN_W/2. - TILE_SIZE/2.;
-	let y_bound = WIN_H/2. - TILE_SIZE/2.;
-	let mut x = -x_bound;
-	let mut y = y_bound;
-
-	for i in 0..starting_chuck.len(){
-        for j in 0..starting_chuck[i].len(){
-            let t = Vec3::new(
-                x,
-                y,
-                0.,
-            );
-            commands
-            .spawn_bundle(SpriteSheetBundle {
-                texture_atlas: map_atlas_handle.clone(),
-                transform: Transform {
-                    translation: t,
-                    ..default()
-                },
-                sprite: TextureAtlasSprite {
-                    index: starting_chuck[i][j],
-                    ..default()
-                },
-                ..default()
-            })
-            .insert(Tile);
-                // break;
-            x += TILE_SIZE;
-            if x > x_bound {
-                x = -x_bound;
-                y -=  TILE_SIZE;
-            }
-    
-        }
-    }
-		
-    
     // Draw the player
-    // He's so smol right now
     commands
-        .spawn_bundle(SpriteBundle { 
-            texture: asset_server.load(PLAYER_SPRITE),
+        .spawn_bundle(SpriteSheetBundle {
+            texture_atlas: texture_atlas_handle,
             transform: Transform::from_xyz(0., 0., 0.),
             ..default()
         })
-        // Homie needs some velocity ong or he is not going ANYWHERE
-        .insert(Velocity::new())
         // Was considering giving player marker struct an xyz component
         // til I realized transform handles that for us.
-        .insert(Player);
+        .insert(AnimationTimer(Timer::from_seconds(ANIM_TIME, true)))
+        //player stats init here:
+        .insert(Player {
+            current_chunk: (0, 0),
+            //constants can be found in player.rs,
+        });
 
+    // Give the player a monster
+    let initial_monster_stats = MonsterStats {
+        ..Default::default()
+    };
+    let initial_monster = commands
+        .spawn()
+        .insert_bundle(initial_monster_stats)
+        .insert(SelectedMonster)
+        .insert(PartyMonster)
+        .id();
+    // initial_monster.insert(SelectedMonster);
+    game_progress.new_monster(initial_monster, initial_monster_stats);
+
+    // Finally, transition to normal playing state
+    commands.insert_resource(NextState(GameState::Playing));
+}
+
+/// Tear down ALL significant resources for the game, and despawn all relevant
+/// in game entities. This should be used when bailing out of the credits state
+/// after beating the game, or when exiting multiplayer to move to singleplayer.*
+///
+/// *Multiplayer may need to add their own relevant resources or queries to despawn
+pub(crate) fn teardown(
+    mut commands: Commands,
+    camera_query: Query<Entity, With<MainCamera>>,
+    background_query: Query<Entity, With<Tile>>,
+    player_query: Query<Entity, With<Player>>,
+    monster_query: Query<Entity, With<PartyMonster>>,
+    npc_query: Query<Entity, With<NPC>>,
+) {
+    // Despawn main camera
+    camera_query.for_each(|camera| {
+        commands.entity(camera).despawn();
+    });
+
+    // Despawn world
+    background_query.for_each(|background| {
+        commands.entity(background).despawn();
+    });
+
+    // Despawn player
+    player_query.for_each(|player| {
+        commands.entity(player).despawn();
+    });
+
+    // Despawn monsters
+    monster_query.for_each(|monster| {
+        commands.entity(monster).despawn();
+    });
+
+    // Despawn NPCs
+    npc_query.for_each(|npc| {
+        commands.entity(npc).despawn();
+    });
+
+    // Remove the game client, as we will reinitialize it on
+    // next setup
+    commands.remove_resource::<GameClient>();
+    // Remove the old worldmap
+    commands.remove_resource::<WorldMap>();
+    // Remove the game progress resource
+    commands.remove_resource::<GameProgress>();
+    // Re-initialize the resources
+    commands.init_resource::<WorldMap>();
+    commands.init_resource::<GameProgress>();
+}
+
+/// Mark that game has been completed and transition to credits.
+pub(crate) fn win_game(mut commands: Commands, game_progress: ResMut<GameProgress>) {
+    if game_progress.num_boss_defeated == 5 {
+        commands.insert_resource(NextState(GameState::Credits));
+    }
+}
+
+pub(crate) fn handle_pause(mut commands: Commands, input: Res<Input<KeyCode>>) {
+    if input.just_pressed(KeyCode::Escape) {
+        // Change to pause menu state
+        commands.insert_resource(NextState(GameState::Pause));
+    }
 }
