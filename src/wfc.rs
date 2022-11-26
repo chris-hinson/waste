@@ -1,5 +1,5 @@
-use bevy::prelude::FromWorld;
-use bevy::prelude::info;
+
+
 use bevy::prelude::warn;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
@@ -19,7 +19,6 @@ use crate::backgrounds::{
     // CHUNK_HEIGHT, CHUNK_WIDTH,
     MAP_HEIGHT,
     MAP_WIDTH,
-    TILE_SIZE,
 };
 
 const MAX_REPICK_ATTEMPTS: usize = 20;
@@ -46,7 +45,7 @@ pub(crate) fn init_rules() -> HashMap<usize, Rule> {
     let mut rules: HashMap<usize, Rule> = HashMap::new();
 
     // Check all inputs
-    for input_file in all_inputs.into_iter() {
+    for input_file in all_inputs {
         // Run rulegen on the input file given
         rulegen(input_file.unwrap().path().to_str().unwrap(), &mut rules, &mut freqs);
     }
@@ -66,7 +65,7 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
         .lines()
         // Split each line by spaces
         .map(|l| {
-            l.split(" ")
+            l.split(' ')
                 // Parse as a usize
                 .map(|s| s.parse::<usize>().unwrap())
                 // Collect the split line into a single vector
@@ -106,7 +105,7 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
             row.checked_sub(1)
                 .and_then(|r| in_board.get(r))
                 .and_then(|c| c.get(col))
-                .and_then(|e| {
+                .map(|e| {
                     // Get type of northern neighbor
                     let north_type = *e as usize;
                     // Add this type to the allowed types
@@ -118,14 +117,14 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
                     });
 
                     // Required by and_then
-                    Some(true)
+                    true
                 });
 
             //SOUTH
             row.checked_add(1)
                 .and_then(|r| in_board.get(r))
                 .and_then(|c| c.get(col))
-                .and_then(|e| {
+                .map(|e| {
                     let north_type = *e as usize;
                     cur.neighbor_rules.entry(Dir::SOUTH).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
@@ -133,13 +132,13 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
                         }
                     });
 
-                    Some(true)
+                    true
                 });
 
             //WEST
             col.checked_sub(1)
                 .and_then(|col| in_board[row].get(col))
-                .and_then(|char| {
+                .map(|char| {
                     let north_type = *char as usize;
                     cur.neighbor_rules.entry(Dir::WEST).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
@@ -147,13 +146,13 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
                         }
                     });
 
-                    Some(true)
+                    true
                 });
 
             //EAST
             col.checked_add(1)
                 .and_then(|col| in_board[row].get(col))
-                .and_then(|char| {
+                .map(|char| {
                     let north_type = *char as usize;
                     cur.neighbor_rules.entry(Dir::EAST).and_modify(|allowed| {
                         if !allowed.contains(&north_type) {
@@ -161,7 +160,7 @@ pub(crate) fn rulegen(infile: &str, rules: &mut HashMap<usize, Rule>, freqs: &mu
                         }
                     });
 
-                    Some(true)
+                    true
                 });
         }
     }
@@ -180,7 +179,7 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<
     let mut board = Board::new(
         (MAP_HEIGHT, MAP_WIDTH),
         rules.clone(),
-        rules.keys().map(|v| *v).collect::<Vec<usize>>(),
+        rules.keys().copied().collect::<Vec<usize>>(),
         seeding.clone(),
     );
 
@@ -213,7 +212,7 @@ pub(crate) fn wfc(seeding: Option<Vec<(usize, (usize, usize))>>, rules: HashMap<
                     board = Board::new(
                         (MAP_HEIGHT, MAP_WIDTH),
                         rules.clone(),
-                        rules.keys().map(|v| *v).collect::<Vec<usize>>(),
+                        rules.keys().copied().collect::<Vec<usize>>(),
                         seeding.clone(),
                     );
                 } else {
@@ -309,32 +308,28 @@ impl Board {
                         n.north = pos
                             .0
                             .checked_sub(1)
-                            .and_then(|e| map.get(e))
-                            .and_then(|f| Some(f[pos.1].clone()));
+                            .and_then(|e| map.get(e)).map(|f| f[pos.1].clone());
 
                         // South
                         n.south = pos
                             .0
                             .checked_add(1)
-                            .and_then(|e| map.get(e))
-                            .and_then(|f| Some(f[pos.1].clone()));
+                            .and_then(|e| map.get(e)).map(|f| f[pos.1].clone());
 
                         // West
                         n.west = pos
                             .1
                             .checked_sub(1)
-                            .and_then(|e| map[pos.0].get(e))
-                            .and_then(|f| Some(f.clone()));
+                            .and_then(|e| map[pos.0].get(e)).cloned();
 
                         // East
                         n.east = pos
                             .1
                             .checked_add(1)
-                            .and_then(|e| map[pos.0].get(e))
-                            .and_then(|f| Some(f.clone()));
+                            .and_then(|e| map[pos.0].get(e)).cloned();
 
                         // Do neighbor update
-                        for mut neighbor in n {
+                        for neighbor in n {
                             map[neighbor.tile.coords.0][neighbor.tile.coords.1]
                                 .position
                                 .retain(|t| rules[&seed.0].neighbor_rules[&neighbor.direction].contains(t));
@@ -371,7 +366,7 @@ impl Board {
             for col in row {
                 // print!("{:?} ", col.entropy());
                 // Empty superpositions are invalid unless the tile has a concrete type
-                if col.position.len() == 0 && col.t.is_none() {
+                if col.position.is_empty() && col.t.is_none() {
                     return false;
                 }
 
@@ -393,7 +388,7 @@ impl Board {
             // print!("\n");
         }
 
-        return true;
+        true
     }
 
     fn is_solved(&self) -> bool {
@@ -401,7 +396,7 @@ impl Board {
             return false;
         }
 
-        return !self.map.iter().flatten().any(|t| t.t == None);
+        return !self.map.iter().flatten().any(|t| t.t.is_none());
     }
 
     /// Choose the tile on the board with the lowest entropy and return its coords within the map
@@ -436,31 +431,27 @@ impl Board {
         n.north = pos
             .0
             .checked_sub(1)
-            .and_then(|e| self.map.get(e))
-            .and_then(|f| Some(f[pos.1].clone()));
+            .and_then(|e| self.map.get(e)).map(|f| f[pos.1].clone());
 
         //south
         n.south = pos
             .0
             .checked_add(1)
-            .and_then(|e| self.map.get(e))
-            .and_then(|f| Some(f[pos.1].clone()));
+            .and_then(|e| self.map.get(e)).map(|f| f[pos.1].clone());
 
         //west
         n.west = pos
             .1
             .checked_sub(1)
-            .and_then(|e| self.map[pos.0].get(e))
-            .and_then(|f| Some(f.clone()));
+            .and_then(|e| self.map[pos.0].get(e)).cloned();
 
         //east
         n.east = pos
             .1
             .checked_add(1)
-            .and_then(|e| self.map[pos.0].get(e))
-            .and_then(|f| Some(f.clone()));
+            .and_then(|e| self.map[pos.0].get(e)).cloned();
 
-        return n;
+        n
     }
 
     /// Update the neighbors of this tile to reflect a change in our state.
@@ -495,10 +486,10 @@ impl Board {
         // and empty out the position of this tile.
 
         let mut random_pos = self[center_tile].position.clone();
-        let mut weight_dist =
+        let weight_dist =
             WeightedIndex::new(random_pos.iter().map(|pos| self.rules[pos].freq)).unwrap();
 
-        let mut backup_pos = self[center_tile].position.clone();
+        let backup_pos = self[center_tile].position.clone();
         self[center_tile].position = Vec::new();
 
         // Shuffle up the position and check all of them to find one that is valid.
@@ -546,8 +537,8 @@ impl Board {
         // Reset ourselves and fail if no position
         // ever succeeded.
         self[center_tile].t = None;
-        self[center_tile].position = backup_pos.clone();
-        return false;
+        self[center_tile].position = backup_pos;
+        false
     }
 }
 
@@ -572,39 +563,31 @@ impl IntoIterator for Neighbors {
     fn into_iter(self) -> Self::IntoIter {
         let mut neighbors: Vec<NeighborIterElement> = Vec::new();
 
-        self.north.and_then(|f| {
-            Some(neighbors.push(NeighborIterElement {
+        if let Some(f) = self.north { neighbors.push(NeighborIterElement {
                 direction: Dir::NORTH,
                 anti_direction: Dir::SOUTH,
                 tile: f,
-            }))
-        });
+            }); }
 
-        self.south.and_then(|f| {
-            Some(neighbors.push(NeighborIterElement {
+        if let Some(f) = self.south { neighbors.push(NeighborIterElement {
                 direction: Dir::SOUTH,
                 anti_direction: Dir::NORTH,
                 tile: f,
-            }))
-        });
+            }); }
 
-        self.east.and_then(|f| {
-            Some(neighbors.push(NeighborIterElement {
+        if let Some(f) = self.east { neighbors.push(NeighborIterElement {
                 direction: Dir::EAST,
                 anti_direction: Dir::WEST,
                 tile: f,
-            }))
-        });
+            }); }
 
-        self.west.and_then(|f| {
-            Some(neighbors.push(NeighborIterElement {
+        if let Some(f) = self.west { neighbors.push(NeighborIterElement {
                 direction: Dir::WEST,
                 anti_direction: Dir::EAST,
                 tile: f,
-            }))
-        });
+            }); }
 
-        return neighbors.into_iter();
+        neighbors.into_iter()
     }
 }
 
@@ -632,7 +615,7 @@ impl IntoIterator for Dir {
     type IntoIter = std::vec::IntoIter<Dir>;
 
     fn into_iter(self) -> Self::IntoIter {
-        return vec![Dir::NORTH, Dir::SOUTH, Dir::EAST, Dir::WEST].into_iter();
+        vec![Dir::NORTH, Dir::SOUTH, Dir::EAST, Dir::WEST].into_iter()
     }
 }
 
@@ -671,9 +654,9 @@ impl Tile {
     /// in this tile's superposition, or infinity if it is collapsed.
     fn entropy(&self) -> usize {
         if self.t.is_some() {
-            return usize::MAX;
+            usize::MAX
         } else {
-            return self.position.len();
+            self.position.len()
         }
     }
 }

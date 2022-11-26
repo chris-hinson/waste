@@ -93,7 +93,7 @@ fn setup_mult(mut commands: Commands,
     thread::spawn(move || {
         let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
-        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
+        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx));
 
         c_sx.send(test_pkg).unwrap();
 

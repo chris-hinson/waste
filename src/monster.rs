@@ -1,15 +1,14 @@
 // current implementation focuses on getting all essential data for monsters in game, will need further optimizations in here and functions later.
 
-use std::f32::consts::E;
+
 
 use bevy::{prelude::*};
-use iyes_loopless::prelude::*;
-use crate::GameState;
-use crate::camera::{SlidesCamera};
-use crate::player::{Player};
-use crate::backgrounds::{Tile};
+
+
+
+
+
 use rand::{
-    seq::SliceRandom,
     distributions::{Distribution, Standard},
 };
 
@@ -70,13 +69,6 @@ pub(crate) struct Moves {
     pub chosen: usize,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub(crate) enum Move {
-    Attack,
-    Defend,
-    Heal,
-    Buff,
-}
 // keeps track of which slot in the party a monster is in. (0 by default means not in the party)
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Slot(u8);
