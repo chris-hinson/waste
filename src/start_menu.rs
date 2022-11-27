@@ -283,8 +283,7 @@ fn setup_menu(
         })
         .insert(MainMenuBackground);
 
-    // START BUTTON
-    commands
+        commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(300.0), Val::Px(65.0)),
@@ -294,14 +293,8 @@ fn setup_menu(
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
-                // 	position_type: PositionType::Absolute,
-                // 	position: UiRect {
-                // 	bottom: Val::Px(175.),
-                // 	left: Val::Px((WIN_W * 0.8) / 2.),
-                // 	..default()
-                // },
-                ..default()
-            },
+            ..default()
+        },
             color: NORMAL_BUTTON.into(),
             ..default()
         })
@@ -317,9 +310,44 @@ fn setup_menu(
         })
         .insert(StartButton)
         .insert(StartMenuUIElement);
-
-    // CREDITS BUTTON
-    commands
+    
+        // MULTIPLAYER BUTTON
+        commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(325.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(275.),
+                    left: Val::Px((WIN_W * 0.75) / 2.),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Multiplayer",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: TEXT_COLOR,
+                },
+            ));
+        })
+        .insert(MultiplayerButton)
+        .insert(StartMenuUIElement);
+    
+        // CREDITS BUTTON
+        commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(225.0), Val::Px(65.0)),
@@ -331,7 +359,7 @@ fn setup_menu(
                 align_items: AlignItems::Center,
                 position_type: PositionType::Absolute,
                 position: UiRect {
-                    bottom: Val::Px(170.),
+                    bottom: Val::Px(200.),
                     left: Val::Px((WIN_W * 0.825) / 2.),
                     ..default()
                 },
@@ -353,42 +381,6 @@ fn setup_menu(
         .insert(CreditsButton)
         .insert(StartMenuUIElement);
 
-
-	// MULTIPLAYER BUTTON
-	commands
-	.spawn_bundle(ButtonBundle {
-		style: Style {
-			size: Size::new(Val::Px(325.0), Val::Px(65.0)),
-			// center button
-			margin: UiRect::all(Val::Auto),
-			// horizontally center child text
-			justify_content: JustifyContent::Center,
-			// vertically center child text
-			align_items: AlignItems::Center,
-			position_type: PositionType::Absolute,
-			position: UiRect {
-				bottom: Val::Px(270.),
-				left: Val::Px((WIN_W * 0.75) / 2.),
-				..default()
-			},
-			..default()
-		},
-		color: NORMAL_BUTTON.into(),
-		..default()
-	})
-	.with_children(|parent| {
-		parent.spawn_bundle(TextBundle::from_section(
-			"Multiplayer",
-			TextStyle {
-				font: asset_server.load("buttons/joystix monospace.ttf"),
-				font_size: 40.0,
-				color: TEXT_COLOR,
-			},
-		));
-	})
-	.insert(MultiplayerButton)
-	.insert(StartMenuUIElement);
-
     // HELP BUTTON
     commands
         .spawn_bundle(ButtonBundle {
@@ -402,7 +394,7 @@ fn setup_menu(
                 align_items: AlignItems::Center,
                 position_type: PositionType::Absolute,
                 position: UiRect {
-                    bottom: Val::Px(90.),
+                    bottom: Val::Px(120.),
                     left: Val::Px((WIN_W * 0.900) / 2.),
                     ..default()
                 },
