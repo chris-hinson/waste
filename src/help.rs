@@ -142,7 +142,7 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "A to attack, D to defend, Q to quit",
+            "A to attack, E for elemental attack, D to defend, Q to quit",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
@@ -153,7 +153,27 @@ pub(crate) fn setup_help(
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(350.0),
-                left: Val::Px(300.0),
+                left: Val::Px(30.0),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(Text);
+
+        commands
+        .spawn_bundle(TextBundle::from_section(
+            "1 to heal, 2 for strength",
+            TextStyle {
+                font: asset_server.load("buttons/joystix monospace.ttf"),
+                font_size: 30.0,
+                color: Color::WHITE,
+            },
+        ))
+        .insert(Style {
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                bottom: Val::Px(325.0),
+                left: Val::Px(425.0),
                 ..default()
             },
             ..default()
