@@ -40,6 +40,7 @@ mod multiplayer_menu;
 mod multiplayer_battle;
 mod game_client;
 mod quests;
+mod networking;
 
 
 //use statements:

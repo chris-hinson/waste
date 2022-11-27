@@ -5,7 +5,7 @@ use crate::player::Player;
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, UdpChannel, SocketInfo, get_addr, ClientMarker};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, SocketInfo, get_addr, ClientMarker};
 use std::fmt::format;
 use std::str::from_utf8;
 use std::{io, thread};
@@ -40,7 +40,7 @@ impl Plugin for MultMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app
 		.add_enter_system(GameState::MultiplayerMenu, setup_mult)
-        .add_system(message_checker
+        .add_system(udp_message_listener
             .run_if_resource_exists::<ClientMarker>())
 		.add_system_set(ConditionSet::new()
 			// Only run handlers in MultiplayerMenu state
@@ -68,22 +68,38 @@ impl Plugin for MultMenuPlugin {
 //     false
 // }
 
-fn message_checker(game_client: ResMut<GameClient>, mut commands: Commands) {
-    let mut buf = [0; 2048];
-        match game_client.socket.udp_socket.recv(&mut buf) {
-            Ok(msg) => {
-                info!("got to message checker");
-                let val = String::from_utf8((&buf[0..msg]).to_vec()).unwrap();
+/// System to listen for UDP messages. The socket is non-blocking intentionally,
+/// so this works by running an "infinite" loop that will continually try to fill a 
+/// 2048 byte buffer until the OS tells it that recv would block, and then it will exit the loop
+/// and return.
+fn udp_message_listener(game_client: ResMut<GameClient>, mut commands: Commands) {
+    loop {
+        let mut buf = [0; 2048];
+        match game_client.socket.udp_socket.recv_from(&mut buf) {
+            Ok(result) => {
+                info!("Got into message checker... Read {} bytes", result.0);
+                let val = String::from_utf8((&buf[0..result.0]).to_vec()).unwrap();
                 info!("{}", val);
                 if val == "TRUE" {
                     commands.insert_resource(NextState(GameState::MultiplayerBattle));
                 }
             },
-            Err(_e) => {
-                //error!("{}", _e);
-                
+            Err(err) => {
+                // If we run into this specific kind of error, it just means that the OS
+                // doesn't have anything ready for us to read yet, so we will stop trying.
+                // This whole system will run again on the next frame, so that's fine.
+                // This error is expected to be hit a LOT, any time a message is not ready for us.
+                if err.kind() != io::ErrorKind::WouldBlock { 
+                    // An ACTUAL error occurred
+                    error!("{}", err);
+                    // This should pulse an event and then return;
+                    return;
+                }
+                // We're done listening
+                break;
             }
         }
+    }
 }
 
 fn despawn_mult_menu(
@@ -283,29 +299,36 @@ pub(crate) fn host_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
+
+                // Having a listener here doesn't make sense. Networking listeners should not be attached to
+                // button clicks. What this should do, most likely, is set the current game client to be a host, 
+                // and change the state into a listening state. Once in a listening state, the host waits for a 
+                // CONNECT or similar request, and then handles it from there. Listening should NOT occur in an 
+                // interaction query, and ESPECIALLY not just one time. This should be a `loop`ed operation.
+                // In all honesty, it should just be able to use the udp_message_listener system above.
                 
-                // if player clicks on host button, designate them as the host
+                // If player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
 
-                let mut buf = [0; 2048];
+                // let mut buf = [0; 2048];
                 
-                match game_client.socket.udp_socket.recv(&mut buf) {
-                    Ok(received) => {
-                        println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
-                        info!("GETS TO HOST BUTTON CLICKED");
-                        let client_info = from_utf8(&buf[..received]).unwrap().to_string();
-                        game_client.socket.udp_socket.connect(client_info);
-                        //game_client.ready_for_battle = true;
-                        // for z in 1..10 {
-                        let cloned = game_client.socket.udp_socket.try_clone().unwrap();
-                        cloned.send(b"TRUE");
-                        // }
-                        commands.insert_resource(NextState(GameState::MultiplayerBattle));
-                    },
-                    Err(e) => {
-                        //info!("No message was received: {}", e)
-                    }
-                }
+                // match game_client.socket.udp_socket.recv(&mut buf) {
+                //     Ok(received) => {
+                //         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
+                //         info!("GETS TO HOST BUTTON CLICKED");
+                //         let client_info = from_utf8(&buf[..received]).unwrap().to_string();
+                //         game_client.socket.udp_socket.connect(client_info);
+                //         //game_client.ready_for_battle = true;
+                //         // for z in 1..10 {
+                //         let cloned = game_client.socket.udp_socket.try_clone().unwrap();
+                //         cloned.send(b"TRUE");
+                //         // }
+                //         commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                //     },
+                //     Err(e) => {
+                //         //info!("No message was received: {}", e)
+                //     }
+                // }
                  
             }
             Interaction::Hovered => {

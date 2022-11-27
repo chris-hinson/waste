@@ -242,29 +242,24 @@ fn setup_menu(
     >,
 ) {
     // -----------------------------------------------------------------------------------------------------------
+    // Get an address to bind socket to
+    // ::bind() creates a new socket bound to the address, and a NEW BINDING
+    // CANNOT BE MADE to the same addr:port thereafter
     let socket_addr = get_addr();
-    println!("{}", socket_addr);
+    println!("Socket address: {}", socket_addr);
     let udp_socket = UdpSocket::bind(socket_addr).unwrap();
+    // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
-    let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
-	info!("Successfully binded host to {}", socket_addr);
-	udp_socket.set_nonblocking(true).unwrap();
+	info!("Successfully bound host to {}", socket_addr);
     
 
     commands.insert_resource(GameClient {
+        // Pass socket info over since we will need to pass the socket
+        // around listener/sender systems frequently
         socket: SocketInfo { socket_addr, udp_socket },
+        // Default initialize player to client type
         player_type: crate::game_client::PlayerType::Client,
-        udp_channel: UdpChannel { sx, rx },
     });
-    // -----------------------------------------------------------------------------------------------------------
-
-    // creates the channel for the main game thread
-    // let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
-    // //create entity for the main game thread's sender + receiver
-    // commands.insert_resource(GameChannel {
-    //     gsx,
-    //     grx
-    // });
     // -----------------------------------------------------------------------------------------------------------
 
     cameras.for_each(|camera| {

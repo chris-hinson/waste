@@ -61,7 +61,7 @@ impl Plugin for MultBattlePlugin {
 			.run_in_state(GameState::MultiplayerBattle)
                 .with_system(spawn_mult_player_monster)
                 .with_system(update_mult_battle_stats)
-
+                .with_system(mult_key_press_handler)
         .into())
 		.add_exit_system(GameState::MultiplayerBattle, despawn_mult_battle);
 	}
@@ -175,27 +175,6 @@ pub(crate) fn setup_mult_battle_stats(
 //     .insert(MultBattleUIElement);
 }
 
-// pub(crate) fn generate_randomized_monster() -> Result<Element, String> {
-//     let mut rng = rand::thread_rng();
-//     match rng.gen_range(0..=7) {
-//         0 => {
-//             info!("Number that was generated is 1");
-//              Ok(Element::Scav)
-//         },
-//         1 => {
-//             info!("Number that was generated is 2");
-//             Ok(Element::Growth)
-//         }
-//         2 => Ok(Element::Ember),
-//         3 => Ok(Element::Flood),
-//         4 => Ok(Element::Rad),
-//         5 => Ok(Element::Robot),
-//         6 => Ok(Element::Clean),
-//         7 => Ok(Element::Filth),
-//         _ => std::process::exit(0)
-//     }
-// }
-
 pub(crate) fn update_mult_battle_stats(
     _commands: Commands,
     _asset_server: Res<AssetServer>,
@@ -255,6 +234,29 @@ pub(crate) fn spawn_mult_player_monster(
         .insert(MultMonster);
 }
 
+pub(crate) fn mult_key_press_handler(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    mut my_monster: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    asset_server: Res<AssetServer>,
+) { 
+    if input.just_pressed(KeyCode::A) { // ATTACK
+        info!("Attack!")
+    }
+    else if input.just_pressed(KeyCode::Q) { // ABORT
+        info!("Quit!")
+    } 
+    else if input.just_pressed(KeyCode::D) { // DEFEND
+        info!("Defend!")
+
+    } 
+    else if input.just_pressed(KeyCode::E) { // ELEMENTAL
+        info!("Elemental attack!")
+    }
+}
 
 fn despawn_mult_battle(mut commands: Commands,
 	// camera_query: Query<Entity,  With<MenuCamera>>,
