@@ -1,27 +1,16 @@
 #![allow(unused)]
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
-use crate::game_client::{self, GameClient, Package, PlayerType};
 use crate::player::Player;
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
 use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, UdpChannel, SocketInfo, get_addr, ClientMarker};
-use crate::{
-	GameState
-};
 use std::fmt::format;
 use std::str::from_utf8;
-use std::sync::mpsc::{self, Receiver, Sender};
 use std::{io, thread};
 use std::net::{UdpSocket, Ipv4Addr};
 use std::sync::mpsc::{Receiver, Sender, self, channel};
-use crate::camera::{MenuCamera};
-use crate::player::{Player};
-use crate::backgrounds::{
-	WIN_H, WIN_W, 
-	Tile
-};
 
 const MULT_MENU_BACKGROUND: &str = "backgrounds/multiplayer_screen.png";
 const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -65,19 +54,19 @@ impl Plugin for MultMenuPlugin {
 }
 
 
-fn is_client(game_client: ResMut<GameClient>) -> bool {
-    if game_client.player_type == PlayerType::Client {
-        return true;
-    }
-    false
-}
+// fn is_client(game_client: ResMut<GameClient>) -> bool {
+//     if game_client.player_type == PlayerType::Client {
+//         return true;
+//     }
+//     false
+// }
 
-fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
-    if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
-        return true;
-    }
-    false
-}
+// fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
+//     if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
+//         return true;
+//     }
+//     false
+// }
 
 fn message_checker(game_client: ResMut<GameClient>, mut commands: Commands) {
     let mut buf = [0; 2048];
@@ -137,11 +126,10 @@ fn setup_mult(
     // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>,
 ) {
-    let c_sx = game_client.udp_channel.sx.clone();
-
+    // let c_sx = game_client.udp_channel.sx.clone();
     // create thread for player's battle communication
-    thread::spawn(move || {
-        let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
+    // thread::spawn(move || {
+    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
 
     //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
 
@@ -158,6 +146,7 @@ fn setup_mult(
     // let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
     // let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
     // thread_sender.send(acknowledgement_pkg).unwrap();
+    // })
 
     cameras.for_each(|camera| {
         commands.entity(camera).despawn();
@@ -245,6 +234,7 @@ fn setup_mult(
         .insert(ClientButton)
         .insert(MultMenuUIElement);
 }
+
 
 pub(crate) fn mult_options(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands

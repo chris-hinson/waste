@@ -1,15 +1,10 @@
 use bevy::{prelude::*, app::AppExit};
 use iyes_loopless::prelude::*;
 use crate::GameState;
-use crate::camera::{PauseCamera, MainCamera};
+use crate::camera::{MainCamera};
 use crate::player::{Player};
 use crate::backgrounds::{Tile, WIN_W};
-use crate::camera::MainCamera;
-use crate::player::Player;
 use crate::start_menu::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON, TEXT_COLOR};
-use crate::GameState;
-use bevy::{app::AppExit, prelude::*};
-use iyes_loopless::prelude::*;
 
 const BLANK: &str = "backgrounds/blank.png";
 

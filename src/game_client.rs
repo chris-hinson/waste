@@ -1,9 +1,6 @@
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::sync::mpsc::{Receiver, Sender};
-
-
-use local_ip_address::local_ip;
 use rand::seq::SliceRandom;
 
 const SIZE: usize = 50;

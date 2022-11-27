@@ -3,9 +3,6 @@ use std::fmt::format;
 use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
 use std::sync::mpsc::{Receiver, channel, Sender};
 use local_ip_address::local_ip;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
-use std::sync::mpsc::{channel, Receiver, Sender};
-
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
 use crate::game_client::*;
@@ -245,12 +242,11 @@ fn setup_menu(
     >,
 ) {
     // -----------------------------------------------------------------------------------------------------------
-    let addr = get_addr();
-    println!("{}", addr);
-    let udp_socket = UdpSocket::bind(addr).unwrap();
+    let socket_addr = get_addr();
+    println!("{}", socket_addr);
+    let udp_socket = UdpSocket::bind(socket_addr).unwrap();
     udp_socket.set_nonblocking(true).unwrap();
     let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
-    let ready_for_battle = false;
 	info!("Successfully binded host to {}", socket_addr);
 	udp_socket.set_nonblocking(true).unwrap();
     
