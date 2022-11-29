@@ -62,10 +62,33 @@ impl Plugin for MultBattlePlugin {
                 .with_system(spawn_mult_player_monster)
                 .with_system(update_mult_battle_stats)
                 .with_system(mult_key_press_handler)
+                .with_system(recv_packets)
         .into())
 		.add_exit_system(GameState::MultiplayerBattle, despawn_mult_battle);
 	}
 }
+
+
+pub(crate) fn recv_packets(game_client: Res<GameClient>, ) {
+    loop {
+        let mut buf = [0; 512];
+        match game_client.socket.udp_socket.recv(&mut buf) {
+            Ok(msg) => {
+                println!("received {msg} bytes. The msg is: {}", from_utf8(&buf[..msg]).unwrap());
+                info!("confirmation: entered recv packets");
+                let data = from_utf8(&buf[..msg]).unwrap().to_string();
+                info!(data);
+            }
+            Err(err) => {
+                if err.kind() != io::ErrorKind::WouldBlock { 
+                    // An ACTUAL error occurred
+                    error!("{}", err);
+                }
+            }
+        }
+    }
+}
+
 
 pub(crate) fn setup_mult_battle(mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -87,7 +110,7 @@ pub(crate) fn setup_mult_battle(mut commands: Commands,
         ..default()
     })  
     .insert(MultBattleBackground);
-    
+
 }
 
 pub(crate) fn setup_mult_battle_stats(
@@ -129,42 +152,42 @@ pub(crate) fn setup_mult_battle_stats(
     .insert(MultPlayerHealth)
     .insert(MultBattleUIElement);
 
-//     commands.spawn_bundle(
-//         // Create a TextBundle that has a Text with a list of sections.
-//         TextBundle::from_sections([
-//             // level header for player's monster
-//             TextSection::new(
-//                 "Level:",
-//                 TextStyle {
-//                     font: asset_server.load("buttons/joystix monospace.ttf"),
-//                     font_size: 40.0,
-//                     color: Color::BLACK,
-//                 },
-//             ),
-//             // level of player's monster
-//             TextSection::new(
-//                 "0 here",
-//                 TextStyle {
-//                     font: asset_server.load("buttons/joystix monospace.ttf"),
-//                     font_size: 40.0,
-//                     color: Color::BLACK,
-//                 },
-//             )
-//         ])
-//         .with_style(Style {
-//                 align_self: AlignSelf::FlexEnd,
-//                 position_type: PositionType::Absolute,
-//                 position: UiRect {
-//                     top: Val::Px(40.0),
-//                     left: Val::Px(15.0),
-//                     ..default()
-//                 },
-//                 ..default()
-//             },
-//         ),
-//     )
-//     .insert(MultPlayerLevel)
-//     .insert(MultBattleUIElement);
+    commands.spawn_bundle(
+        // Create a TextBundle that has a Text with a list of sections.
+        TextBundle::from_sections([
+            // level header for player's monster
+            TextSection::new(
+                "Level:",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::BLACK,
+                },
+            ),
+            // level of player's monster
+            TextSection::new(
+                "0 here",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: Color::BLACK,
+                },
+            )
+        ])
+        .with_style(Style {
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(40.0),
+                    left: Val::Px(15.0),
+                    ..default()
+                },
+                ..default()
+            },
+        ),
+    )
+    .insert(MultPlayerLevel)
+    .insert(MultBattleUIElement);
 }
 
 pub(crate) fn update_mult_battle_stats(
@@ -224,6 +247,12 @@ pub(crate) fn spawn_mult_player_monster(
         })
         .insert(MultPlayerMonster)
         .insert(MultMonster);
+}
+
+
+// TODO: spawn enemy's monster when data is sent from other player
+pub(crate) fn spawn_mult_enemy_monster(mut commands: Commands) {
+
 }
 
 pub(crate) fn mult_key_press_handler(
