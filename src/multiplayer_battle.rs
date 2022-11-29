@@ -84,6 +84,8 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, ) {
                     // An ACTUAL error occurred
                     error!("{}", err);
                 }
+                
+                break;
             }
         }
     }
@@ -151,43 +153,7 @@ pub(crate) fn setup_mult_battle_stats(
     )
     .insert(MultPlayerHealth)
     .insert(MultBattleUIElement);
-
-    commands.spawn_bundle(
-        // Create a TextBundle that has a Text with a list of sections.
-        TextBundle::from_sections([
-            // level header for player's monster
-            TextSection::new(
-                "Level:",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::BLACK,
-                },
-            ),
-            // level of player's monster
-            TextSection::new(
-                "0 here",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::BLACK,
-                },
-            )
-        ])
-        .with_style(Style {
-                align_self: AlignSelf::FlexEnd,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    top: Val::Px(40.0),
-                    left: Val::Px(15.0),
-                    ..default()
-                },
-                ..default()
-            },
-        ),
-    )
-    .insert(MultPlayerLevel)
-    .insert(MultBattleUIElement);
+    
 }
 
 pub(crate) fn update_mult_battle_stats(
