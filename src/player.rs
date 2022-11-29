@@ -1,7 +1,7 @@
 use crate::backgrounds::{ChestTile, HealingTile, MonsterTile, Tile};
 use crate::monster::{Boss, Defense, Enemy, Health, Level, MonsterStats, Strength};
 use crate::quests::NPC;
-use crate::world::{item_index_to_name, GameProgress};
+use crate::world::{item_index_to_name, GameProgress, TextBuffer};
 use crate::GameState;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
@@ -95,6 +95,7 @@ pub(crate) fn move_player(
             Without<ChestTile>,
         ),
     >,
+    mut text_buffer: ResMut<TextBuffer>,
 ) {
     if player.is_empty() {
         error!("Couldn't find a player to move...");
@@ -126,6 +127,12 @@ pub(crate) fn move_player(
     if input.pressed(KeyCode::D) {
         x_vel += player_movement;
         y_vel = 0.;
+    }
+
+    if input.just_released(KeyCode::P) {
+        let num_of_monsters = game_progress.num_monsters;
+        let text = format!("You have collected {} monsters.", num_of_monsters);
+        text_buffer.bottom_middle.push_back(text);
     }
 
     // Most of these numbers come from debugging
