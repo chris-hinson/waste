@@ -17,6 +17,7 @@ pub(crate) enum GameState {
     Credits,
     Help, //NEW
     MultiplayerMenu,
+    MultiplayerWaiting,
     MultiplayerBattle,
 }
 
@@ -41,6 +42,7 @@ mod multiplayer_battle;
 mod game_client;
 mod quests;
 mod networking;
+mod multiplayer_waiting;
 
 
 //use statements:
@@ -59,6 +61,7 @@ use world::*;
 use multiplayer_menu::*;
 use multiplayer_battle::*;
 use game_client::*;
+use multiplayer_waiting::*;
 
 
 
@@ -96,6 +99,7 @@ fn main() {
         .add_plugin(PausePlugin)
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
+        .add_plugin(MultiplayerWaitingPlugin)
         .add_plugin(MultBattlePlugin)
         .add_enter_system_set(
             GameState::StartPlaying,

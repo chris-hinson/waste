@@ -5,7 +5,7 @@ use crate::player::Player;
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, SocketInfo, get_addr, ClientMarker};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, SocketInfo, get_addr, ClientMarker, HostMarker};
 use std::fmt::format;
 use std::str::from_utf8;
 use std::{io, thread};
@@ -35,13 +35,15 @@ pub(crate) struct ClientButton;
 #[derive(Component)]
 pub(crate) struct MultMenuUIElement;
 
+
+
 // Builds plugin for multiplayer menu
 impl Plugin for MultMenuPlugin {
 	fn build(&self, app: &mut App) {
 		app
 		.add_enter_system(GameState::MultiplayerMenu, setup_mult)
-        .add_system(udp_message_listener
-            .run_if_resource_exists::<ClientMarker>())
+        // .add_system(udp_message_listener
+        //     .run_if_resource_exists::<ClientMarker>())
 		.add_system_set(ConditionSet::new()
 			// Only run handlers in MultiplayerMenu state
 			.run_in_state(GameState::MultiplayerMenu)
@@ -142,28 +144,6 @@ fn setup_mult(
     // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>,
 ) {
-    // let c_sx = game_client.udp_channel.sx.clone();
-    // create thread for player's battle communication
-    // thread::spawn(move || {
-    //     let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
-
-    //     let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
-
-    //     c_sx.send(test_pkg).unwrap();
-
-    //     let acknowledgement = rx.recv().unwrap();
-    //     info!("Here is the confirmation from main to thread: {}", acknowledgement);
-
-    // });
-
-    // let response = game_client.udp_channel.rx.recv().unwrap();
-    // println!("Player thread receiving this message: {}", response.message);
-
-    // let acknowledgement_pkg = Package::new(String::from("hey main got the msg!"), Some(game_client.udp_channel.sx.clone()));
-    // let thread_sender = response.sender.expect("Couldn't extract sender channel from thread");
-    // thread_sender.send(acknowledgement_pkg).unwrap();
-    // })
-
     cameras.for_each(|camera| {
         commands.entity(camera).despawn();
     });
@@ -309,6 +289,8 @@ pub(crate) fn host_button_handler(
                 
                 // If player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
+                commands.insert_resource(HostMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
 
                 // let mut buf = [0; 2048];
                 
@@ -363,8 +345,8 @@ pub(crate) fn client_button_handler(
 
                 // if player clicks on client button, designate them as the client
                 game_client.player_type = PlayerType::Client;
-
                 commands.insert_resource(ClientMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
                 
                 // get host IP
                 println!("Enter in host IP address.");

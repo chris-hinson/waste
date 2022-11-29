@@ -87,15 +87,7 @@ pub(crate) fn setup_mult_battle(mut commands: Commands,
         ..default()
     })  
     .insert(MultBattleBackground);
-
-        // Give the player a monster
-        let initial_monster_stats = MonsterStats {
-            ..Default::default()
-        };
-        let initial_monster = commands
-            .spawn()
-            .insert_bundle(initial_monster_stats)
-            .insert(SelectedMonster);
+    
 }
 
 pub(crate) fn setup_mult_battle_stats(

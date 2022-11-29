@@ -24,6 +24,9 @@ pub(crate) struct GameClient {
 /// this is inserted as a resource when the player selects "Join Game"
 /// since they want to be the client. this allows the client to move to the multiplayer battle stage
 pub(crate) struct ClientMarker {}
+pub(crate) struct HostMarker {}
+pub(crate) struct HostNotReady {}
+pub(crate) struct HostReady {}
 
 #[derive(Debug)]
 pub(crate) struct Package {
@@ -49,8 +52,7 @@ pub(crate) fn get_randomized_port() -> i32 {
 }
 
 pub(crate) fn get_addr() -> SocketAddr {
-    let port_list = vec![9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
     let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-    let socket_addr = SocketAddr::new(ip_addr, *port_list.choose(&mut rand::thread_rng()).unwrap());
+    let socket_addr = SocketAddr::new(ip_addr, get_randomized_port() as u16);
     socket_addr
 }
