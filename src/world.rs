@@ -6,7 +6,7 @@ use crate::{
     quests::*,
     Chunk,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 /// Number of total consumable item types
 pub(crate) const NUM_ITEM_TYPES: usize = 2;
@@ -305,4 +305,9 @@ impl Default for TypeSystem {
             type_modifier: modifier_map,
         }
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TextBuffer {
+    pub bottom_middle: VecDeque<String>,
 }
