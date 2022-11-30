@@ -231,10 +231,6 @@ pub(crate) fn wfc(
                 }
 
                 attempts += 1;
-                warn!(
-                    "WFC could not collapse. Retrying, attempt {}.",
-                    attempts + 1
-                );
             }
 
             // Put the board contents into the result
@@ -473,8 +469,6 @@ impl Board {
         if self.is_solved() {
             return true;
         }
-
-        // info!("collapsing {:?}", center_tile);
 
         // center_tile is the tile we are pivoting collapse on right now.
         // Get the super position of the tile, back it up,
