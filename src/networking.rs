@@ -1,11 +1,10 @@
-// Networking helper structs and functions
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use bytes::{Bytes};
+use std::net::{SocketAddr};
 use std::{io};
-use crate::game_client::*;
 
 // use std::io::Bytes;
 // MultiplayerActions as an enum separates the desired result for data sent to apply
-pub enum MultiplayerActions {
+pub enum BattleEvent {
     Initialize,
     MonsterStats,
     MonsterType,
@@ -15,25 +14,30 @@ pub enum MultiplayerActions {
     Special,
 }
 
+pub enum NetworkEvent {
+    Message(SocketAddr, Bytes),
+    RecvError(io::Error),
+    SendError(io::Error, Message)
+}
+
 // Message structs represent the data within the message on a larger sense of scale.
 pub struct Message {
     /// The destination to send the message.
     pub destination: SocketAddr,
     // The action ID to identify what data was sent
-    pub action: MultiplayerActions,
+    pub event: BattleEvent,
     // The data sent itself.
-    //pub payload: Bytes,
+    pub payload: Vec<u8>,
 }
 
 // function for initializing a new Message
 impl Message {
     /// Creates and returns a new Message.
-    pub(crate) fn new(destination: SocketAddr, action: MultiplayerActions, payload: &[u8]) -> Self {
+    pub(crate) fn new(destination: SocketAddr, event: BattleEvent, payload: Vec<u8>) -> Self {
         Self {
             destination,
-            action,
-            // payload: use std::io::Bytes;,
-            
+            event,
+            payload,
         }
     }
 }

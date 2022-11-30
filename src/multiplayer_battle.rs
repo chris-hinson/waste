@@ -1,5 +1,6 @@
 #![allow(unused)]
 use bevy::{prelude::*, ui::*};
+use bytes::Bytes;
 use iyes_loopless::prelude::*;
 use rand::Rng;
 use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port};
@@ -7,6 +8,7 @@ use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats,
     PartyMonster, SelectedMonster, Strength,
 };
+use crate::networking::{BattleEvent, Message};
 use crate::{
 	GameState
 };
@@ -45,6 +47,12 @@ pub(crate) struct MultBattleUIElement;
 #[derive(Component)]
 pub(crate) struct MultPlayerType;
 
+pub(crate) struct AttackEvent(Entity);
+
+pub(crate) struct DefendEvent(Entity);
+
+pub(crate) struct HealEvent(Entity);
+
 pub struct MultBattlePlugin;
 
 // Builds plugin for multiplayer battles
@@ -69,7 +77,7 @@ impl Plugin for MultBattlePlugin {
 }
 
 
-pub(crate) fn recv_packets(game_client: Res<GameClient>, ) {
+pub(crate) fn recv_packets(game_client: Res<GameClient>) {
     loop {
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
@@ -88,6 +96,21 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, ) {
                 break;
             }
         }
+    }
+}
+
+pub(crate) fn send_message(message: Message) {
+    match message.event {
+        BattleEvent::Attack => {
+            let payload = message.payload;
+            info!("{:#?}", from_utf8(&payload).unwrap());
+        }
+        BattleEvent::Initialize => todo!(),
+        BattleEvent::MonsterStats => todo!(),
+        BattleEvent::MonsterType => todo!(),
+        BattleEvent::Defend => todo!(),
+        BattleEvent::Heal => todo!(),
+        BattleEvent::Special => todo!(),
     }
 }
 
@@ -229,9 +252,16 @@ pub(crate) fn mult_key_press_handler(
         (With<SelectedMonster>),
     >,
     asset_server: Res<AssetServer>,
+    game_client: Res<GameClient>,
 ) { 
     if input.just_pressed(KeyCode::A) { // ATTACK
-        info!("Attack!")
+        info!("Attack!");
+
+        send_message(Message { 
+            destination: (game_client.socket.socket_addr), 
+            event: (BattleEvent::Attack), 
+            payload: "i attacked you".to_string().into_bytes()
+        });
     }
     else if input.just_pressed(KeyCode::Q) { // ABORT
         info!("Quit!")

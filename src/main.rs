@@ -89,6 +89,9 @@ fn main() {
         .init_resource::<GameProgress>()
         .init_resource::<TypeSystem>()
         .init_resource::<ProcGen>()
+        .add_event::<AttackEvent>()
+        .add_event::<DefendEvent>()
+        .add_event::<HealEvent>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
