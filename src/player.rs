@@ -142,7 +142,10 @@ pub(crate) fn move_player(
     // Check item inventory
     if input.just_released(KeyCode::I) {
         let text = PooledText {
-            text: format!("Items: {} heal, {} buff.", game_progress.player_inventory[0], game_progress.player_inventory[1]),
+            text: format!(
+                "Items: {} heal, {} buff.",
+                game_progress.player_inventory[0], game_progress.player_inventory[1]
+            ),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -152,10 +155,12 @@ pub(crate) fn move_player(
     if input.just_released(KeyCode::G) {
         // Print out current level, bosses defeated, and number of active quests
         let text = PooledText {
-            text: format!("Level: {} Bosses defeated: {} Active Quests: {}.", 
-                game_progress.current_level, 
+            text: format!(
+                "Level: {} Bosses defeated: {} Active Quests: {}.",
+                game_progress.current_level,
                 game_progress.num_boss_defeated,
-                game_progress.quests_active.len()),
+                game_progress.quests_active.len()
+            ),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
