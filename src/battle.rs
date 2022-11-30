@@ -512,20 +512,21 @@ pub(crate) fn key_press_handler(
         }
     }
 
+    let enemy_action = rand::thread_rng().gen_range(0..=3);
+    let enemy_act_string = if enemy_action == 0 {
+        format!("Enemy attacks!")
+    } else if enemy_action == 1 {
+        format!("Enemy defends!")
+    } else if enemy_action == 2 {
+        format!("Enemy elemental!")
+    } else {
+        format!("Enemy special!")
+    };
+
     if input.just_pressed(KeyCode::A) {
         // ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
-        let enemy_act_string = if enemy_action == 0 {
-            format!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            format!("Enemy defends!")
-        } else if enemy_action == 2 {
-            format!("Enemy elemental!")
-        } else {
-            format!("Enemy special!")
-        };
         let text = PooledText {
             text: format!("You attack! {}", enemy_act_string),
             pooled: false,
@@ -671,16 +672,6 @@ pub(crate) fn key_press_handler(
         // ELEMENTAL ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
-        let enemy_act_string = if enemy_action == 0 {
-            format!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            format!("Enemy defends!")
-        } else if enemy_action == 2 {
-            format!("Enemy elemental!")
-        } else {
-            format!("Enemy special!")
-        };
         let text = PooledText {
             text: format!("{:?} elemental! {}", player_type, enemy_act_string),
             pooled: false,
@@ -822,22 +813,179 @@ pub(crate) fn key_press_handler(
                     .insert(SelectedMonster);
             }
         }
+    } else if input.just_pressed(KeyCode::S) {
+        // SPECIAL ATTACK HANDLER
+        // The way special/multi-move attacks work is we do the 
+        // monster's unique elemental attack followed immediately by a base attack,
+        // WITHOUT giving the enemy the chance to respond twice, only once to the whole attack.
+        // If this seems overpowered, it's because it is. We only allow a special attack to be used
+        // twice per battle.
+        let text = PooledText {
+            text: format!("{:?} multi-move! {}", player_type, enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+
+        let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
+            let text = PooledText {
+                text: format!("Buffed! Extra damage..."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            game_progress.turns_left_of_buff[0] -= 1;
+            game_progress.current_level
+        } else {
+            0
+        };
+
+        // Temporarily increase strength for the turn calculation
+        player_stg.atk += str_buff_damage;
+        let turn_result_one = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            2,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+        // Reset strength for next turn
+        player_stg.atk -= str_buff_damage;
+
+        // Deal damage only to the enemy, enemy cannot respond
+        // until next turn.
+        enemy_health.health -= turn_result_one.0;
+
+        player_stg.atk += str_buff_damage;
+        let turn_result_two = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            1,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+        // Reset strength for next turn
+        player_stg.atk -= str_buff_damage;
+
+        player_health.health -= turn_result_two.1;
+        enemy_health.health -= turn_result_two.0;
+
+        if enemy_health.health <= 0 {
+            let text = PooledText {
+                text: format!("Enemy defeated! Level up!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            // at this point this monster is already "ours", we just need to register is with the resource
+            // get the stats from the monster
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
+            // remove the monster from the enemy stats
+            game_progress.enemy_stats.remove(&enemy_entity);
+            // add the monster to the monster bag
+            commands.entity(enemy_entity).insert(PartyMonster);
+            game_progress.new_monster(enemy_entity, new_monster_stats);
+            let text = PooledText {
+                text: format!(
+                    "New monster: {:?}",
+                    game_progress
+                        .monster_entity_to_stats
+                        .get(&enemy_entity)
+                        .unwrap()
+                        .typing
+                ),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            // update game progress
+            // check for boss
+            if enemy_boss.is_some() {
+                // info!("Boss defeated!");
+                let text = PooledText {
+                    text: "Boss defeated!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                game_progress.get_quest_rewards(*enemy_type);
+                game_progress.win_boss();
+                // if boss level up twice
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+                commands.entity(enemy_entity).remove::<Boss>();
+
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                let text = PooledText {
+                    text: format!("Someone appears from the dust..."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(
+                            transform.translation.x,
+                            transform.translation.y,
+                            0.,
+                        ),
+                        ..default()
+                    })
+                    .insert(NPC { quest: new_quest });
+            } else {
+                game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
+                // if not boss level up once
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+            }
+            end_battle!(commands, game_progress, player_entity, enemy_entity);
+        } else if player_health.health <= 0 {
+            game_progress.num_living_monsters -= 1;
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
+            if next_monster.is_none() {
+                let text = PooledText {
+                    text: format!("Defeated."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                end_battle!(commands, game_progress, player_entity, enemy_entity);
+            } else {
+                let text = PooledText {
+                    text: format!("Monster defeated. Switching."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                commands.entity(player_entity).remove::<SelectedMonster>();
+                commands
+                    .entity(player_entity)
+                    .remove_bundle::<SpriteBundle>();
+                commands.entity(player_entity).remove::<PlayerMonster>();
+                commands.entity(player_entity).remove::<Monster>();
+                commands
+                    .entity(*next_monster.unwrap())
+                    .insert(SelectedMonster);
+            }
+        }
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT HANDLER
         commands.entity(enemy_entity).remove::<Enemy>();
         commands.insert_resource(NextState(GameState::Playing));
     } else if input.just_pressed(KeyCode::D) {
         // DEFEND HANDLER
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
-        let enemy_act_string = if enemy_action == 0 {
-            format!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            format!("Enemy defends!")
-        } else if enemy_action == 2 {
-            format!("Enemy elemental!")
-        } else {
-            format!("Enemy special!")
-        };
         let text = PooledText {
             text: format!("You defend! {}", enemy_act_string),
             pooled: false,
@@ -870,16 +1018,6 @@ pub(crate) fn key_press_handler(
                 .insert(SelectedMonster);
 
             // Allow enemy to respond to cycle
-            let enemy_action = rand::thread_rng().gen_range(0..=3);
-            let enemy_act_string = if enemy_action == 0 {
-                format!("Enemy attacks!")
-            } else if enemy_action == 1 {
-                format!("Enemy defends!")
-            } else if enemy_action == 2 {
-                format!("Enemy elemental!")
-            } else {
-                format!("Enemy special!")
-            };
             let text = PooledText {
                 text: format!("{}", enemy_act_string),
                 pooled: false,
