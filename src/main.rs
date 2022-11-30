@@ -4,7 +4,7 @@
 use bevy::{prelude::*, window::PresentMode};
 
 use iyes_loopless::prelude::*;
-use std::convert::From;
+use std::{convert::From};
 
 // GAMEWIDE CONSTANTS
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -248,56 +248,60 @@ pub fn display_text(
     mut text_buffer: ResMut<TextBuffer>,
 ) {
     // take the text buffer and display it on the screen
-    let text = text_buffer.bottom_middle.pop_front();
-    if text.is_none() {
-        return;
-    }
-    commands
-    .spawn_bundle(
-        // Create a TextBundle that has a Text with a list of sections.
-        TextBundle::from_sections([
-            // health header for player's monster
-            TextSection::new(
-                // "Press ESC to pause",
-                text.unwrap(),
-                TextStyle {
+    // let text = text_buffer.bottom_middle.pop_front();
+    // if text.is_none() {
+    //     return;
+    // }
+    let mut display_latest = 725.0;
+    for i in 0..text_buffer.bottom_middle.len() {
+        let text = text_buffer.bottom_middle.get(i);
+        commands
+        .spawn_bundle(
+            // Create a TextBundle that has a Text with a list of sections.
+            TextBundle::from_sections([
+                TextSection::new(
+                    text.unwrap(),
+                    TextStyle {
+                        font: asset_server.load("buttons/joystix monospace.ttf"),
+                        font_size: 40.0,
+                        color: Color::BLACK,
+                    },
+                ),
+                TextSection::from_style(TextStyle {
                     font: asset_server.load("buttons/joystix monospace.ttf"),
                     font_size: 40.0,
                     color: Color::BLACK,
+                }),
+            ])
+            .with_text_alignment(TextAlignment::CENTER)
+            .with_style(Style {
+                align_self: AlignSelf::FlexEnd,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Px(display_latest - i as f32 *20.),
+                    left: Val::Px(400.0),
+                    ..default()
                 },
-            ),
-            // health of player's monster
-            TextSection::from_style(TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 40.0,
-                color: Color::BLACK,
-            }),
-        ])
-        .with_text_alignment(TextAlignment::CENTER)
-        .with_style(Style {
-            align_self: AlignSelf::FlexEnd,
-            position_type: PositionType::Absolute,
-            position: UiRect {
-                top: Val::Px(725.0),
-                left: Val::Px(400.0),
                 ..default()
-            },
-            ..default()
-        }),
-    )
-    .insert(UIText)
-    .insert(TextTimer{time: Timer::from_seconds(2., true)});
+            }),
+        )
+        .insert(UIText)
+        .insert(TextTimer{time: Timer::from_seconds(2., true)});
+
+    }
 }
 
 pub fn despawn_text(
     mut commands: Commands,
     mut text_timer: Query<(Entity, &mut TextTimer)>,
     time: Res<Time>,
+    mut text_buffer: ResMut<TextBuffer>,
 ) {
     for (entity, mut timer) in text_timer.iter_mut() {
         timer.time.tick(time.delta());
         if timer.time.finished() {
             commands.entity(entity).despawn();
+            text_buffer.bottom_middle.pop_front();
         }
     }
 }

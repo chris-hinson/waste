@@ -135,6 +135,10 @@ pub(crate) fn move_player(
         text_buffer.bottom_middle.push_back(text);
     }
 
+    if input.just_released(KeyCode::T) {
+        text_buffer.bottom_middle.push_back("A test message to alternate display".to_string());
+    }
+
     // Most of these numbers come from debugging
     // and seeing what works.
     pt.translation.x += x_vel;
