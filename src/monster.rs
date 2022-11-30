@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use rand::distributions::{Distribution, Standard};
+use serde::{Serialize, Deserialize};
 
 // Elemental types
-#[derive(Component, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Component, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Element {
     Scav,
     Growth,

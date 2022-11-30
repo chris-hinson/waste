@@ -113,7 +113,7 @@ fn host_listen_for_conn(game_client: ResMut<GameClient>, mut commands: Commands)
         let mut buf = [0; 512];    
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(result) => {                
-                println!("received {result} bytes. The msg is: {}", from_utf8(&buf[..result]).unwrap());
+                println!("received {result} bytes. The msg from_host_listen_for_conn is: {}", from_utf8(&buf[..result]).unwrap());
                 info!("confirmation: entered host listener");
                 let client_info = from_utf8(&buf[..result]).unwrap().to_string();
                 info!(client_info);
@@ -139,10 +139,10 @@ fn host_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands: C
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(result) => {
-                println!("received {result} bytes. The msg is: {}", from_utf8(&buf[..result]).unwrap());
+                println!("received {result} bytes. The msg from host_listen_for_confirmation is: {}", from_utf8(&buf[..result]).unwrap());
                 info!("confirmation: entered host listen for confirmation");
                 let val = from_utf8(&buf[..result]).unwrap().to_string();
-                info!("{}", val);
+                //info!("{}", val);
                 if val == "TRUE" {                    
                     // Give the player a monster
                     let initial_monster_stats = MonsterStats {
@@ -152,6 +152,8 @@ fn host_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands: C
                         .spawn()
                         .insert_bundle(initial_monster_stats)
                         .insert(SelectedMonster);
+
+                        commands.remove_resource::<HostReady>();
                     
                     commands.insert_resource(NextState(GameState::MultiplayerBattle));
                 }
@@ -229,5 +231,5 @@ fn despawn_mult_waiting(
     });
 
     //Despawn HostReady resource
-    commands.remove_resource::<HostReady>()
+    //commands.remove_resource::<HostReady>()
 }

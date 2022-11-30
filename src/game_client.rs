@@ -28,6 +28,8 @@ pub(crate) struct HostMarker {}
 pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
 
+pub(crate) struct ReadyToSpawnEnemy {}
+
 #[derive(Debug)]
 pub(crate) struct Package {
     pub(crate) message: String,
