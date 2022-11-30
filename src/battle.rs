@@ -983,8 +983,7 @@ pub(crate) fn key_press_handler(
         }
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT HANDLER
-        commands.entity(enemy_entity).remove::<Enemy>();
-        commands.insert_resource(NextState(GameState::Playing));
+        end_battle!(commands, game_progress, player_entity, enemy_entity);
     } else if input.just_pressed(KeyCode::D) {
         // DEFEND HANDLER
         let text = PooledText {
