@@ -1298,7 +1298,7 @@ fn calculate_turn(
     } else if player_action == 3 {
         // Multi-move
         // Do an attack first
-        result.0 = calculate_turn(
+        result.0 += calculate_turn(
             player_stg,
             player_def,
             player_type,
@@ -1322,7 +1322,7 @@ fn calculate_turn(
     } else if enemy_action == 3 {
         // Multi-move
         // Do an attack first
-        result.1 = calculate_turn(
+        result.1 += calculate_turn(
             player_stg,
             player_def,
             player_type,
