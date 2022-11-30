@@ -12,6 +12,8 @@ use std::collections::{HashMap, VecDeque};
 pub(crate) const NUM_ITEM_TYPES: usize = 2;
 /// Number of total buff/debuff types
 // pub(crate) const NUM_STATUS_TYPES: usize = 3; // Commented out because it is currently unused
+/// Number of special moves each player can use per battle, across all monsters
+pub(crate) const SPECIALS_PER_BATTLE: usize = 2;
 
 #[derive(Default, Debug)]
 pub(crate) struct WorldMap {
@@ -90,6 +92,10 @@ pub(crate) struct GameProgress {
     /// Number of turns remaining with a given buff applied
     /// Strength Buff = 0, Slowness = 1, Blindness = 2
     pub(crate) turns_left_of_buff: Vec<usize>,
+    /// Count of special moves available for player (index 0) and 
+    /// enemy (index 1)
+    /// Reset at the end of every battle to SPECIALS_PER_BATTLE.
+    pub(crate) spec_moves_left: Vec<usize>,
     /// Active player quests
     pub(crate) quests_active: Vec<Quest>,
 }
@@ -210,6 +216,7 @@ impl Default for GameProgress {
             enemy_stats: Default::default(),
             player_inventory: vec![0; 9],
             turns_left_of_buff: vec![0; 3],
+            spec_moves_left: vec![SPECIALS_PER_BATTLE; 2],
             quests_active: Vec::new(),
         }
     }

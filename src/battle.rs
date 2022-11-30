@@ -5,8 +5,8 @@ use crate::monster::{
     PartyMonster, SelectedMonster, Strength,
 };
 use crate::player::Player;
-use crate::{quests::*};
-use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem};
+use crate::{quests::*, game_client};
+use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
@@ -72,6 +72,8 @@ macro_rules! end_battle {
     ($commands:expr, $game_progress:expr, $my_monster:expr, $enemy_monster:expr) => {
         // remove the monster from the enemy stats
         $game_progress.enemy_stats.remove(&$enemy_monster);
+        $game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
+        $game_progress.spec_moves_left[1] = SPECIALS_PER_BATTLE;
         // reset selected monster back to the first one in our bag
         let first_monster = $game_progress.monster_id_entity.get(&0).unwrap().clone();
         $commands.entity($my_monster).remove::<SelectedMonster>();
@@ -511,8 +513,13 @@ pub(crate) fn key_press_handler(
                 .insert(SelectedMonster);
         }
     }
+    let mut enemy_action = rand::thread_rng().gen_range(0..=3);
 
-    let enemy_action = rand::thread_rng().gen_range(0..=3);
+    // Enemy cannot special if it is out of special moves
+    if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+        enemy_action = rand::thread_rng().gen_range(0..=2);
+    }
+
     let enemy_act_string = if enemy_action == 0 {
         format!("Enemy attacks!")
     } else if enemy_action == 1 {
@@ -520,6 +527,7 @@ pub(crate) fn key_press_handler(
     } else if enemy_action == 2 {
         format!("Enemy elemental!")
     } else {
+        game_progress.spec_moves_left[1] -= 1;
         format!("Enemy special!")
     };
 
@@ -815,11 +823,23 @@ pub(crate) fn key_press_handler(
         }
     } else if input.just_pressed(KeyCode::S) {
         // SPECIAL ATTACK HANDLER
-        // The way special/multi-move attacks work is we do the 
+        // The way special/multi-move attacks work is we do the
         // monster's unique elemental attack followed immediately by a base attack,
         // WITHOUT giving the enemy the chance to respond twice, only once to the whole attack.
         // If this seems overpowered, it's because it is. We only allow a special attack to be used
         // twice per battle.
+        if game_progress.spec_moves_left[0] == 0 { 
+            // No special moves left
+            let text = PooledText {
+                text: format!("Special move not allowed!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            return;
+        }
+
+        game_progress.spec_moves_left[0] -= 1;
+        
         let text = PooledText {
             text: format!("{:?} multi-move! {}", player_type, enemy_act_string),
             pooled: false,
@@ -838,13 +858,13 @@ pub(crate) fn key_press_handler(
             0
         };
 
-        // Temporarily increase strength for the turn calculation
+        // Temp str increase
         player_stg.atk += str_buff_damage;
-        let turn_result_one = calculate_turn(
+        let turn_result = calculate_turn(
             &player_stg,
             &player_def,
             player_type,
-            2,
+            3,
             &enemy_stg,
             &enemy_def,
             enemy_type,
@@ -854,27 +874,8 @@ pub(crate) fn key_press_handler(
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
-        // Deal damage only to the enemy, enemy cannot respond
-        // until next turn.
-        enemy_health.health -= turn_result_one.0;
-
-        player_stg.atk += str_buff_damage;
-        let turn_result_two = calculate_turn(
-            &player_stg,
-            &player_def,
-            player_type,
-            1,
-            &enemy_stg,
-            &enemy_def,
-            enemy_type,
-            enemy_action,
-            *type_system,
-        );
-        // Reset strength for next turn
-        player_stg.atk -= str_buff_damage;
-
-        player_health.health -= turn_result_two.1;
-        enemy_health.health -= turn_result_two.0;
+        player_health.health -= turn_result.1;
+        enemy_health.health -= turn_result.0;
 
         if enemy_health.health <= 0 {
             let text = PooledText {
@@ -1290,6 +1291,25 @@ fn calculate_turn(
     }
 
     if player_action == 2 {
+        // Elemental move
+        result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+            * result.0 as f32)
+            .trunc() as usize;
+    } else if player_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.0 = calculate_turn(
+            player_stg,
+            player_def,
+            player_type,
+            0,
+            enemy_stg,
+            enemy_def,
+            enemy_type,
+            enemy_action,
+            type_system,
+        ).0 as usize;
+        // Then simulate elemental
         result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
             * result.0 as f32)
             .trunc() as usize;
@@ -1297,6 +1317,24 @@ fn calculate_turn(
 
     if enemy_action == 2 {
         result.1 = (type_system.type_modifier[*enemy_type as usize][*player_type as usize]
+            * result.1 as f32)
+            .trunc() as usize;
+    } else if enemy_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.1 = calculate_turn(
+            player_stg,
+            player_def,
+            player_type,
+            player_action,
+            enemy_stg,
+            enemy_def,
+            enemy_type,
+            0,
+            type_system,
+        ).1 as usize;
+        // Then simulate elemental
+        result.1 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
             * result.1 as f32)
             .trunc() as usize;
     }

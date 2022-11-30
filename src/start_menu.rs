@@ -282,103 +282,103 @@ fn setup_menu(
         .insert(MainMenuBackground);
 
     // START BUTTON
-	commands
-	.spawn_bundle(ButtonBundle {
-		style: Style {
-			size: Size::new(Val::Px(300.0), Val::Px(65.0)),
-			// center button
-			margin: UiRect::all(Val::Auto),
-			// horizontally center child text
-			justify_content: JustifyContent::Center,
-			// vertically center child text
-			align_items: AlignItems::Center,
-		..default()
-	},
-		color: NORMAL_BUTTON.into(),
-		..default()
-	})
-	.with_children(|parent| {
-		parent.spawn_bundle(TextBundle::from_section(
-			"Start Game",
-			TextStyle {
-				font: asset_server.load("buttons/joystix monospace.ttf"),
-				font_size: 40.0,
-				color: TEXT_COLOR,
-			},
-		));
-	})
-	.insert(StartButton)
-	.insert(StartMenuUIElement);
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(300.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Start Game",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: TEXT_COLOR,
+                },
+            ));
+        })
+        .insert(StartButton)
+        .insert(StartMenuUIElement);
 
-	// MULTIPLAYER BUTTON
-	commands
-	.spawn_bundle(ButtonBundle {
-		style: Style {
-			size: Size::new(Val::Px(325.0), Val::Px(65.0)),
-			// center button
-			margin: UiRect::all(Val::Auto),
-			// horizontally center child text
-			justify_content: JustifyContent::Center,
-			// vertically center child text
-			align_items: AlignItems::Center,
-			position_type: PositionType::Absolute,
-			position: UiRect {
-				bottom: Val::Px(275.),
-				left: Val::Px((WIN_W * 0.75) / 2.),
-				..default()
-			},
-			..default()
-		},
-		color: NORMAL_BUTTON.into(),
-		..default()
-	})
-	.with_children(|parent| {
-		parent.spawn_bundle(TextBundle::from_section(
-			"Multiplayer",
-			TextStyle {
-				font: asset_server.load("buttons/joystix monospace.ttf"),
-				font_size: 40.0,
-				color: TEXT_COLOR,
-			},
-		));
-	})
-	.insert(MultiplayerButton)
-	.insert(StartMenuUIElement);
+    // MULTIPLAYER BUTTON
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(325.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(275.),
+                    left: Val::Px((WIN_W * 0.75) / 2.),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Multiplayer",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: TEXT_COLOR,
+                },
+            ));
+        })
+        .insert(MultiplayerButton)
+        .insert(StartMenuUIElement);
 
-	// CREDITS BUTTON
-	commands
-	.spawn_bundle(ButtonBundle {
-		style: Style {
-			size: Size::new(Val::Px(225.0), Val::Px(65.0)),
-			// center button
-			margin: UiRect::all(Val::Auto),
-			// horizontally center child text
-			justify_content: JustifyContent::Center,
-			// vertically center child text
-			align_items: AlignItems::Center,
-			position_type: PositionType::Absolute,
-			position: UiRect {
-				bottom: Val::Px(200.),
-				left: Val::Px((WIN_W * 0.825) / 2.),
-				..default()
-			},
-			..default()
-		},
-		color: NORMAL_BUTTON.into(),
-		..default()
-	})
-	.with_children(|parent| {
-		parent.spawn_bundle(TextBundle::from_section(
-			"Credits",
-			TextStyle {
-				font: asset_server.load("buttons/joystix monospace.ttf"),
-				font_size: 40.0,
-				color: TEXT_COLOR,
-			},
-		));
-	})
-	.insert(CreditsButton)
-	.insert(StartMenuUIElement);
+    // CREDITS BUTTON
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(225.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(200.),
+                    left: Val::Px((WIN_W * 0.825) / 2.),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Credits",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: TEXT_COLOR,
+                },
+            ));
+        })
+        .insert(CreditsButton)
+        .insert(StartMenuUIElement);
 
     // HELP BUTTON
     commands
