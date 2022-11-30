@@ -513,28 +513,31 @@ pub(crate) fn key_press_handler(
                 .insert(SelectedMonster);
         }
     }
-    let mut enemy_action = rand::thread_rng().gen_range(0..=3);
-
-    // Enemy cannot special if it is out of special moves
-    if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
-        enemy_action = rand::thread_rng().gen_range(0..=2);
-    }
-
-    let enemy_act_string = if enemy_action == 0 {
-        format!("Enemy attacks!")
-    } else if enemy_action == 1 {
-        format!("Enemy defends!")
-    } else if enemy_action == 2 {
-        format!("Enemy elemental!")
-    } else {
-        game_progress.spec_moves_left[1] -= 1;
-        format!("Enemy special!")
-    };
 
     if input.just_pressed(KeyCode::A) {
         // ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
+
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
         let text = PooledText {
             text: format!("You attack! {}", enemy_act_string),
             pooled: false,
@@ -680,6 +683,26 @@ pub(crate) fn key_press_handler(
         // ELEMENTAL ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
+
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
         let text = PooledText {
             text: format!("{:?} elemental! {}", player_type, enemy_act_string),
             pooled: false,
@@ -828,6 +851,25 @@ pub(crate) fn key_press_handler(
         // WITHOUT giving the enemy the chance to respond twice, only once to the whole attack.
         // If this seems overpowered, it's because it is. We only allow a special attack to be used
         // twice per battle.
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
         if game_progress.spec_moves_left[0] == 0 { 
             // No special moves left
             let text = PooledText {
@@ -986,6 +1028,26 @@ pub(crate) fn key_press_handler(
         end_battle!(commands, game_progress, player_entity, enemy_entity);
     } else if input.just_pressed(KeyCode::D) {
         // DEFEND HANDLER
+
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
         let text = PooledText {
             text: format!("You defend! {}", enemy_act_string),
             pooled: false,
@@ -1016,6 +1078,25 @@ pub(crate) fn key_press_handler(
             commands
                 .entity(*next_monster.unwrap())
                 .insert(SelectedMonster);
+
+            // Enemy reaction
+            let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+            // Enemy cannot special if it is out of special moves
+            if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+                enemy_action = rand::thread_rng().gen_range(0..=2);
+            }
+
+            let enemy_act_string = if enemy_action == 0 {
+                format!("Enemy attacks!")
+            } else if enemy_action == 1 {
+                format!("Enemy defends!")
+            } else if enemy_action == 2 {
+                format!("Enemy elemental!")
+            } else {
+                game_progress.spec_moves_left[1] -= 1;
+                format!("Enemy special!")
+            };
 
             // Allow enemy to respond to cycle
             let text = PooledText {
@@ -1104,7 +1185,13 @@ pub(crate) fn key_press_handler(
             text_buffer.bottom_text.push_back(text);
 
             // Enemy reaction
-            let enemy_action = rand::thread_rng().gen_range(0..=3);
+            let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+            // Enemy cannot special if it is out of special moves
+            if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+                enemy_action = rand::thread_rng().gen_range(0..=2);
+            }
+
             let enemy_act_string = if enemy_action == 0 {
                 format!("Enemy attacks!")
             } else if enemy_action == 1 {
@@ -1112,6 +1199,7 @@ pub(crate) fn key_press_handler(
             } else if enemy_action == 2 {
                 format!("Enemy elemental!")
             } else {
+                game_progress.spec_moves_left[1] -= 1;
                 format!("Enemy special!")
             };
             let text = PooledText {
@@ -1176,8 +1264,14 @@ pub(crate) fn key_press_handler(
             game_progress.turns_left_of_buff[0] = 5;
         }
 
-        // Enemy response
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
         let enemy_act_string = if enemy_action == 0 {
             format!("Enemy attacks!")
         } else if enemy_action == 1 {
@@ -1185,6 +1279,7 @@ pub(crate) fn key_press_handler(
         } else if enemy_action == 2 {
             format!("Enemy elemental!")
         } else {
+            game_progress.spec_moves_left[1] -= 1;
             format!("Enemy special!")
         };
         let text = PooledText {
