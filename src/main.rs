@@ -4,7 +4,7 @@
 use bevy::{prelude::*, window::PresentMode};
 
 use iyes_loopless::prelude::*;
-use std::{convert::From};
+use std::convert::From;
 
 // GAMEWIDE CONSTANTS
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -107,10 +107,10 @@ fn main() {
                 .with_system(expand_map)
                 .with_system(win_game)
                 .with_system(handle_pause)
-                .with_system(display_text)
-                .with_system(despawn_text)
                 .into(),
         )
+        .add_system(display_text)
+        .add_system(despawn_text)
         .run();
 }
 
@@ -252,42 +252,48 @@ pub fn display_text(
     // if text.is_none() {
     //     return;
     // }
-    let mut display_latest = 725.0;
-    for i in 0..text_buffer.bottom_middle.len() {
-        let text = text_buffer.bottom_middle.get(i);
-        commands
-        .spawn_bundle(
-            // Create a TextBundle that has a Text with a list of sections.
-            TextBundle::from_sections([
-                TextSection::new(
-                    text.unwrap(),
-                    TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
-                        color: Color::BLACK,
-                    },
-                ),
-                TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: Color::BLACK,
-                }),
-            ])
-            .with_text_alignment(TextAlignment::CENTER)
-            .with_style(Style {
-                align_self: AlignSelf::FlexEnd,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    top: Val::Px(display_latest - i as f32 *20.),
-                    left: Val::Px(400.0),
-                    ..default()
-                },
-                ..default()
-            }),
-        )
-        .insert(UIText)
-        .insert(TextTimer{time: Timer::from_seconds(2., true)});
+    let display_latest = 725.0;
+    for i in 0..text_buffer.bottom_text.len() {
+        let mut text = text_buffer.bottom_text.get_mut(i);
+        if text.as_ref().unwrap().pooled {
+            continue;
+        }
 
+        text.as_mut().unwrap().pooled = true;
+        commands
+            .spawn_bundle(
+                // Create a TextBundle that has a Text with a list of sections.
+                TextBundle::from_sections([
+                    TextSection::new(
+                        text.as_ref().unwrap().text.clone(),
+                        TextStyle {
+                            font: asset_server.load("buttons/joystix monospace.ttf"),
+                            font_size: 30.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    TextSection::from_style(TextStyle {
+                        font: asset_server.load("buttons/joystix monospace.ttf"),
+                        font_size: 30.0,
+                        color: Color::BLACK,
+                    }),
+                ])
+                .with_text_alignment(TextAlignment::CENTER)
+                .with_style(Style {
+                    align_self: AlignSelf::FlexEnd,
+                    position_type: PositionType::Absolute,
+                    position: UiRect {
+                        top: Val::Px(display_latest - i as f32 * 30.),
+                        left: Val::Px(10.0),
+                        ..default()
+                    },
+                    ..default()
+                }),
+            )
+            .insert(UIText)
+            .insert(TextTimer {
+                time: Timer::from_seconds(2., true),
+            });
     }
 }
 
@@ -297,14 +303,11 @@ pub fn despawn_text(
     time: Res<Time>,
     mut text_buffer: ResMut<TextBuffer>,
 ) {
-    for (entity, mut timer) in text_timer.iter_mut() {
+    for (text_entity, mut timer) in text_timer.iter_mut() {
         timer.time.tick(time.delta());
         if timer.time.finished() {
-            commands.entity(entity).despawn();
-            text_buffer.bottom_middle.pop_front();
+            commands.entity(text_entity).despawn_recursive();
+            text_buffer.bottom_text.pop_front();
         }
     }
 }
-
-
-

@@ -1,7 +1,7 @@
 use crate::backgrounds::{ChestTile, HealingTile, MonsterTile, Tile};
 use crate::monster::{Boss, Defense, Enemy, Health, Level, MonsterStats, Strength};
 use crate::quests::NPC;
-use crate::world::{item_index_to_name, GameProgress, TextBuffer};
+use crate::world::{item_index_to_name, GameProgress, PooledText, TextBuffer};
 use crate::GameState;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
@@ -131,12 +131,11 @@ pub(crate) fn move_player(
 
     if input.just_released(KeyCode::P) {
         let num_of_monsters = game_progress.num_monsters;
-        let text = format!("You have collected {} monsters.", num_of_monsters);
-        text_buffer.bottom_middle.push_back(text);
-    }
-
-    if input.just_released(KeyCode::T) {
-        text_buffer.bottom_middle.push_back("A test message to alternate display".to_string());
+        let text = PooledText {
+            text: format!("You have collected {} monsters.", num_of_monsters),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
     }
 
     // Most of these numbers come from debugging
@@ -244,7 +243,11 @@ pub(crate) fn move_player(
                     hp.health = hp.max_health as isize;
                 }
                 game_progress.num_living_monsters = game_progress.num_monsters;
-                info!("Monster health restored.");
+                let text = PooledText {
+                    text: format!("Monster health restored."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 commands.entity(healing_tile).remove::<HealingTile>();
             }
         }
@@ -264,7 +267,11 @@ pub(crate) fn move_player(
             Some(_) => {
                 let item = rand::thread_rng().gen_range(0..=1) as usize;
                 let item_got = item_index_to_name(item);
-                info!("You got a {} item.", item_got);
+                let text = PooledText {
+                    text: format!("You got a {} item.", item_got),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 game_progress.player_inventory[item] += 1;
                 commands.entity(chest_tile).remove::<ChestTile>();
             }
@@ -283,7 +290,20 @@ pub(crate) fn move_player(
             None => {}
             Some(_) => {
                 let quest = npc_data.quest;
-                info!("A new quest has been acquired: {:?}", quest);
+                let text = PooledText {
+                    text: format!(
+                        "Quest: Hunt 1 {:?}, reward {} {}.",
+                        quest.target,
+                        quest.reward_amount,
+                        match quest.reward {
+                            0 => "heal",
+                            1 => "buff",
+                            _ => "???",
+                        }
+                    ),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 game_progress.add_active_quest(quest);
                 commands.entity(npc_entity).despawn();
             }

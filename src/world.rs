@@ -104,7 +104,6 @@ impl GameProgress {
         self.monster_entity_to_stats.insert(entity, stats);
         self.num_monsters += 1;
         self.num_living_monsters += 1;
-        info!("you have {} monsters now.", self.num_monsters);
     }
 
     // pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
@@ -120,11 +119,6 @@ impl GameProgress {
         }
         let monster_id_entity_len = self.monster_id_entity.len();
         let our_id = self.entity_monster_id.get(&last_monster);
-        info!(
-            "Trying {} with length {}",
-            ((*our_id.unwrap() + 1) % monster_id_entity_len),
-            monster_id_entity_len
-        );
 
         self.monster_id_entity
             .get(&((*our_id.unwrap() + 1) % monster_id_entity_len))
@@ -307,7 +301,15 @@ impl Default for TypeSystem {
     }
 }
 
+/// Text that will be pooled in the queue for text to write to the screen
+#[derive(Debug, Clone)]
+pub struct PooledText {
+    pub text: String,
+    pub pooled: bool,
+}
+
+/// Buffer of text to write to UI
 #[derive(Debug, Clone, Default)]
 pub struct TextBuffer {
-    pub bottom_middle: VecDeque<String>,
+    pub bottom_text: VecDeque<PooledText>,
 }

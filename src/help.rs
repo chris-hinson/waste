@@ -160,7 +160,7 @@ pub(crate) fn setup_help(
         })
         .insert(Text);
 
-        commands
+    commands
         .spawn_bundle(TextBundle::from_section(
             "1 to heal, 2 for strength",
             TextStyle {
