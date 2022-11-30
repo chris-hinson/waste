@@ -8,6 +8,7 @@ use iyes_loopless::prelude::*;
 use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, SocketInfo, get_addr, ClientMarker, HostMarker};
 use std::fmt::format;
 use std::str::from_utf8;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::{io, thread};
 use std::net::{UdpSocket, Ipv4Addr};
 use std::sync::mpsc::{Receiver, Sender, self, channel};

@@ -474,8 +474,6 @@ impl Board {
             return true;
         }
 
-        // info!("collapsing {:?}", center_tile);
-
         // center_tile is the tile we are pivoting collapse on right now.
         // Get the super position of the tile, back it up,
         // and empty out the position of this tile.

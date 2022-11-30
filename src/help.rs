@@ -66,7 +66,7 @@ pub(crate) fn setup_help(
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 40.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
             },
         ))
         .insert(Style {
@@ -82,11 +82,11 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "MOVEMENT CONTROLS",
+            "MAIN CONTROLS",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 35.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
             },
         ))
         .insert(Style {
@@ -102,17 +102,17 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "W to move up, S to move down, A to move left, D to move right",
+            "W: move up, S: move down, A: move left, D: move right\nP: party size, G: game progress, I: inventory\nEsc: Pause",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
             },
         ))
         .insert(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                bottom: Val::Px(550.0),
+                bottom: Val::Px(500.0),
                 left: Val::Px(10.0),
                 ..default()
             },
@@ -126,7 +126,7 @@ pub(crate) fn setup_help(
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 35.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
             },
         ))
         .insert(Style {
@@ -142,18 +142,18 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "A to attack, D to defend, Q to quit",
+            "A: attack, E: elemental, D: defend,\n1: heal item, 2: buff item, Q: quit",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
-                color: Color::WHITE,
+                color: Color::BLACK,
             },
         ))
         .insert(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                bottom: Val::Px(350.0),
-                left: Val::Px(300.0),
+                bottom: Val::Px(300.0),
+                left: Val::Px(30.0),
                 ..default()
             },
             ..default()
