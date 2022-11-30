@@ -55,6 +55,7 @@ impl Plugin for BattlePlugin {
         )
         .add_system_set(
             ConditionSet::new()
+                // TODO: Use events and system ordering
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                 // addl systems go here
