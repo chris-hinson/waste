@@ -5,7 +5,7 @@ use crate::monster::{
     PartyMonster, SelectedMonster, Strength,
 };
 use crate::player::Player;
-use crate::{quests::*, game_client};
+use crate::{quests::*};
 use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::prelude::*;
@@ -45,13 +45,19 @@ pub(crate) struct BattleUIElement;
 
 pub(crate) struct BattlePlugin;
 
+pub(crate) struct SwitchMonsterEvent(Entity);
+
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
-        app.add_enter_system_set(
+        app
+        .add_event::<SwitchMonsterEvent>()
+        .add_enter_system_set(
             GameState::Battle,
             SystemSet::new()
                 .with_system(setup_battle)
-                .with_system(setup_battle_stats),
+                .with_system(setup_battle_stats)
+                .with_system(spawn_player_monster)
+                .with_system(spawn_enemy_monster)
         )
         .add_system_set(
             ConditionSet::new()
@@ -59,10 +65,9 @@ impl Plugin for BattlePlugin {
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                 // addl systems go here
-                .with_system(spawn_player_monster)
-                .with_system(spawn_enemy_monster)
                 .with_system(update_battle_stats)
                 .with_system(key_press_handler)
+                .with_system(update_player_monster)
                 .into(),
         )
         .add_exit_system(GameState::Battle, despawn_battle);
@@ -352,13 +357,10 @@ pub(crate) fn spawn_player_monster(
 
     let (ct, _) = cameras.single();
 
-    // why doesn't this update
     let (selected_type, selected_monster) = selected_monster_query.single();
 
     commands
-        .entity(selected_monster)
-        .remove_bundle::<SpriteBundle>()
-        .insert_bundle(SpriteBundle {
+    .spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
                 flip_x: true,  // guess what this does
@@ -370,6 +372,55 @@ pub(crate) fn spawn_player_monster(
         })
         .insert(PlayerMonster)
         .insert(Monster);
+}
+
+pub(crate) fn update_player_monster(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<
+            (&Transform, Entity),
+            (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,)>,
+    mut switch_event: EventReader<SwitchMonsterEvent>,
+    mut game_progress: ResMut<GameProgress>,
+    player_monster_sprites: Query<Entity, With<PlayerMonster>>,
+) {
+    if cameras.is_empty() {
+        error!("No spawned camera...?");
+        return;
+    }
+
+    let mut new_entity: Option<Entity> = None;
+    for event in switch_event.iter() {
+        info!("Event fired");
+        // Despawn 
+        for pm in player_monster_sprites.iter(){
+            commands.entity(pm).despawn_recursive();
+        }
+        new_entity = Some(event.0);
+    }
+
+    if new_entity.is_none() {
+        return;
+    }
+
+    let new_type = game_progress.monster_entity_to_stats.get(&new_entity.unwrap()).unwrap().typing;
+
+    let (ct, _) = cameras.single();
+
+    commands.
+    spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                flip_y: false, // flips our little buddy, you guessed it, in the y direction
+                flip_x: true,  // guess what this does
+                ..default()
+            },
+            texture: asset_server.load(&get_monster_sprite_for_type(new_type)),
+            transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.),
+            ..default()
+        })
+        .insert(PlayerMonster)
+        .insert(Monster);
+
 }
 
 pub(crate) fn spawn_enemy_monster(
@@ -474,6 +525,7 @@ pub(crate) fn key_press_handler(
     >,
     asset_server: Res<AssetServer>,
     mut text_buffer: ResMut<TextBuffer>,
+    mut switch_event: EventWriter<SwitchMonsterEvent>,
 ) {
     if my_monster.is_empty() || enemy_monster.is_empty() {
         info!("Monsters are missing!");
@@ -503,6 +555,7 @@ pub(crate) fn key_press_handler(
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else {
             info!("Your monster was defeated. Switching to next monster.");
+            switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
             commands.entity(player_entity).remove::<SelectedMonster>();
             commands
                 .entity(player_entity)
@@ -669,6 +722,7 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
@@ -834,6 +888,7 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
@@ -1013,6 +1068,7 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
@@ -1058,6 +1114,7 @@ pub(crate) fn key_press_handler(
         // CYCLE HANDLER
         // They want to cycle their monster
         let next_monster = game_progress.next_monster_cyclic(player_entity);
+        switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
         if next_monster.is_none() {
             let text = PooledText {
                 text: format!("No monster to cycle to."),
@@ -1135,6 +1192,7 @@ pub(crate) fn key_press_handler(
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
+                    switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                     commands.entity(player_entity).remove::<SelectedMonster>();
                     commands
                         .entity(player_entity)
@@ -1238,6 +1296,7 @@ pub(crate) fn key_press_handler(
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
+                    switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                     commands.entity(player_entity).remove::<SelectedMonster>();
                     commands
                         .entity(player_entity)
@@ -1318,6 +1377,7 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
