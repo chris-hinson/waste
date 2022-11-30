@@ -1,7 +1,7 @@
 use crate::backgrounds::{ChestTile, HealingTile, MonsterTile, Tile};
 use crate::monster::{Boss, Defense, Enemy, Health, Level, MonsterStats, Strength};
 use crate::quests::NPC;
-use crate::world::{item_index_to_name, GameProgress, PooledText, TextBuffer};
+use crate::world::{item_index_to_name, GameProgress};
 use crate::GameState;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
@@ -95,7 +95,6 @@ pub(crate) fn move_player(
             Without<ChestTile>,
         ),
     >,
-    mut text_buffer: ResMut<TextBuffer>,
 ) {
     if player.is_empty() {
         error!("Couldn't find a player to move...");
@@ -127,43 +126,6 @@ pub(crate) fn move_player(
     if input.pressed(KeyCode::D) {
         x_vel += player_movement;
         y_vel = 0.;
-    }
-
-    // Check party size
-    if input.just_released(KeyCode::P) {
-        let num_of_monsters = game_progress.num_monsters;
-        let text = PooledText {
-            text: format!("You have collected {} monsters.", num_of_monsters),
-            pooled: false,
-        };
-        text_buffer.bottom_text.push_back(text);
-    }
-
-    // Check item inventory
-    if input.just_released(KeyCode::I) {
-        let text = PooledText {
-            text: format!(
-                "Items: {} heal, {} buff.",
-                game_progress.player_inventory[0], game_progress.player_inventory[1]
-            ),
-            pooled: false,
-        };
-        text_buffer.bottom_text.push_back(text);
-    }
-
-    // Check general game progress
-    if input.just_released(KeyCode::G) {
-        // Print out current level, bosses defeated, and number of active quests
-        let text = PooledText {
-            text: format!(
-                "Level: {} Bosses defeated: {} Active Quests: {}.",
-                game_progress.current_level,
-                game_progress.num_boss_defeated,
-                game_progress.quests_active.len()
-            ),
-            pooled: false,
-        };
-        text_buffer.bottom_text.push_back(text);
     }
 
     // Most of these numbers come from debugging
@@ -271,11 +233,7 @@ pub(crate) fn move_player(
                     hp.health = hp.max_health as isize;
                 }
                 game_progress.num_living_monsters = game_progress.num_monsters;
-                let text = PooledText {
-                    text: format!("Monster health restored."),
-                    pooled: false,
-                };
-                text_buffer.bottom_text.push_back(text);
+                info!("Monster health restored.");
                 commands.entity(healing_tile).remove::<HealingTile>();
             }
         }
@@ -295,11 +253,7 @@ pub(crate) fn move_player(
             Some(_) => {
                 let item = rand::thread_rng().gen_range(0..=1) as usize;
                 let item_got = item_index_to_name(item);
-                let text = PooledText {
-                    text: format!("You got a {} item.", item_got),
-                    pooled: false,
-                };
-                text_buffer.bottom_text.push_back(text);
+                info!("You got a {} item.", item_got);
                 game_progress.player_inventory[item] += 1;
                 commands.entity(chest_tile).remove::<ChestTile>();
             }
@@ -318,20 +272,7 @@ pub(crate) fn move_player(
             None => {}
             Some(_) => {
                 let quest = npc_data.quest;
-                let text = PooledText {
-                    text: format!(
-                        "Quest: Hunt 1 {:?}, reward {} {}.",
-                        quest.target,
-                        quest.reward_amount,
-                        match quest.reward {
-                            0 => "heal",
-                            1 => "buff",
-                            _ => "???",
-                        }
-                    ),
-                    pooled: false,
-                };
-                text_buffer.bottom_text.push_back(text);
+                info!("A new quest has been acquired: {:?}", quest);
                 game_progress.add_active_quest(quest);
                 commands.entity(npc_entity).despawn();
             }

@@ -15,9 +15,8 @@ pub(crate) enum GameState {
     Playing,
     Battle,
     Credits,
-    Help,
     Help, //NEW
-    MultiplayerMenu,,
+    MultiplayerMenu,
     MultiplayerWaiting,
     MultiplayerBattle,
 }
@@ -31,19 +30,10 @@ mod backgrounds;
 mod battle;
 mod camera;
 mod credits;
-mod game_client;
-mod help;
-mod monster;
-mod multiplayer_menu;
-mod pause;
-mod battle;
-mod camera;
-mod credits;
 mod help;
 mod monster;
 mod pause;
 mod player;
-mod quests;
 mod start_menu;
 mod wfc;
 mod world;
@@ -57,14 +47,6 @@ mod multiplayer_waiting;
 
 //use statements:
 use backgrounds::*;
-use battle::*;
-use camera::*;
-use credits::*;
-use game_client::*;
-use help::*;
-use monster::*;
-use multiplayer_menu::*;
-use pause::*;
 use battle::*;
 use camera::*;
 use credits::*;
@@ -85,13 +67,14 @@ use multiplayer_waiting::*;
 
 // END CUSTOM MODULES
 
-#[derive(Debug, Clone, Component)]
-pub struct UIText;
+// pub(crate) struct GameChannel {
+//     // channel set for main thread/sending/receiving data
+//     pub(crate) gsx: Sender<Package>,
+//     pub(crate) grx: Receiver<Package>,
+// }
 
-#[derive(Debug, Clone, Component)]
-pub struct TextTimer {
-    pub time: Timer,
-}
+// unsafe impl Send for GameChannel {}
+// unsafe impl Sync for GameChannel {}
 
 fn main() {
     App::new()
@@ -104,9 +87,6 @@ fn main() {
         })
         .init_resource::<WorldMap>()
         .init_resource::<GameProgress>()
-        .init_resource::<TypeSystem>()
-        .init_resource::<ProcGen>()
-        .init_resource::<TextBuffer>()
         .init_resource::<TypeSystem>()
         .init_resource::<ProcGen>()
         .add_event::<AttackEvent>()
@@ -272,75 +252,5 @@ pub(crate) fn handle_pause(mut commands: Commands, input: Res<Input<KeyCode>>) {
     if input.just_pressed(KeyCode::Escape) {
         // Change to pause menu state
         commands.insert_resource(NextState(GameState::Pause));
-    }
-}
-
-pub fn display_text(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut text_buffer: ResMut<TextBuffer>,
-) {
-    // take the text buffer and display it on the screen
-    // let text = text_buffer.bottom_middle.pop_front();
-    // if text.is_none() {
-    //     return;
-    // }
-    let display_latest = 725.0;
-    for i in 0..text_buffer.bottom_text.len() {
-        let mut text = text_buffer.bottom_text.get_mut(i);
-        if text.as_ref().unwrap().pooled {
-            continue;
-        }
-
-        text.as_mut().unwrap().pooled = true;
-        commands
-            .spawn_bundle(
-                // Create a TextBundle that has a Text with a list of sections.
-                TextBundle::from_sections([
-                    TextSection::new(
-                        text.as_ref().unwrap().text.clone(),
-                        TextStyle {
-                            font: asset_server.load("buttons/joystix monospace.ttf"),
-                            font_size: 30.0,
-                            color: Color::BLACK,
-                        },
-                    ),
-                    TextSection::from_style(TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 30.0,
-                        color: Color::BLACK,
-                    }),
-                ])
-                .with_text_alignment(TextAlignment::CENTER)
-                .with_style(Style {
-                    align_self: AlignSelf::FlexEnd,
-                    position_type: PositionType::Absolute,
-                    position: UiRect {
-                        top: Val::Px(display_latest - i as f32 * 30.),
-                        left: Val::Px(10.0),
-                        ..default()
-                    },
-                    ..default()
-                }),
-            )
-            .insert(UIText)
-            .insert(TextTimer {
-                time: Timer::from_seconds(2., true),
-            });
-    }
-}
-
-pub fn despawn_text(
-    mut commands: Commands,
-    mut text_timer: Query<(Entity, &mut TextTimer)>,
-    time: Res<Time>,
-    mut text_buffer: ResMut<TextBuffer>,
-) {
-    for (text_entity, mut timer) in text_timer.iter_mut() {
-        timer.time.tick(time.delta());
-        if timer.time.finished() {
-            commands.entity(text_entity).despawn_recursive();
-            text_buffer.bottom_text.pop_front();
-        }
     }
 }

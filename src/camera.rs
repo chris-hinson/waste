@@ -29,9 +29,6 @@ pub(crate) struct PauseCamera;
 #[derive(Component)]
 pub(crate) struct HelpCamera;
 
-#[derive(Component)]
-pub(crate) struct HelpCamera;
-
 pub(crate) const CAMERA_Z_VALUE: f32 = 100.;
 
 #[derive(Component)]

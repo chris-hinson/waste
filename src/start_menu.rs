@@ -17,10 +17,6 @@ pub(crate) const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
 pub(crate) const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 pub(crate) const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 pub(crate) const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
-pub(crate) const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
-pub(crate) const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
-pub(crate) const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
-pub(crate) const PRESSED_BUTTON: Color = Color::rgb(0.75, 0.35, 0.35);
 
 pub struct MainMenuPlugin;
 
@@ -42,25 +38,8 @@ pub(crate) struct StartMenuUIElement;
 #[derive(Component)]
 pub(crate) struct HelpButton;
 
-#[derive(Component)]
-pub(crate) struct HelpButton;
-
 //Builds plugin called MainMenuPlugin
 impl Plugin for MainMenuPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_enter_system(GameState::Start, setup_menu)
-            .add_system_set(
-                ConditionSet::new()
-                    // Only run handlers on Start state
-                    .run_in_state(GameState::Start)
-                    .with_system(start_button_handler)
-                    .with_system(credits_button_handler)
-                    .with_system(multiplayer_button_handler)
-                    .with_system(help_button_handler)
-                    .into(),
-            )
-            .add_exit_system(GameState::Start, despawn_start_menu);
-    }
     fn build(&self, app: &mut App) {
         app.add_enter_system(GameState::Start, setup_menu)
             .add_system_set(
