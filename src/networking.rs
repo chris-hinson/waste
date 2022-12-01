@@ -2,9 +2,12 @@ use std::net::{SocketAddr};
 use std::{io};
 use serde::{Serialize, Deserialize};
 
-// MultiplayerActions as an enum separates the desired result for data sent to apply
+/// Bevy Event wrapper around BattleActions
+pub struct BattleEvent(BattleAction);
+
+/// BattleActions as an enum separates the desired result for data sent to apply
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub enum BattleEvent {
+pub enum BattleAction {
     Initialize,
     MonsterStats,
     MonsterType,
@@ -25,7 +28,7 @@ pub enum BattleEvent {
 pub struct Message {
     /// The destination to send the message.
     // The action ID to identify what data was sent
-    pub event: BattleEvent,
+    pub action: BattleAction,
     // The data sent itself.
     pub payload: Vec<u8>,
 }
@@ -33,10 +36,10 @@ pub struct Message {
 // function for initializing a new Message
 impl Message {
     /// Creates and returns a new Message.
-    pub(crate) fn new(event: BattleEvent, payload: Vec<u8>) -> Self {
+    pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
         Self {
             // destination,
-            event,
+            action,
             payload,
         }
     }

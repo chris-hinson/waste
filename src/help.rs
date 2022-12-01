@@ -142,7 +142,7 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "A: attack, E: elemental, D: defend,\n1: heal item, 2: buff item, Q: quit",
+            "A: attack, E: elemental, D: defend, S: special\n1: heal item, 2: buff item, Q: quit",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
@@ -153,7 +153,7 @@ pub(crate) fn setup_help(
             position_type: PositionType::Absolute,
             position: UiRect {
                 bottom: Val::Px(300.0),
-                left: Val::Px(30.0),
+                left: Val::Px(10.0),
                 ..default()
             },
             ..default()
