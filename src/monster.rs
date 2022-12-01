@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::distributions::{Distribution, Standard};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // Elemental types
 #[derive(Component, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

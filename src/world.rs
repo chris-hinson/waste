@@ -93,7 +93,7 @@ pub(crate) struct GameProgress {
     /// Number of turns remaining with a given buff applied
     /// Strength Buff = 0, Slowness = 1, Blindness = 2
     pub(crate) turns_left_of_buff: Vec<usize>,
-    /// Count of special moves available for player (index 0) and 
+    /// Count of special moves available for player (index 0) and
     /// enemy (index 1)
     /// Reset at the end of every battle to SPECIALS_PER_BATTLE.
     pub(crate) spec_moves_left: Vec<usize>,

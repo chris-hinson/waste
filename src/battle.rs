@@ -5,7 +5,7 @@ use crate::monster::{
     PartyMonster, SelectedMonster, Strength,
 };
 use crate::player::Player;
-use crate::{quests::*};
+use crate::quests::*;
 use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::prelude::*;
@@ -49,28 +49,27 @@ pub(crate) struct SwitchMonsterEvent(Entity);
 
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
-        app
-        .add_event::<SwitchMonsterEvent>()
-        .add_enter_system_set(
-            GameState::Battle,
-            SystemSet::new()
-                .with_system(setup_battle)
-                .with_system(setup_battle_stats)
-                .with_system(spawn_player_monster)
-                .with_system(spawn_enemy_monster)
-        )
-        .add_system_set(
-            ConditionSet::new()
-                // TODO: Use events and system ordering
-                // Run these systems only when in Battle state
-                .run_in_state(GameState::Battle)
-                // addl systems go here
-                .with_system(update_battle_stats)
-                .with_system(key_press_handler)
-                .with_system(update_player_monster)
-                .into(),
-        )
-        .add_exit_system(GameState::Battle, despawn_battle);
+        app.add_event::<SwitchMonsterEvent>()
+            .add_enter_system_set(
+                GameState::Battle,
+                SystemSet::new()
+                    .with_system(setup_battle)
+                    .with_system(setup_battle_stats)
+                    .with_system(spawn_player_monster)
+                    .with_system(spawn_enemy_monster),
+            )
+            .add_system_set(
+                ConditionSet::new()
+                    // TODO: Use events and system ordering
+                    // Run these systems only when in Battle state
+                    .run_in_state(GameState::Battle)
+                    // addl systems go here
+                    .with_system(update_battle_stats)
+                    .with_system(key_press_handler)
+                    .with_system(update_player_monster)
+                    .into(),
+            )
+            .add_exit_system(GameState::Battle, despawn_battle);
     }
 }
 
@@ -360,7 +359,7 @@ pub(crate) fn spawn_player_monster(
     let (selected_type, _selected_monster) = selected_monster_query.single();
 
     commands
-    .spawn_bundle(SpriteBundle {
+        .spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
                 flip_x: true,  // guess what this does
@@ -378,8 +377,9 @@ pub(crate) fn update_player_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<
-            (&Transform, Entity),
-            (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,)>,
+        (&Transform, Entity),
+        (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>),
+    >,
     mut switch_event: EventReader<SwitchMonsterEvent>,
     game_progress: ResMut<GameProgress>,
     player_monster_sprites: Query<Entity, With<PlayerMonster>>,
@@ -392,8 +392,8 @@ pub(crate) fn update_player_monster(
     let mut new_entity: Option<Entity> = None;
     for event in switch_event.iter() {
         info!("Event fired");
-        // Despawn 
-        for pm in player_monster_sprites.iter(){
+        // Despawn
+        for pm in player_monster_sprites.iter() {
             commands.entity(pm).despawn_recursive();
         }
 
@@ -402,14 +402,18 @@ pub(crate) fn update_player_monster(
 
     if new_entity.is_none() {
         return;
-    } 
-    let new_type = game_progress.monster_entity_to_stats.get(&new_entity.unwrap()).unwrap().typing;
+    }
+    let new_type = game_progress
+        .monster_entity_to_stats
+        .get(&new_entity.unwrap())
+        .unwrap()
+        .typing;
     info!("got type {:?}", new_type);
 
     let (ct, _) = cameras.single();
 
-    commands.
-    spawn_bundle(SpriteBundle {
+    commands
+        .spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
                 flip_x: true,  // guess what this does
@@ -421,7 +425,6 @@ pub(crate) fn update_player_monster(
         })
         .insert(PlayerMonster)
         .insert(Monster);
-
 }
 
 pub(crate) fn spawn_enemy_monster(
@@ -929,7 +932,7 @@ pub(crate) fn key_press_handler(
             format!("Enemy special!")
         };
 
-        if game_progress.spec_moves_left[0] == 0 { 
+        if game_progress.spec_moves_left[0] == 0 {
             // No special moves left
             let text = PooledText {
                 text: format!("Special move not allowed!"),
@@ -940,7 +943,7 @@ pub(crate) fn key_press_handler(
         }
 
         game_progress.spec_moves_left[0] -= 1;
-        
+
         let text = PooledText {
             text: format!("{:?} multi-move! {}", player_type, enemy_act_string),
             pooled: false,
@@ -1398,7 +1401,8 @@ fn calculate_turn(
             enemy_type,
             enemy_action,
             type_system,
-        ).0 as usize;
+        )
+        .0 as usize;
         // Then simulate elemental
         result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
             * result.0 as f32)
@@ -1422,7 +1426,8 @@ fn calculate_turn(
             enemy_type,
             0,
             type_system,
-        ).1 as usize;
+        )
+        .1 as usize;
         // Then simulate elemental
         result.1 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
             * result.1 as f32)

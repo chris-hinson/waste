@@ -1,8 +1,4 @@
 #![allow(unused)]
-use std::fmt::format;
-use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
-use std::sync::mpsc::{Receiver, channel, Sender};
-use local_ip_address::local_ip;
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
 use crate::game_client::*;
@@ -10,7 +6,11 @@ use crate::player::Player;
 use crate::{battle, GameState};
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use local_ip_address::local_ip;
 use rand::seq::SliceRandom;
+use std::fmt::format;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 const START_MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
 pub(crate) const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -115,8 +115,8 @@ pub(crate) fn credits_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	//game_client: Res<GameClient>,
-	// game_channel: Res<GameChannel>,
+    //game_client: Res<GameClient>,
+    // game_channel: Res<GameChannel>,
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -173,7 +173,7 @@ pub(crate) fn multiplayer_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	//mut game_client: ResMut<GameClient>
+    //mut game_client: ResMut<GameClient>
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -184,7 +184,6 @@ pub(crate) fn multiplayer_button_handler(
                 text.sections[0].value = "Multiplayer".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::MultiplayerMenu));
-
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Multiplayer".to_string();
@@ -250,13 +249,15 @@ fn setup_menu(
     let udp_socket = UdpSocket::bind(socket_addr).unwrap();
     // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
-	info!("Successfully bound host to {}", socket_addr);
-    
+    info!("Successfully bound host to {}", socket_addr);
 
     commands.insert_resource(GameClient {
         // Pass socket info over since we will need to pass the socket
         // around listener/sender systems frequently
-        socket: SocketInfo { socket_addr, udp_socket },
+        socket: SocketInfo {
+            socket_addr,
+            udp_socket,
+        },
         // Default initialize player to client type
         player_type: crate::game_client::PlayerType::Client,
     });
@@ -278,7 +279,7 @@ fn setup_menu(
         })
         .insert(MainMenuBackground);
 
-        commands
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(300.0), Val::Px(65.0)),
@@ -288,8 +289,8 @@ fn setup_menu(
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
-            ..default()
-        },
+                ..default()
+            },
             color: NORMAL_BUTTON.into(),
             ..default()
         })
@@ -305,9 +306,9 @@ fn setup_menu(
         })
         .insert(StartButton)
         .insert(StartMenuUIElement);
-    
-        // MULTIPLAYER BUTTON
-        commands
+
+    // MULTIPLAYER BUTTON
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(325.0), Val::Px(65.0)),
@@ -340,9 +341,9 @@ fn setup_menu(
         })
         .insert(MultiplayerButton)
         .insert(StartMenuUIElement);
-    
-        // CREDITS BUTTON
-        commands
+
+    // CREDITS BUTTON
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(225.0), Val::Px(65.0)),

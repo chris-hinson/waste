@@ -24,7 +24,7 @@ pub(crate) struct MultWaitingCamera;
 pub(crate) struct SlidesCamera;
 
 #[derive(Component)]
-pub(crate) struct PauseCamera; 
+pub(crate) struct PauseCamera;
 
 #[derive(Component)]
 pub(crate) struct HelpCamera;

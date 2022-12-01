@@ -1,6 +1,6 @@
+use rand::seq::SliceRandom;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
-use rand::seq::SliceRandom;
 
 const SIZE: usize = 50;
 
@@ -49,12 +49,15 @@ impl fmt::Display for Package {
 
 /// Choose a random port of the known, normally open UDP ports
 pub(crate) fn get_randomized_port() -> i32 {
-    let port_list = vec![9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
+    let port_list = vec![
+        9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090,
+    ];
     *port_list.choose(&mut rand::thread_rng()).unwrap()
 }
 
+/// Get the local address to bind a socket to
 pub(crate) fn get_addr() -> SocketAddr {
     let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-    let socket_addr = SocketAddr::new(ip_addr, get_randomized_port() as u16);
+    let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
     socket_addr
 }
