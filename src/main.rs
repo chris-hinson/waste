@@ -106,6 +106,7 @@ fn main() {
         .add_plugin(MultMenuPlugin)
         .add_plugin(MultiplayerWaitingPlugin)
         .add_plugin(MultPvPPlugin)
+        .add_plugin(MultPvEPlugin)
         .add_enter_system_set(
             GameState::StartPlaying,
             // This system set is unconditional, as it is being added in an enter helper
