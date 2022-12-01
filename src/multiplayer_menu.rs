@@ -27,10 +27,16 @@ pub(crate) struct MultMenuBackground;
 pub(crate) struct MultOptionsText;
 
 #[derive(Component)]
-pub(crate) struct HostButton;
+pub(crate) struct HostPVPButton;
 
 #[derive(Component)]
-pub(crate) struct ClientButton;
+pub(crate) struct ClientPVPButton;
+
+#[derive(Component)]
+pub(crate) struct HostPVEButton;
+
+#[derive(Component)]
+pub(crate) struct ClientPVEButton;
 
 #[derive(Component)]
 pub(crate) struct MultMenuUIElement;
@@ -48,8 +54,10 @@ impl Plugin for MultMenuPlugin {
 			// Only run handlers in MultiplayerMenu state
 			.run_in_state(GameState::MultiplayerMenu)
 				.with_system(mult_options)
-                .with_system(host_button_handler)
-                .with_system(client_button_handler)
+                .with_system(hostPVP_button_handler)
+                .with_system(clientPVP_button_handler)
+                .with_system(hostPVE_button_handler)
+                .with_system(clientPVE_button_handler)
 			.into())
 		.add_exit_system(GameState::MultiplayerMenu, despawn_mult_menu);
 	}
@@ -61,7 +69,7 @@ impl Plugin for MultMenuPlugin {
 //         return true;
 //     }
 //     false
-// }
+
 
 // fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
 //     if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
@@ -164,7 +172,42 @@ fn setup_mult(
     commands
         .spawn_bundle(ButtonBundle {
             style: Style {
-                size: Size::new(Val::Px(275.0), Val::Px(65.0)),
+                size: Size::new(Val::Px(400.0), Val::Px(65.0)),
+                // center button
+                margin: UiRect::all(Val::Auto),
+                // horizontally center child text
+                justify_content: JustifyContent::Center,
+                // vertically center child text
+                align_items: AlignItems::Center,
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    bottom: Val::Px(450.),
+                    left: Val::Px((WIN_W * 0.685) / 2.),
+                    ..default()
+                },
+                ..default()
+            },
+            color: NORMAL_BUTTON.into(),
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn_bundle(TextBundle::from_section(
+                "Host PVP Game",
+                TextStyle {
+                    font: asset_server.load("buttons/joystix monospace.ttf"),
+                    font_size: 40.0,
+                    color: TEXT_COLOR,
+                },
+            ));
+        })
+        .insert(HostPVPButton)
+        .insert(MultMenuUIElement);
+
+    // CLIENT BUTTON
+    commands
+        .spawn_bundle(ButtonBundle {
+            style: Style {
+                size: Size::new(Val::Px(400.0), Val::Px(65.0)),
                 // center button
                 margin: UiRect::all(Val::Auto),
                 // horizontally center child text
@@ -174,7 +217,7 @@ fn setup_mult(
                 position_type: PositionType::Absolute,
                 position: UiRect {
                     bottom: Val::Px(350.),
-                    left: Val::Px((WIN_W * 0.785) / 2.),
+                    left: Val::Px((WIN_W * 0.685) / 2.),
                     ..default()
                 },
                 ..default()
@@ -184,7 +227,7 @@ fn setup_mult(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Host Game",
+                "Join PVP Game",
                 TextStyle {
                     font: asset_server.load("buttons/joystix monospace.ttf"),
                     font_size: 40.0,
@@ -192,43 +235,79 @@ fn setup_mult(
                 },
             ));
         })
-        .insert(HostButton)
+        .insert(ClientPVPButton)
         .insert(MultMenuUIElement);
+    
+       // HOST BUTTON
+       commands
+       .spawn_bundle(ButtonBundle {
+           style: Style {
+               size: Size::new(Val::Px(400.0), Val::Px(65.0)),
+               // center button
+               margin: UiRect::all(Val::Auto),
+               // horizontally center child text
+               justify_content: JustifyContent::Center,
+               // vertically center child text
+               align_items: AlignItems::Center,
+               position_type: PositionType::Absolute,
+               position: UiRect {
+                   bottom: Val::Px(250.),
+                   left: Val::Px((WIN_W * 0.685) / 2.),
+                   ..default()
+               },
+               ..default()
+           },
+           color: NORMAL_BUTTON.into(),
+           ..default()
+       })
+       .with_children(|parent| {
+           parent.spawn_bundle(TextBundle::from_section(
+               "Host PVE Game",
+               TextStyle {
+                   font: asset_server.load("buttons/joystix monospace.ttf"),
+                   font_size: 40.0,
+                   color: TEXT_COLOR,
+               },
+           ));
+       })
+       .insert(HostPVEButton)
+       .insert(MultMenuUIElement);
 
-    // CLIENT BUTTON
+       // CLIENT BUTTON
     commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(275.0), Val::Px(65.0)),
-                // center button
-                margin: UiRect::all(Val::Auto),
-                // horizontally center child text
-                justify_content: JustifyContent::Center,
-                // vertically center child text
-                align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
-                position: UiRect {
-                    bottom: Val::Px(250.),
-                    left: Val::Px((WIN_W * 0.785) / 2.),
-                    ..default()
-                },
+    .spawn_bundle(ButtonBundle {
+        style: Style {
+            size: Size::new(Val::Px(400.0), Val::Px(65.0)),
+            // center button
+            margin: UiRect::all(Val::Auto),
+            // horizontally center child text
+            justify_content: JustifyContent::Center,
+            // vertically center child text
+            align_items: AlignItems::Center,
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                bottom: Val::Px(150.),
+                left: Val::Px((WIN_W * 0.685) / 2.),
                 ..default()
             },
-            color: NORMAL_BUTTON.into(),
             ..default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle::from_section(
-                "Join Game",
-                TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
-                    color: TEXT_COLOR,
-                },
-            ));
-        })
-        .insert(ClientButton)
-        .insert(MultMenuUIElement);
+        },
+        color: NORMAL_BUTTON.into(),
+        ..default()
+    })
+    .with_children(|parent| {
+        parent.spawn_bundle(TextBundle::from_section(
+            "Join PVE Game",
+            TextStyle {
+                font: asset_server.load("buttons/joystix monospace.ttf"),
+                font_size: 40.0,
+                color: TEXT_COLOR,
+            },
+        ));
+    })
+    .insert(ClientPVEButton)
+    .insert(MultMenuUIElement);
+       
 }
 
 
@@ -261,10 +340,10 @@ pub(crate) fn mult_options(mut commands: Commands, asset_server: Res<AssetServer
         .insert(MultMenuUIElement);
 }
 
-pub(crate) fn host_button_handler(
+pub(crate) fn hostPVP_button_handler(
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<HostButton>),
+        (Changed<Interaction>, With<HostPVPButton>),
     >,
     mut text_query: Query<&mut Text>,
     // game_channel: Res<GameChannel>,
@@ -277,7 +356,7 @@ pub(crate) fn host_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Host Game".to_string();
+                text.sections[0].value = "Host PVP Game".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // Having a listener here doesn't make sense. Networking listeners should not be attached to
@@ -314,21 +393,21 @@ pub(crate) fn host_button_handler(
                  
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Host Game".to_string();
+                text.sections[0].value = "Host PVP Game".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Host Game".to_string();
+                text.sections[0].value = "Host PVP Game".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
     }
 }
 
-pub(crate) fn client_button_handler(
+pub(crate) fn clientPVP_button_handler(
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &Children),
-        (Changed<Interaction>, With<ClientButton>),
+        (Changed<Interaction>, With<ClientPVPButton>),
     >,
     mut text_query: Query<&mut Text>,
     mut game_client: ResMut<GameClient>,
@@ -340,7 +419,7 @@ pub(crate) fn client_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Join Game".to_string();
+                text.sections[0].value = "Join PVP Game".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // if player clicks on client button, designate them as the client
@@ -381,11 +460,141 @@ pub(crate) fn client_button_handler(
                 game_client.socket.udp_socket.send(client_info.as_bytes()).expect("Error on send");
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Join Game".to_string();
+                text.sections[0].value = "Join PVP Game".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Join Game".to_string();
+                text.sections[0].value = "Join PVP Game".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+
+pub(crate) fn hostPVE_button_handler(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<HostPVEButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    // game_channel: Res<GameChannel>,
+    mut game_client: ResMut<GameClient>,
+    mut commands: Commands,
+) {
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query
+            .get_mut(*children.iter().next().unwrap())
+            .unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Host PVE Game".to_string();
+                *color = PRESSED_BUTTON.into();
+
+                // Having a listener here doesn't make sense. Networking listeners should not be attached to
+                // button clicks. What this should do, most likely, is set the current game client to be a host, 
+                // and change the state into a listening state. Once in a listening state, the host waits for a 
+                // CONNECT or similar request, and then handles it from there. Listening should NOT occur in an 
+                // interaction query, and ESPECIALLY not just one time. This should be a `loop`ed operation.
+                // In all honesty, it should just be able to use the udp_message_listener system above.
+                
+                // If player clicks on host button, designate them as the host
+                game_client.player_type = PlayerType::Host;
+                commands.insert_resource(HostMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
+
+                // let mut buf = [0; 2048];
+                
+                // match game_client.socket.udp_socket.recv(&mut buf) {
+                //     Ok(received) => {
+                //         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
+                //         info!("GETS TO HOST BUTTON CLICKED");
+                //         let client_info = from_utf8(&buf[..received]).unwrap().to_string();
+                //         game_client.socket.udp_socket.connect(client_info);
+                //         //game_client.ready_for_battle = true;
+                //         // for z in 1..10 {
+                //         let cloned = game_client.socket.udp_socket.try_clone().unwrap();
+                //         cloned.send(b"TRUE");
+                //         // }
+                //         commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                //     },
+                //     Err(e) => {
+                //         //info!("No message was received: {}", e)
+                //     }
+                // }
+                 
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Host PVE Game".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Host PVE Game".to_string();
+                *color = NORMAL_BUTTON.into();
+            }
+        }
+    }
+}
+pub(crate) fn clientPVE_button_handler(
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Children),
+        (Changed<Interaction>, With<ClientPVEButton>),
+    >,
+    mut text_query: Query<&mut Text>,
+    mut game_client: ResMut<GameClient>,
+    mut commands: Commands,
+) {
+    for (interaction, mut color, children) in &mut interaction_query {
+        let mut text = text_query
+            .get_mut(*children.iter().next().unwrap())
+            .unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                text.sections[0].value = "Join PVE Game".to_string();
+                *color = PRESSED_BUTTON.into();
+
+                // if player clicks on client button, designate them as the client
+                game_client.player_type = PlayerType::Client;
+                commands.insert_resource(ClientMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
+                
+                // get host IP
+                println!("Enter in host IP address.");
+                let mut host_ip_addr: String = String::new();
+                //placeholder value for scope purposes
+                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
+	            match io::stdin().read_line(&mut host_ip_addr) {
+		            Ok(_) => {
+                         host_ip_addr = host_ip_addr.trim().to_string();
+                    }
+                    Err(_e) => {
+                        error!("ERROR while reading in host's IP address: {}", _e);
+                    }
+	            }
+                // get host port
+                println!("Enter in host port.");
+                let mut host_port: String = String::new();
+	            match io::stdin().read_line(&mut host_port){
+		            Ok(_) => {
+                        host_port = host_port.trim().to_string();
+                    }
+                    Err(_e) => {
+                        error!("ERROR while reading in host's port number: {}", _e);
+                    }
+	            }
+
+                let host_addr_port = format!("{}:{}", host_ip_addr, host_port);
+                info!("printed this: {}", host_addr_port);
+
+                game_client.socket.udp_socket.connect(host_addr_port);
+                let client_info = game_client.socket.socket_addr.to_string();
+                game_client.socket.udp_socket.send(client_info.as_bytes()).expect("Error on send");
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "Join PVE Game".to_string();
+                *color = HOVERED_BUTTON.into();
+            }
+            Interaction::None => {
+                text.sections[0].value = "Join PVE Game".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
