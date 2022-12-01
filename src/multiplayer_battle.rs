@@ -7,7 +7,7 @@ use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats,
     PartyMonster, SelectedMonster, Strength, Moves,
 };
-use crate::networking::{BattleEvent, Message};
+use crate::networking::{BattleAction, Message};
 use crate::{
 	GameState
 };
@@ -89,12 +89,21 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
             Ok(msg) => {
                 info!("from here: {}, {:#?}", msg, &buf[..msg]);
                 let decoded_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
-                let event_type = decoded_msg.event;
+                let action_type = decoded_msg.action;
                 let payload = usize::from_ne_bytes(decoded_msg.payload.try_into().unwrap());
-                info!("{:#?}", event_type);
+                info!("{:#?}", action_type);
                 info!("{:#?}", payload);
                 
-                if event_type == BattleEvent::MonsterType {
+                // In an actual Bevy event system rather than handling each possible action
+                // as it is received in this handler (to avoid having massively bloated handlers 
+                // like the ones in battle.rs 😢), what this system should do is fire a Bevy event
+                // specific to each type of action and with the necessary information to handle it wrapped
+                // inside. That way, some other Bevy system can handle this work ONLY IF the event was
+                // fired to tell it to do so. 
+                // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventWriter.html
+                // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventReader.html
+                // https://bevy-cheatbook.github.io/programming/events.html
+                if action_type == BattleAction::MonsterType {
                     // Create structs for opponent's monster 
                     let enemy_monster_stats = MonsterStats {
                         typing: convert_num_to_element(payload),
@@ -149,20 +158,20 @@ fn convert_num_to_element(num: usize) -> Element {
 }
 
 pub(crate) fn send_message(message: Message) {
-    match message.event {
-        BattleEvent::Attack => {
+    match message.action {
+        BattleAction::Attack => {
             let payload = message.payload;
             //info!("{:#?}", from_utf8(&payload).unwrap());
         }
-        BattleEvent::Initialize => todo!(),
-        BattleEvent::MonsterStats => todo!(),
-        BattleEvent::MonsterType => {
+        BattleAction::Initialize => todo!(),
+        BattleAction::MonsterStats => todo!(),
+        BattleAction::MonsterType => {
             let payload = message.payload;
             
         },
-        BattleEvent::Defend => todo!(),
-        BattleEvent::Heal => todo!(),
-        BattleEvent::Special => todo!(),
+        BattleAction::Defend => todo!(),
+        BattleAction::Heal => todo!(),
+        BattleAction::Special => todo!(),
     }
 }
 
@@ -192,7 +201,7 @@ pub(crate) fn setup_mult_battle(mut commands: Commands,
     let (selected_type) = selected_monster_query.single();
     let num_type = *selected_type as usize;
     
-    let msg = Message {event: BattleEvent::MonsterType, payload: num_type.to_ne_bytes().to_vec()};
+    let msg = Message {action: BattleAction::MonsterType, payload: num_type.to_ne_bytes().to_vec()};
     game_client.socket.udp_socket.send(&bincode::serialize(&msg).unwrap());    
 
 }
@@ -404,7 +413,7 @@ pub(crate) fn mult_key_press_handler(
 
         send_message(Message { 
             // destination: (game_client.socket.socket_addr), 
-            event: (BattleEvent::Attack), 
+            action: (BattleAction::Attack), 
             payload: "i attacked you".to_string().into_bytes()
         });
     }

@@ -24,17 +24,11 @@ impl Plugin for MultiplayerWaitingPlugin {
                 .with_system(mult_waiting_text)
 				.with_system(host_listen_for_conn
                     .run_if(is_host)
-                    // .run_unless_resource_equals(HostReady {
-                    //     state: "NO".to_owned()
-                    // })
                     .run_if_resource_exists::<HostNotReady>())
                 .with_system(client_listen_for_confirmation
                     .run_if(is_client))
                 .with_system(host_listen_for_confirmation
                     .run_if(is_host)
-                    // .run_if_resource_equals(HostReady {
-                    //     state: "YES".to_owned()
-                    // })
                     .run_if_resource_exists::<HostReady>())
 			.into())
 		.add_exit_system(GameState::MultiplayerWaiting, despawn_mult_waiting);
@@ -139,7 +133,7 @@ fn host_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands: C
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(result) => {
-                println!("received {result} bytes. The msg from host_listen_for_confirmation is: {}", from_utf8(&buf[..result]).unwrap());
+                info!("received {result} bytes. The msg from host_listen_for_confirmation is: {}", from_utf8(&buf[..result]).unwrap());
                 info!("confirmation: entered host listen for confirmation");
                 let val = from_utf8(&buf[..result]).unwrap().to_string();
                 //info!("{}", val);
@@ -156,6 +150,14 @@ fn host_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands: C
                         commands.remove_resource::<HostReady>();
                     
                     commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                    // This break is necessary because the above line does not actually change state when it
+                    // runs. It instead queues the state change by adding it as a resource, which will trigger
+                    // state change when the system ends. The problem is, this system is set up to never end
+                    // until all messages buffered have been read! Once we trigger a state change we need
+                    // to leave the infinite loop to let the next buffered message be received by the appropriate
+                    // new system.
+                    // KEEP THIS IN MIND WHEN WRITING ANY OTHER RECEIVERS THAT CHANGE STATE
+                    break;
                 }
             }
             Err(err) => {
@@ -175,7 +177,7 @@ fn client_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands:
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(result) => {
-                println!("received {result} bytes. The msg is: {}", from_utf8(&buf[..result]).unwrap());
+                info!("received {result} bytes. The msg is: {}", from_utf8(&buf[..result]).unwrap());
                 info!("confirmation: entered client listen for confirmation");
                 let val = from_utf8(&buf[..result]).unwrap().to_string();
                 info!("{}", val);
@@ -189,7 +191,7 @@ fn client_listen_for_confirmation(game_client: ResMut<GameClient>, mut commands:
                         .spawn()
                         .insert_bundle(initial_monster_stats)
                         .insert(SelectedMonster);
-                    
+
                     commands.insert_resource(NextState(GameState::MultiplayerBattle));
                 }
             }

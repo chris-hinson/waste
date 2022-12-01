@@ -230,11 +230,11 @@ pub(crate) fn wfc(
                     break;
                 }
 
-                attempts += 1;
-                warn!(
-                    "WFC could not collapse. Retrying, attempt {}.",
-                    attempts + 1
-                );
+                // attempts += 1;
+                // warn!(
+                //     "WFC could not collapse. Retrying, attempt {}.",
+                //     attempts + 1
+                // );
             }
 
             // Put the board contents into the result

@@ -465,7 +465,7 @@ pub(crate) fn despawn_battle(
     battle_ui_element_query: Query<Entity, With<BattleUIElement>>,
 ) {
     if background_query.is_empty() {
-        error!("background is here!");
+        error!("background is not here!");
     }
 
     background_query.for_each(|background| {
@@ -552,18 +552,23 @@ pub(crate) fn key_press_handler(
     if player_health.health <= 0 {
         let next_monster = game_progress.next_monster_cyclic(player_entity);
         if next_monster.is_none() {
-            info!("Your monster was defeated.");
+            let text = PooledText {
+                text: format!("Monster defeated!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else {
-            info!("Your monster was defeated. Switching to next monster.");
-            info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
+            let text = PooledText {
+                text: format!("Monster defeated! Switching..."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
             commands.entity(player_entity).remove::<SelectedMonster>();
             commands
                 .entity(player_entity)
                 .remove_bundle::<SpriteBundle>();
-            // commands.entity(player_entity).remove::<PlayerMonster>();
-            // commands.entity(player_entity).remove::<Monster>();
             commands
                 .entity(*next_monster.unwrap())
                 .insert(SelectedMonster);
@@ -710,7 +715,6 @@ pub(crate) fn key_press_handler(
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else if player_health.health <= 0 {
             game_progress.num_living_monsters -= 1;
-            info!("you have {} monsters alive.", game_progress.num_living_monsters);
             let next_monster = game_progress.next_monster_cyclic(player_entity);
             if next_monster.is_none() {
                 let text = PooledText {
@@ -730,8 +734,6 @@ pub(crate) fn key_press_handler(
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                // commands.entity(player_entity).remove::<PlayerMonster>();
-                // commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
@@ -896,8 +898,6 @@ pub(crate) fn key_press_handler(
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                // commands.entity(player_entity).remove::<PlayerMonster>();
-                // commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
@@ -1071,14 +1071,11 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
-                info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
                 switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                // commands.entity(player_entity).remove::<PlayerMonster>();
-                // commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
@@ -1138,85 +1135,14 @@ pub(crate) fn key_press_handler(
                 pooled: false,
             };
             text_buffer.bottom_text.push_back(text);
-            info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
             switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
             commands.entity(player_entity).remove::<SelectedMonster>();
             commands
                 .entity(player_entity)
                 .remove_bundle::<SpriteBundle>();
-            // commands.entity(player_entity).remove::<PlayerMonster>();
-            // commands.entity(player_entity).remove::<Monster>();
             commands
                 .entity(*next_monster.unwrap())
                 .insert(SelectedMonster);
-
-            // // Enemy reaction
-            // let mut enemy_action = rand::thread_rng().gen_range(0..=3);
-
-            // // Enemy cannot special if it is out of special moves
-            // if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
-            //     enemy_action = rand::thread_rng().gen_range(0..=2);
-            // }
-
-            // let enemy_act_string = if enemy_action == 0 {
-            //     format!("Enemy attacks!")
-            // } else if enemy_action == 1 {
-            //     format!("Enemy defends!")
-            // } else if enemy_action == 2 {
-            //     format!("Enemy elemental!")
-            // } else {
-            //     game_progress.spec_moves_left[1] -= 1;
-            //     format!("Enemy special!")
-            // };
-
-            // // Allow enemy to respond to cycle
-            // let text = PooledText {
-            //     text: format!("{}", enemy_act_string),
-            //     pooled: false,
-            // };
-            // text_buffer.bottom_text.push_back(text);
-
-            // let turn_result = calculate_turn(
-            //     &player_stg,
-            //     &player_def,
-            //     player_type,
-            //     0,
-            //     &enemy_stg,
-            //     &enemy_def,
-            //     enemy_type,
-            //     enemy_action,
-            //     *type_system,
-            // );
-
-            // player_health.health -= turn_result.1;
-            // if player_health.health <= 0 {
-            //     game_progress.num_living_monsters -= 1;
-            //     let next_monster = game_progress.next_monster_cyclic(player_entity);
-            //     if next_monster.is_none() {
-            //         let text = PooledText {
-            //             text: format!("Defeated."),
-            //             pooled: false,
-            //         };
-            //         text_buffer.bottom_text.push_back(text);
-            //         end_battle!(commands, game_progress, player_entity, enemy_entity);
-            //     } else {
-            //         let text = PooledText {
-            //             text: format!("Monster defeated. Switching."),
-            //             pooled: false,
-            //         };
-            //         text_buffer.bottom_text.push_back(text);
-            //         switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
-            //         commands.entity(player_entity).remove::<SelectedMonster>();
-            //         commands
-            //             .entity(player_entity)
-            //             .remove_bundle::<SpriteBundle>();
-            //         commands.entity(player_entity).remove::<PlayerMonster>();
-            //         commands.entity(player_entity).remove::<Monster>();
-            //         commands
-            //             .entity(*next_monster.unwrap())
-            //             .insert(SelectedMonster);
-            //     }
-            // }
         }
     } else if input.just_pressed(KeyCode::Key1) {
         // USE HEAL ITEM HANDLER
@@ -1314,8 +1240,6 @@ pub(crate) fn key_press_handler(
                     commands
                         .entity(player_entity)
                         .remove_bundle::<SpriteBundle>();
-                    // commands.entity(player_entity).remove::<PlayerMonster>();
-                    // commands.entity(player_entity).remove::<Monster>();
                     commands
                         .entity(*next_monster.unwrap())
                         .insert(SelectedMonster);
@@ -1395,8 +1319,6 @@ pub(crate) fn key_press_handler(
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                commands.entity(player_entity).remove::<PlayerMonster>();
-                commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
