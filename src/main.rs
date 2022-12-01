@@ -17,6 +17,8 @@ pub(crate) enum GameState {
     Credits,
     Help,
     MultiplayerMenu,
+    MultiplayerWaiting,
+    MultiplayerBattle,
 }
 
 pub(crate) const TITLE: &str = "Waste";
@@ -28,32 +30,40 @@ mod backgrounds;
 mod battle;
 mod camera;
 mod credits;
-mod game_client;
 mod help;
 mod monster;
-mod multiplayer_menu;
 mod pause;
 mod player;
-mod quests;
 mod start_menu;
 mod wfc;
 mod world;
+mod multiplayer_menu;
+mod multiplayer_battle;
+mod game_client;
+mod quests;
+mod networking;
+mod multiplayer_waiting;
+
 
 //use statements:
 use backgrounds::*;
 use battle::*;
 use camera::*;
 use credits::*;
-use game_client::*;
 use help::*;
 use monster::*;
-use multiplayer_menu::*;
 use pause::*;
 use player::*;
 use quests::*;
 use start_menu::*;
 use wfc::*;
 use world::*;
+use multiplayer_menu::*;
+use multiplayer_battle::*;
+use game_client::*;
+use multiplayer_waiting::*;
+
+
 
 // END CUSTOM MODULES
 
@@ -78,6 +88,9 @@ fn main() {
         .init_resource::<GameProgress>()
         .init_resource::<TypeSystem>()
         .init_resource::<ProcGen>()
+        .add_event::<AttackEvent>()
+        .add_event::<DefendEvent>()
+        .add_event::<HealEvent>()
         .init_resource::<TextBuffer>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
@@ -89,6 +102,8 @@ fn main() {
         .add_plugin(PausePlugin)
         .add_plugin(BattlePlugin)
         .add_plugin(MultMenuPlugin)
+        .add_plugin(MultiplayerWaitingPlugin)
+        .add_plugin(MultBattlePlugin)
         .add_enter_system_set(
             GameState::StartPlaying,
             // This system set is unconditional, as it is being added in an enter helper

@@ -15,7 +15,16 @@ pub(crate) struct MainCamera;
 pub(crate) struct MenuCamera;
 
 #[derive(Component)]
+pub(crate) struct MultCamera;
+
+#[derive(Component)]
+pub(crate) struct MultWaitingCamera;
+
+#[derive(Component)]
 pub(crate) struct SlidesCamera;
+
+#[derive(Component)]
+pub(crate) struct PauseCamera; 
 
 #[derive(Component)]
 pub(crate) struct HelpCamera;

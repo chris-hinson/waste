@@ -1,15 +1,16 @@
 #![allow(unused)]
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
-use crate::game_client::{self, GameClient, Package, PlayerType};
 use crate::player::Player;
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
-use std::net::{Ipv4Addr, UdpSocket};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, SocketInfo, get_addr, ClientMarker, HostMarker};
+use std::fmt::format;
 use std::str::from_utf8;
-use std::sync::mpsc::{self, Receiver, Sender};
 use std::{io, thread};
+use std::net::{UdpSocket, Ipv4Addr};
+use std::sync::mpsc::{Receiver, Sender, self, channel};
 
 const MULT_MENU_BACKGROUND: &str = "backgrounds/multiplayer_screen.png";
 const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -34,20 +35,72 @@ pub(crate) struct ClientButton;
 #[derive(Component)]
 pub(crate) struct MultMenuUIElement;
 
-// Builds plugin called MainMenuPlugin
+
+
+// Builds plugin for multiplayer menu
 impl Plugin for MultMenuPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_enter_system(GameState::MultiplayerMenu, setup_mult)
-            .add_system_set(
-                ConditionSet::new()
-                    // Only run handlers on Start state
-                    .run_in_state(GameState::MultiplayerMenu)
-                    .with_system(mult_options)
-                    .with_system(host_button_handler)
-                    .with_system(client_button_handler)
-                    .into(),
-            )
-            .add_exit_system(GameState::MultiplayerMenu, despawn_mult_menu);
+	fn build(&self, app: &mut App) {
+		app
+		.add_enter_system(GameState::MultiplayerMenu, setup_mult)
+        // .add_system(udp_message_listener
+        //     .run_if_resource_exists::<ClientMarker>())
+		.add_system_set(ConditionSet::new()
+			// Only run handlers in MultiplayerMenu state
+			.run_in_state(GameState::MultiplayerMenu)
+				.with_system(mult_options)
+                .with_system(host_button_handler)
+                .with_system(client_button_handler)
+			.into())
+		.add_exit_system(GameState::MultiplayerMenu, despawn_mult_menu);
+	}
+}
+
+
+// fn is_client(game_client: ResMut<GameClient>) -> bool {
+//     if game_client.player_type == PlayerType::Client {
+//         return true;
+//     }
+//     false
+// }
+
+// fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
+//     if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
+//         return true;
+//     }
+//     false
+// }
+
+/// System to listen for UDP messages. The socket is non-blocking intentionally,
+/// so this works by running an "infinite" loop that will continually try to fill a 
+/// 2048 byte buffer until the OS tells it that recv would block, and then it will exit the loop
+/// and return.
+fn udp_message_listener(game_client: ResMut<GameClient>, mut commands: Commands) {
+    loop {
+        let mut buf = [0; 2048];
+        match game_client.socket.udp_socket.recv_from(&mut buf) {
+            Ok(result) => {
+                info!("Got into message checker... Read {} bytes", result.0);
+                let val = String::from_utf8((&buf[0..result.0]).to_vec()).unwrap();
+                info!("{}", val);
+                if val == "TRUE" {
+                    commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                }
+            },
+            Err(err) => {
+                // If we run into this specific kind of error, it just means that the OS
+                // doesn't have anything ready for us to read yet, so we will stop trying.
+                // This whole system will run again on the next frame, so that's fine.
+                // This error is expected to be hit a LOT, any time a message is not ready for us.
+                if err.kind() != io::ErrorKind::WouldBlock { 
+                    // An ACTUAL error occurred
+                    error!("{}", err);
+                    // This should pulse an event and then return;
+                    return;
+                }
+                // We're done listening
+                break;
+            }
+        }
     }
 }
 
@@ -91,35 +144,6 @@ fn setup_mult(
     // game_channel: Res<GameChannel>,
     game_client: Res<GameClient>,
 ) {
-    let c_sx = game_client.udp_channel.sx.clone();
-
-    // create thread for player's battle communication
-    thread::spawn(move || {
-        let (tx, rx): (Sender<Package>, Receiver<Package>) = mpsc::channel();
-
-        let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx));
-
-        c_sx.send(test_pkg).unwrap();
-
-        let acknowledgement = rx.recv().unwrap();
-        info!(
-            "Here is the confirmation from main to thread: {}",
-            acknowledgement
-        );
-    });
-
-    let response = game_client.udp_channel.rx.recv().unwrap();
-    println!("Player thread receiving this message: {}", response.message);
-
-    let acknowledgement_pkg = Package::new(
-        String::from("hey main got the msg!"),
-        Some(game_client.udp_channel.sx.clone()),
-    );
-    let thread_sender = response
-        .sender
-        .expect("Couldn't extract sender channel from thread");
-    thread_sender.send(acknowledgement_pkg).unwrap();
-
     cameras.for_each(|camera| {
         commands.entity(camera).despawn();
     });
@@ -207,6 +231,7 @@ fn setup_mult(
         .insert(MultMenuUIElement);
 }
 
+
 pub(crate) fn mult_options(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn_bundle(
@@ -254,54 +279,39 @@ pub(crate) fn host_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Host Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                //commands.insert_resource(NextState(GameState::PreHost));
 
-                // if player clicks on host button, designate them as the host
+                // Having a listener here doesn't make sense. Networking listeners should not be attached to
+                // button clicks. What this should do, most likely, is set the current game client to be a host, 
+                // and change the state into a listening state. Once in a listening state, the host waits for a 
+                // CONNECT or similar request, and then handles it from there. Listening should NOT occur in an 
+                // interaction query, and ESPECIALLY not just one time. This should be a `loop`ed operation.
+                // In all honesty, it should just be able to use the udp_message_listener system above.
+                
+                // If player clicks on host button, designate them as the host
                 game_client.player_type = PlayerType::Host;
+                commands.insert_resource(HostMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
 
-                // get client IP
-                println!("Enter in client IP address.");
-                let mut client_ip_addr: String = String::new();
-                //placeholder value for scope purposes
-                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
-                match io::stdin().read_line(&mut client_ip_addr) {
-                    Ok(_) => {
-                        client_ip_addr = client_ip_addr.trim().to_string();
-                        //let split_ip_addr: Vec<u8> = client_ip_addr.split(".").map(|val| val.parse().unwrap()).collect();
-                    }
-                    Err(_e) => {
-                        // some error handling
-                    }
-                }
-                // get client port
-                println!("Enter in client port.");
-                let mut client_port: String = String::new();
-                match io::stdin().read_line(&mut client_port) {
-                    Ok(_) => {
-                        client_port = client_port.trim().to_string();
-                    }
-                    Err(_e) => {
-                        //some error handling
-                    }
-                }
-
-                let client_addr_port = format!("{}:{}", client_ip_addr, client_port);
-                println!("printed this: {}", client_addr_port);
-
-                // sends msg from host to client following successful connection
-                // let package = Package::new("here's a message from the host to the client".to_string(), Some(game_client.udp_channel.sx.clone()));
-
-                // Creates the soft connection btwn player 1 and player 2
-                game_client
-                    .socket
-                    .udp_socket
-                    .connect(client_addr_port)
-                    .expect("couldnt connect");
-
-                game_client
-                    .socket
-                    .udp_socket
-                    .send(b"SENT MSG FROM HOST TO CLIENT");
+                // let mut buf = [0; 2048];
+                
+                // match game_client.socket.udp_socket.recv(&mut buf) {
+                //     Ok(received) => {
+                //         println!("received {received} bytes. The msg is: {}", from_utf8(&buf[..received]).unwrap());
+                //         info!("GETS TO HOST BUTTON CLICKED");
+                //         let client_info = from_utf8(&buf[..received]).unwrap().to_string();
+                //         game_client.socket.udp_socket.connect(client_info);
+                //         //game_client.ready_for_battle = true;
+                //         // for z in 1..10 {
+                //         let cloned = game_client.socket.udp_socket.try_clone().unwrap();
+                //         cloned.send(b"TRUE");
+                //         // }
+                //         commands.insert_resource(NextState(GameState::MultiplayerBattle));
+                //     },
+                //     Err(e) => {
+                //         //info!("No message was received: {}", e)
+                //     }
+                // }
+                 
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Host Game".to_string();
@@ -332,20 +342,43 @@ pub(crate) fn client_button_handler(
             Interaction::Clicked => {
                 text.sections[0].value = "Join Game".to_string();
                 *color = PRESSED_BUTTON.into();
-                //commands.insert_resource(NextState(GameState::PrePeer));
-                let mut buf = [0; 100];
-                // let (number_of_bytes, src_addr) = game_client.socket.udp_socket.recv_from(&mut buf)
-                //                                         .expect("Didn't receive data");
-                // let filled_buf = &mut buf[..number_of_bytes];
-                // info!("{:?}", from_utf8(filled_buf));
 
-                match game_client.socket.udp_socket.recv(&mut buf) {
-                    Ok(received) => println!(
-                        "received {received} bytes {:?}",
-                        from_utf8(&buf[..received]).unwrap()
-                    ),
-                    Err(e) => println!("recv function failed: {e:?}"),
-                }
+                // if player clicks on client button, designate them as the client
+                game_client.player_type = PlayerType::Client;
+                commands.insert_resource(ClientMarker {}); 
+                commands.insert_resource(NextState(GameState::MultiplayerWaiting));
+                
+                // get host IP
+                println!("Enter in host IP address.");
+                let mut host_ip_addr: String = String::new();
+                //placeholder value for scope purposes
+                let mut ipv4_addr = Ipv4Addr::new(127, 0, 0, 1);
+	            match io::stdin().read_line(&mut host_ip_addr) {
+		            Ok(_) => {
+                         host_ip_addr = host_ip_addr.trim().to_string();
+                    }
+                    Err(_e) => {
+                        error!("ERROR while reading in host's IP address: {}", _e);
+                    }
+	            }
+                // get host port
+                println!("Enter in host port.");
+                let mut host_port: String = String::new();
+	            match io::stdin().read_line(&mut host_port){
+		            Ok(_) => {
+                        host_port = host_port.trim().to_string();
+                    }
+                    Err(_e) => {
+                        error!("ERROR while reading in host's port number: {}", _e);
+                    }
+	            }
+
+                let host_addr_port = format!("{}:{}", host_ip_addr, host_port);
+                info!("printed this: {}", host_addr_port);
+
+                game_client.socket.udp_socket.connect(host_addr_port);
+                let client_info = game_client.socket.socket_addr.to_string();
+                game_client.socket.udp_socket.send(client_info.as_bytes()).expect("Error on send");
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Join Game".to_string();

@@ -1,8 +1,8 @@
 #![allow(unused)]
+use std::fmt::format;
+use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
+use std::sync::mpsc::{Receiver, channel, Sender};
 use local_ip_address::local_ip;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
-use std::sync::mpsc::{channel, Receiver, Sender};
-
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
 use crate::game_client::*;
@@ -115,8 +115,8 @@ pub(crate) fn credits_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-    game_client: Res<GameClient>,
-    // game_channel: Res<GameChannel>,
+	//game_client: Res<GameClient>,
+	// game_channel: Res<GameChannel>,
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -173,7 +173,7 @@ pub(crate) fn multiplayer_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-    mut game_client: ResMut<GameClient>,
+	//mut game_client: ResMut<GameClient>
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -185,7 +185,6 @@ pub(crate) fn multiplayer_button_handler(
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::MultiplayerMenu));
 
-                println!("{:?}", game_client.socket);
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Multiplayer".to_string();
@@ -243,26 +242,24 @@ fn setup_menu(
     >,
 ) {
     // -----------------------------------------------------------------------------------------------------------
-    let addr = get_addr();
-    println!("{}", addr);
-    let udp_socket = UdpSocket::bind(addr).unwrap();
+    // Get an address to bind socket to
+    // ::bind() creates a new socket bound to the address, and a NEW BINDING
+    // CANNOT BE MADE to the same addr:port thereafter
+    let socket_addr = get_addr();
+    println!("Socket address: {}", socket_addr);
+    let udp_socket = UdpSocket::bind(socket_addr).unwrap();
+    // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
-    let (sx, rx): (Sender<Package>, Receiver<Package>) = channel();
+	info!("Successfully bound host to {}", socket_addr);
+    
 
     commands.insert_resource(GameClient {
-        socket: SocketInfo { addr, udp_socket },
+        // Pass socket info over since we will need to pass the socket
+        // around listener/sender systems frequently
+        socket: SocketInfo { socket_addr, udp_socket },
+        // Default initialize player to client type
         player_type: crate::game_client::PlayerType::Client,
-        udp_channel: UdpChannel { sx, rx },
     });
-    // -----------------------------------------------------------------------------------------------------------
-
-    // creates the channel for the main game thread
-    // let (gsx, grx): (Sender<Package>, Receiver<Package>) = channel();
-    // //create entity for the main game thread's sender + receiver
-    // commands.insert_resource(GameChannel {
-    //     gsx,
-    //     grx
-    // });
     // -----------------------------------------------------------------------------------------------------------
 
     cameras.for_each(|camera| {
@@ -281,8 +278,7 @@ fn setup_menu(
         })
         .insert(MainMenuBackground);
 
-    // START BUTTON
-    commands
+        commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(300.0), Val::Px(65.0)),
@@ -292,8 +288,8 @@ fn setup_menu(
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
-                ..default()
-            },
+            ..default()
+        },
             color: NORMAL_BUTTON.into(),
             ..default()
         })
@@ -309,9 +305,9 @@ fn setup_menu(
         })
         .insert(StartButton)
         .insert(StartMenuUIElement);
-
-    // MULTIPLAYER BUTTON
-    commands
+    
+        // MULTIPLAYER BUTTON
+        commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(325.0), Val::Px(65.0)),
@@ -344,9 +340,9 @@ fn setup_menu(
         })
         .insert(MultiplayerButton)
         .insert(StartMenuUIElement);
-
-    // CREDITS BUTTON
-    commands
+    
+        // CREDITS BUTTON
+        commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(225.0), Val::Px(65.0)),
