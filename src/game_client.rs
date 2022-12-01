@@ -56,8 +56,21 @@ pub(crate) fn get_randomized_port() -> i32 {
 }
 
 /// Get the local address to bind a socket to
-pub(crate) fn get_addr() -> SocketAddr {
-    let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-    let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
-    socket_addr
+pub(crate) fn get_addr() -> Vec<SocketAddr> {
+    // let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    // let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
+    // socket_addr
+    vec![
+        SocketAddr::from(([127,0,0,1], 9800)),
+        SocketAddr::from(([127,0,0,1], 8081)),
+        SocketAddr::from(([127,0,0,1], 8082)),
+        SocketAddr::from(([127,0,0,1], 8083)),
+        SocketAddr::from(([127,0,0,1], 8084)),
+        SocketAddr::from(([127,0,0,1], 8085)),
+        SocketAddr::from(([127,0,0,1], 8086)),
+        SocketAddr::from(([127,0,0,1], 8087)),
+        SocketAddr::from(([127,0,0,1], 8088)),
+        SocketAddr::from(([127,0,0,1], 8089)),
+        SocketAddr::from(([127,0,0,1], 8090)),
+    ]
 }

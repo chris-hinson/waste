@@ -244,12 +244,13 @@ fn setup_menu(
     // Get an address to bind socket to
     // ::bind() creates a new socket bound to the address, and a NEW BINDING
     // CANNOT BE MADE to the same addr:port thereafter
-    let socket_addr = get_addr();
-    println!("Socket address: {}", socket_addr);
-    let udp_socket = UdpSocket::bind(socket_addr).unwrap();
+    let socket_addresses = get_addr();
+    println!("Choosing socket address from: {:?}", socket_addresses);
+    let udp_socket = UdpSocket::bind(&socket_addresses[..]).unwrap();
+    let socket_addr = udp_socket.local_addr().expect("Couldn't retrieve local address from socket.");
     // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
-    info!("Successfully bound host to {}", socket_addr);
+    info!("Successfully bound socket to {}", socket_addr);
 
     commands.insert_resource(GameClient {
         // Pass socket info over since we will need to pass the socket
