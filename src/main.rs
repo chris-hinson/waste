@@ -15,7 +15,7 @@ pub(crate) enum GameState {
     Playing,
     Battle,
     Credits,
-    Help, //NEW
+    Help,
     MultiplayerMenu,
     MultiplayerWaiting,
     MultiplayerBattle,
@@ -67,14 +67,13 @@ use multiplayer_waiting::*;
 
 // END CUSTOM MODULES
 
-// pub(crate) struct GameChannel {
-//     // channel set for main thread/sending/receiving data
-//     pub(crate) gsx: Sender<Package>,
-//     pub(crate) grx: Receiver<Package>,
-// }
+#[derive(Debug, Clone, Component)]
+pub struct UIText;
 
-// unsafe impl Send for GameChannel {}
-// unsafe impl Sync for GameChannel {}
+#[derive(Debug, Clone, Component)]
+pub struct TextTimer {
+    pub time: Timer,
+}
 
 fn main() {
     App::new()
@@ -92,6 +91,7 @@ fn main() {
         .add_event::<AttackEvent>()
         .add_event::<DefendEvent>()
         .add_event::<HealEvent>()
+        .init_resource::<TextBuffer>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
@@ -124,6 +124,8 @@ fn main() {
                 .with_system(handle_pause)
                 .into(),
         )
+        .add_system(display_text)
+        .add_system(despawn_text)
         .run();
 }
 
@@ -252,5 +254,75 @@ pub(crate) fn handle_pause(mut commands: Commands, input: Res<Input<KeyCode>>) {
     if input.just_pressed(KeyCode::Escape) {
         // Change to pause menu state
         commands.insert_resource(NextState(GameState::Pause));
+    }
+}
+
+pub fn display_text(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+    // take the text buffer and display it on the screen
+    // let text = text_buffer.bottom_middle.pop_front();
+    // if text.is_none() {
+    //     return;
+    // }
+    let display_latest = 725.0;
+    for i in 0..text_buffer.bottom_text.len() {
+        let mut text = text_buffer.bottom_text.get_mut(i);
+        if text.as_ref().unwrap().pooled {
+            continue;
+        }
+
+        text.as_mut().unwrap().pooled = true;
+        commands
+            .spawn_bundle(
+                // Create a TextBundle that has a Text with a list of sections.
+                TextBundle::from_sections([
+                    TextSection::new(
+                        text.as_ref().unwrap().text.clone(),
+                        TextStyle {
+                            font: asset_server.load("buttons/joystix monospace.ttf"),
+                            font_size: 30.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    TextSection::from_style(TextStyle {
+                        font: asset_server.load("buttons/joystix monospace.ttf"),
+                        font_size: 30.0,
+                        color: Color::BLACK,
+                    }),
+                ])
+                .with_text_alignment(TextAlignment::CENTER)
+                .with_style(Style {
+                    align_self: AlignSelf::FlexEnd,
+                    position_type: PositionType::Absolute,
+                    position: UiRect {
+                        top: Val::Px(display_latest - i as f32 * 30.),
+                        left: Val::Px(10.0),
+                        ..default()
+                    },
+                    ..default()
+                }),
+            )
+            .insert(UIText)
+            .insert(TextTimer {
+                time: Timer::from_seconds(2., true),
+            });
+    }
+}
+
+pub fn despawn_text(
+    mut commands: Commands,
+    mut text_timer: Query<(Entity, &mut TextTimer)>,
+    time: Res<Time>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+    for (text_entity, mut timer) in text_timer.iter_mut() {
+        timer.time.tick(time.delta());
+        if timer.time.finished() {
+            commands.entity(text_entity).despawn_recursive();
+            text_buffer.bottom_text.pop_front();
+        }
     }
 }

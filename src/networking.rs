@@ -41,17 +41,3 @@ impl Message {
         }
     }
 }
-
-pub enum MultiplayerEvent {
-    // A message was received from a client
-    // Message(SocketAddr, MultiplayerActions, Bytes),
-    // A new client has connected to us
-    Connected(SocketAddr),
-    // A client has disconnected from us
-    Disconnected(SocketAddr),
-    // An error occurred while receiving a message
-    RecvError(io::Error),
-    // An error occurred while sending a message
-    // optional, setup message
-    SendError(io::Error),
-}

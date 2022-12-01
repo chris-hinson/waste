@@ -5,8 +5,8 @@ use crate::monster::{
     PartyMonster, SelectedMonster, Strength,
 };
 use crate::player::Player;
-use crate::quests::*;
-use crate::world::{GameProgress, TypeSystem};
+use crate::{quests::*};
+use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
@@ -45,23 +45,29 @@ pub(crate) struct BattleUIElement;
 
 pub(crate) struct BattlePlugin;
 
+pub(crate) struct SwitchMonsterEvent(Entity);
+
 impl Plugin for BattlePlugin {
     fn build(&self, app: &mut App) {
-        app.add_enter_system_set(
+        app
+        .add_event::<SwitchMonsterEvent>()
+        .add_enter_system_set(
             GameState::Battle,
             SystemSet::new()
                 .with_system(setup_battle)
-                .with_system(setup_battle_stats),
+                .with_system(setup_battle_stats)
+                .with_system(spawn_player_monster)
+                .with_system(spawn_enemy_monster)
         )
         .add_system_set(
             ConditionSet::new()
+                // TODO: Use events and system ordering
                 // Run these systems only when in Battle state
                 .run_in_state(GameState::Battle)
                 // addl systems go here
-                .with_system(spawn_player_monster)
-                .with_system(spawn_enemy_monster)
                 .with_system(update_battle_stats)
                 .with_system(key_press_handler)
+                .with_system(update_player_monster)
                 .into(),
         )
         .add_exit_system(GameState::Battle, despawn_battle);
@@ -72,6 +78,8 @@ macro_rules! end_battle {
     ($commands:expr, $game_progress:expr, $my_monster:expr, $enemy_monster:expr) => {
         // remove the monster from the enemy stats
         $game_progress.enemy_stats.remove(&$enemy_monster);
+        $game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
+        $game_progress.spec_moves_left[1] = SPECIALS_PER_BATTLE;
         // reset selected monster back to the first one in our bag
         let first_monster = $game_progress.monster_id_entity.get(&0).unwrap().clone();
         $commands.entity($my_monster).remove::<SelectedMonster>();
@@ -133,7 +141,9 @@ pub(crate) fn setup_battle(
             ..default()
         })
         .insert(BattleBackground);
-} 
+}
+
+// -----------------------------------------------------------------------------------------------------------
 
 pub(crate) fn setup_battle_stats(
     mut commands: Commands,
@@ -347,13 +357,10 @@ pub(crate) fn spawn_player_monster(
 
     let (ct, _) = cameras.single();
 
-    // why doesn't this update
-    let (selected_type, selected_monster) = selected_monster_query.single();
+    let (selected_type, _selected_monster) = selected_monster_query.single();
 
     commands
-        .entity(selected_monster)
-        .remove_bundle::<SpriteBundle>()
-        .insert_bundle(SpriteBundle {
+    .spawn_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
                 flip_x: true,  // guess what this does
@@ -365,6 +372,56 @@ pub(crate) fn spawn_player_monster(
         })
         .insert(PlayerMonster)
         .insert(Monster);
+}
+
+pub(crate) fn update_player_monster(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<
+            (&Transform, Entity),
+            (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>,)>,
+    mut switch_event: EventReader<SwitchMonsterEvent>,
+    game_progress: ResMut<GameProgress>,
+    player_monster_sprites: Query<Entity, With<PlayerMonster>>,
+) {
+    if cameras.is_empty() {
+        error!("No spawned camera...?");
+        return;
+    }
+
+    let mut new_entity: Option<Entity> = None;
+    for event in switch_event.iter() {
+        info!("Event fired");
+        // Despawn 
+        for pm in player_monster_sprites.iter(){
+            commands.entity(pm).despawn_recursive();
+        }
+
+        new_entity = Some(event.0);
+    }
+
+    if new_entity.is_none() {
+        return;
+    } 
+    let new_type = game_progress.monster_entity_to_stats.get(&new_entity.unwrap()).unwrap().typing;
+    info!("got type {:?}", new_type);
+
+    let (ct, _) = cameras.single();
+
+    commands.
+    spawn_bundle(SpriteBundle {
+            sprite: Sprite {
+                flip_y: false, // flips our little buddy, you guessed it, in the y direction
+                flip_x: true,  // guess what this does
+                ..default()
+            },
+            texture: asset_server.load(&get_monster_sprite_for_type(new_type)),
+            transform: Transform::from_xyz(ct.translation.x - 400., ct.translation.y - 100., 1.),
+            ..default()
+        })
+        .insert(PlayerMonster)
+        .insert(Monster);
+
 }
 
 pub(crate) fn spawn_enemy_monster(
@@ -468,6 +525,8 @@ pub(crate) fn key_press_handler(
         (With<Camera2d>, Without<MenuCamera>, Without<SlidesCamera>),
     >,
     asset_server: Res<AssetServer>,
+    mut text_buffer: ResMut<TextBuffer>,
+    mut switch_event: EventWriter<SwitchMonsterEvent>,
 ) {
     if my_monster.is_empty() || enemy_monster.is_empty() {
         info!("Monsters are missing!");
@@ -497,12 +556,14 @@ pub(crate) fn key_press_handler(
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else {
             info!("Your monster was defeated. Switching to next monster.");
+            info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
+            switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
             commands.entity(player_entity).remove::<SelectedMonster>();
             commands
                 .entity(player_entity)
                 .remove_bundle::<SpriteBundle>();
-            commands.entity(player_entity).remove::<PlayerMonster>();
-            commands.entity(player_entity).remove::<Monster>();
+            // commands.entity(player_entity).remove::<PlayerMonster>();
+            // commands.entity(player_entity).remove::<Monster>();
             commands
                 .entity(*next_monster.unwrap())
                 .insert(SelectedMonster);
@@ -513,21 +574,38 @@ pub(crate) fn key_press_handler(
         // ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
-        info!("You attack!");
 
-        if enemy_action == 0 {
-            info!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            info!("Enemy defends!")
-        } else if enemy_action == 2 {
-            info!("Enemy uses an elemental attack!")
-        } else {
-            info!("Enemy uses its special ability!")
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
         }
 
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
+        let text = PooledText {
+            text: format!("You attack! {}", enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+
         let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
-            info!("You will deal extra damage this turn.");
+            let text = PooledText {
+                text: format!("Buffed! Extra damage..."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             game_progress.turns_left_of_buff[0] -= 1;
             game_progress.current_level
         } else {
@@ -554,7 +632,11 @@ pub(crate) fn key_press_handler(
         enemy_health.health -= turn_result.0;
 
         if enemy_health.health <= 0 {
-            info!("Enemy monster defeated. Your monsters will level up!");
+            let text = PooledText {
+                text: format!("Enemy defeated! Level up!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
             let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
@@ -566,19 +648,27 @@ pub(crate) fn key_press_handler(
             // add the monster to the monster bag
             commands.entity(enemy_entity).insert(PartyMonster);
             game_progress.new_monster(enemy_entity, new_monster_stats);
-            // TODO: see the discrepancy between the type we see and the type we get
-            info!(
-                "new member type: {:?}",
-                game_progress
-                    .monster_entity_to_stats
-                    .get(&enemy_entity)
-                    .unwrap()
-                    .typing
-            );
+            let text = PooledText {
+                text: format!(
+                    "New monster: {:?}",
+                    game_progress
+                        .monster_entity_to_stats
+                        .get(&enemy_entity)
+                        .unwrap()
+                        .typing
+                ),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // update game progress
             // check for boss
             if enemy_boss.is_some() {
-                info!("Boss defeated!");
+                // info!("Boss defeated!");
+                let text = PooledText {
+                    text: "Boss defeated!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 game_progress.get_quest_rewards(*enemy_type);
                 game_progress.win_boss();
                 // if boss level up twice
@@ -591,7 +681,11 @@ pub(crate) fn key_press_handler(
 
                 // Spawn an NPC if enemy_boss is some and we won
                 let new_quest = Quest::random();
-                info!("Someone appears in the dust!");
+                let text = PooledText {
+                    text: format!("Someone appears from the dust..."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 commands
                     .spawn_bundle(SpriteBundle {
                         texture: asset_server.load(NPC_PATH),
@@ -616,18 +710,28 @@ pub(crate) fn key_press_handler(
             end_battle!(commands, game_progress, player_entity, enemy_entity);
         } else if player_health.health <= 0 {
             game_progress.num_living_monsters -= 1;
+            info!("you have {} monsters alive.", game_progress.num_living_monsters);
             let next_monster = game_progress.next_monster_cyclic(player_entity);
             if next_monster.is_none() {
-                info!("Your monster was defeated.");
+                let text = PooledText {
+                    text: format!("Defeated."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 end_battle!(commands, game_progress, player_entity, enemy_entity);
             } else {
-                info!("Your monster was defeated. Switching to next monster.");
+                let text = PooledText {
+                    text: format!("Monster defeated. Switching."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                commands.entity(player_entity).remove::<PlayerMonster>();
-                commands.entity(player_entity).remove::<Monster>();
+                // commands.entity(player_entity).remove::<PlayerMonster>();
+                // commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
@@ -637,21 +741,38 @@ pub(crate) fn key_press_handler(
         // ELEMENTAL ATTACK HANDLER
         // Actions:
         // 0: attack 1: defend: 2: elemental: 3: special
-        let enemy_action = rand::thread_rng().gen_range(0..=3);
-        info!("You use your type {:?} elemental attack!", player_type);
 
-        if enemy_action == 0 {
-            info!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            info!("Enemy defends!")
-        } else if enemy_action == 2 {
-            info!("Enemy uses an elemental attack!")
-        } else {
-            info!("Enemy uses its special ability!")
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
         }
 
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
+        let text = PooledText {
+            text: format!("{:?} elemental! {}", player_type, enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+
         let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
-            info!("You will deal extra damage this turn.");
+            let text = PooledText {
+                text: format!("Buffed! Extra damage..."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             game_progress.turns_left_of_buff[0] -= 1;
             game_progress.current_level
         } else {
@@ -678,7 +799,11 @@ pub(crate) fn key_press_handler(
         enemy_health.health -= turn_result.0;
 
         if enemy_health.health <= 0 {
-            info!("Enemy monster defeated. Your monsters will level up!");
+            let text = PooledText {
+                text: format!("Enemy defeated! Level up!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // at this point this monster is already "ours", we just need to register is with the resource
             // get the stats from the monster
             let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
@@ -690,21 +815,29 @@ pub(crate) fn key_press_handler(
             // add the monster to the monster bag
             commands.entity(enemy_entity).insert(PartyMonster);
             game_progress.new_monster(enemy_entity, new_monster_stats);
-            // TODO: see the discrepancy between the type we see and the type we get
-            info!(
-                "new member type: {:?}",
-                game_progress
-                    .monster_entity_to_stats
-                    .get(&enemy_entity)
-                    .unwrap()
-                    .typing
-            );
+            let text = PooledText {
+                text: format!(
+                    "New monster: {:?}",
+                    game_progress
+                        .monster_entity_to_stats
+                        .get(&enemy_entity)
+                        .unwrap()
+                        .typing
+                ),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // update game progress
             // check for boss
             if enemy_boss.is_some() {
-                info!("Boss defeated!");
-                game_progress.win_boss();
+                // info!("Boss defeated!");
+                let text = PooledText {
+                    text: "Boss defeated!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 game_progress.get_quest_rewards(*enemy_type);
+                game_progress.win_boss();
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.3, 1);
@@ -712,9 +845,14 @@ pub(crate) fn key_press_handler(
                 monster_level_up!(commands, game_progress, player_entity, 1);
                 monster_level_up!(commands, game_progress, enemy_entity, 1);
                 commands.entity(enemy_entity).remove::<Boss>();
+
                 // Spawn an NPC if enemy_boss is some and we won
                 let new_quest = Quest::random();
-                info!("Someone appears in the dust!");
+                let text = PooledText {
+                    text: format!("Someone appears from the dust..."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 commands
                     .spawn_bundle(SpriteBundle {
                         texture: asset_server.load(NPC_PATH),
@@ -741,16 +879,206 @@ pub(crate) fn key_press_handler(
             game_progress.num_living_monsters -= 1;
             let next_monster = game_progress.next_monster_cyclic(player_entity);
             if next_monster.is_none() {
-                info!("Your monster was defeated.");
+                let text = PooledText {
+                    text: format!("Defeated."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
                 end_battle!(commands, game_progress, player_entity, enemy_entity);
             } else {
-                info!("Your monster was defeated. Switching to next monster.");
+                let text = PooledText {
+                    text: format!("Monster defeated. Switching."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
                 commands.entity(player_entity).remove::<SelectedMonster>();
                 commands
                     .entity(player_entity)
                     .remove_bundle::<SpriteBundle>();
-                commands.entity(player_entity).remove::<PlayerMonster>();
-                commands.entity(player_entity).remove::<Monster>();
+                // commands.entity(player_entity).remove::<PlayerMonster>();
+                // commands.entity(player_entity).remove::<Monster>();
+                commands
+                    .entity(*next_monster.unwrap())
+                    .insert(SelectedMonster);
+            }
+        }
+    } else if input.just_pressed(KeyCode::S) {
+        // SPECIAL ATTACK HANDLER
+        // The way special/multi-move attacks work is we do the
+        // monster's unique elemental attack followed immediately by a base attack,
+        // WITHOUT giving the enemy the chance to respond twice, only once to the whole attack.
+        // If this seems overpowered, it's because it is. We only allow a special attack to be used
+        // twice per battle.
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
+        if game_progress.spec_moves_left[0] == 0 { 
+            // No special moves left
+            let text = PooledText {
+                text: format!("Special move not allowed!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            return;
+        }
+
+        game_progress.spec_moves_left[0] -= 1;
+        
+        let text = PooledText {
+            text: format!("{:?} multi-move! {}", player_type, enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+
+        let str_buff_damage = if game_progress.turns_left_of_buff[0] > 0 {
+            let text = PooledText {
+                text: format!("Buffed! Extra damage..."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            game_progress.turns_left_of_buff[0] -= 1;
+            game_progress.current_level
+        } else {
+            0
+        };
+
+        // Temp str increase
+        player_stg.atk += str_buff_damage;
+        let turn_result = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            3,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+        // Reset strength for next turn
+        player_stg.atk -= str_buff_damage;
+
+        player_health.health -= turn_result.1;
+        enemy_health.health -= turn_result.0;
+
+        if enemy_health.health <= 0 {
+            let text = PooledText {
+                text: format!("Enemy defeated! Level up!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            // at this point this monster is already "ours", we just need to register is with the resource
+            // get the stats from the monster
+            let mut new_monster_stats = *game_progress.enemy_stats.get(&enemy_entity).unwrap();
+            // Clamp health down so we don't keep boss health
+            new_monster_stats.hp.health = game_progress.current_level as isize * 10;
+            new_monster_stats.hp.max_health = game_progress.current_level * 10;
+            // remove the monster from the enemy stats
+            game_progress.enemy_stats.remove(&enemy_entity);
+            // add the monster to the monster bag
+            commands.entity(enemy_entity).insert(PartyMonster);
+            game_progress.new_monster(enemy_entity, new_monster_stats);
+            let text = PooledText {
+                text: format!(
+                    "New monster: {:?}",
+                    game_progress
+                        .monster_entity_to_stats
+                        .get(&enemy_entity)
+                        .unwrap()
+                        .typing
+                ),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            // update game progress
+            // check for boss
+            if enemy_boss.is_some() {
+                // info!("Boss defeated!");
+                let text = PooledText {
+                    text: "Boss defeated!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                game_progress.get_quest_rewards(*enemy_type);
+                game_progress.win_boss();
+                // if boss level up twice
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+                commands.entity(enemy_entity).remove::<Boss>();
+
+                // Spawn an NPC if enemy_boss is some and we won
+                let new_quest = Quest::random();
+                let text = PooledText {
+                    text: format!("Someone appears from the dust..."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                commands
+                    .spawn_bundle(SpriteBundle {
+                        texture: asset_server.load(NPC_PATH),
+                        transform: Transform::from_xyz(
+                            transform.translation.x,
+                            transform.translation.y,
+                            0.,
+                        ),
+                        ..default()
+                    })
+                    .insert(NPC { quest: new_quest });
+            } else {
+                game_progress.win_battle();
+                game_progress.get_quest_rewards(*enemy_type);
+                // if not boss level up once
+                for pm in party_monsters.iter_mut() {
+                    monster_level_up!(commands, game_progress, pm.3, 1);
+                }
+                monster_level_up!(commands, game_progress, player_entity, 1);
+                monster_level_up!(commands, game_progress, enemy_entity, 1);
+            }
+            end_battle!(commands, game_progress, player_entity, enemy_entity);
+        } else if player_health.health <= 0 {
+            game_progress.num_living_monsters -= 1;
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
+            if next_monster.is_none() {
+                let text = PooledText {
+                    text: format!("Defeated."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                end_battle!(commands, game_progress, player_entity, enemy_entity);
+            } else {
+                let text = PooledText {
+                    text: format!("Monster defeated. Switching."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
+                commands.entity(player_entity).remove::<SelectedMonster>();
+                commands
+                    .entity(player_entity)
+                    .remove_bundle::<SpriteBundle>();
+                // commands.entity(player_entity).remove::<PlayerMonster>();
+                // commands.entity(player_entity).remove::<Monster>();
                 commands
                     .entity(*next_monster.unwrap())
                     .insert(SelectedMonster);
@@ -758,31 +1086,137 @@ pub(crate) fn key_press_handler(
         }
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT HANDLER
-        commands.entity(enemy_entity).remove::<Enemy>();
-        commands.insert_resource(NextState(GameState::Playing));
+        end_battle!(commands, game_progress, player_entity, enemy_entity);
     } else if input.just_pressed(KeyCode::D) {
         // DEFEND HANDLER
+
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+
+        let text = PooledText {
+            text: format!("You defend! {}", enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
     } else if input.just_pressed(KeyCode::C) {
         // CYCLE HANDLER
-        if my_monster.is_empty() {
-            error!("No monster spawned, cannot switch!");
+        // They want to cycle their monster
+        if game_progress.num_living_monsters <= 1 {
+            let text = PooledText {
+                text: format!("No monster to cycle to."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             return;
         }
-        // They want to cycle their monster
         let next_monster = game_progress.next_monster_cyclic(player_entity);
         if next_monster.is_none() {
-            info!("No monster to cycle to.");
+            let text = PooledText {
+                text: format!("No monster to cycle to."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
         } else {
-            info!("Cycling to next monster in party.");
+            let text = PooledText {
+                text: format!("Cycling to next monster."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+            info!("player entity is: {}, new monster is: {}", player_entity.id(), next_monster.unwrap().id());
+            switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
             commands.entity(player_entity).remove::<SelectedMonster>();
             commands
                 .entity(player_entity)
                 .remove_bundle::<SpriteBundle>();
-            commands.entity(player_entity).remove::<PlayerMonster>();
-            commands.entity(player_entity).remove::<Monster>();
+            // commands.entity(player_entity).remove::<PlayerMonster>();
+            // commands.entity(player_entity).remove::<Monster>();
             commands
                 .entity(*next_monster.unwrap())
                 .insert(SelectedMonster);
+
+            // // Enemy reaction
+            // let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+            // // Enemy cannot special if it is out of special moves
+            // if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            //     enemy_action = rand::thread_rng().gen_range(0..=2);
+            // }
+
+            // let enemy_act_string = if enemy_action == 0 {
+            //     format!("Enemy attacks!")
+            // } else if enemy_action == 1 {
+            //     format!("Enemy defends!")
+            // } else if enemy_action == 2 {
+            //     format!("Enemy elemental!")
+            // } else {
+            //     game_progress.spec_moves_left[1] -= 1;
+            //     format!("Enemy special!")
+            // };
+
+            // // Allow enemy to respond to cycle
+            // let text = PooledText {
+            //     text: format!("{}", enemy_act_string),
+            //     pooled: false,
+            // };
+            // text_buffer.bottom_text.push_back(text);
+
+            // let turn_result = calculate_turn(
+            //     &player_stg,
+            //     &player_def,
+            //     player_type,
+            //     0,
+            //     &enemy_stg,
+            //     &enemy_def,
+            //     enemy_type,
+            //     enemy_action,
+            //     *type_system,
+            // );
+
+            // player_health.health -= turn_result.1;
+            // if player_health.health <= 0 {
+            //     game_progress.num_living_monsters -= 1;
+            //     let next_monster = game_progress.next_monster_cyclic(player_entity);
+            //     if next_monster.is_none() {
+            //         let text = PooledText {
+            //             text: format!("Defeated."),
+            //             pooled: false,
+            //         };
+            //         text_buffer.bottom_text.push_back(text);
+            //         end_battle!(commands, game_progress, player_entity, enemy_entity);
+            //     } else {
+            //         let text = PooledText {
+            //             text: format!("Monster defeated. Switching."),
+            //             pooled: false,
+            //         };
+            //         text_buffer.bottom_text.push_back(text);
+            //         switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
+            //         commands.entity(player_entity).remove::<SelectedMonster>();
+            //         commands
+            //             .entity(player_entity)
+            //             .remove_bundle::<SpriteBundle>();
+            //         commands.entity(player_entity).remove::<PlayerMonster>();
+            //         commands.entity(player_entity).remove::<Monster>();
+            //         commands
+            //             .entity(*next_monster.unwrap())
+            //             .insert(SelectedMonster);
+            //     }
+            // }
         }
     } else if input.just_pressed(KeyCode::Key1) {
         // USE HEAL ITEM HANDLER
@@ -816,17 +1250,157 @@ pub(crate) fn key_press_handler(
                 player_health.health += heal_amount;
             }
 
-            info!("{} health restored.", heal_amount);
+            let text = PooledText {
+                text: format!("{} health restored.", heal_amount),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+
+            // Enemy reaction
+            let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+            // Enemy cannot special if it is out of special moves
+            if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+                enemy_action = rand::thread_rng().gen_range(0..=2);
+            }
+
+            let enemy_act_string = if enemy_action == 0 {
+                format!("Enemy attacks!")
+            } else if enemy_action == 1 {
+                format!("Enemy defends!")
+            } else if enemy_action == 2 {
+                format!("Enemy elemental!")
+            } else {
+                game_progress.spec_moves_left[1] -= 1;
+                format!("Enemy special!")
+            };
+            let text = PooledText {
+                text: format!("{}", enemy_act_string),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+
+            let turn_result = calculate_turn(
+                &player_stg,
+                &player_def,
+                player_type,
+                0,
+                &enemy_stg,
+                &enemy_def,
+                enemy_type,
+                enemy_action,
+                *type_system,
+            );
+
+            player_health.health -= turn_result.1;
+            if player_health.health <= 0 {
+                game_progress.num_living_monsters -= 1;
+                let next_monster = game_progress.next_monster_cyclic(player_entity);
+                if next_monster.is_none() {
+                    let text = PooledText {
+                        text: format!("Defeated."),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    end_battle!(commands, game_progress, player_entity, enemy_entity);
+                } else {
+                    let text = PooledText {
+                        text: format!("Monster defeated. Switching."),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
+                    commands.entity(player_entity).remove::<SelectedMonster>();
+                    commands
+                        .entity(player_entity)
+                        .remove_bundle::<SpriteBundle>();
+                    // commands.entity(player_entity).remove::<PlayerMonster>();
+                    // commands.entity(player_entity).remove::<Monster>();
+                    commands
+                        .entity(*next_monster.unwrap())
+                        .insert(SelectedMonster);
+                }
+            }
         }
     } else if input.just_pressed(KeyCode::Key2) {
         // USE STRENGTH BUFF HANDLER
         // Check that we have a buff item
         if game_progress.player_inventory[1] > 0 {
-            info!("You used a strength buff. The next five turns you will deal extra damage.");
+            let text = PooledText {
+                text: format!("You use a buff item."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // Decrement
             game_progress.player_inventory[1] -= 1;
             // Make it so we have turns left of this buff
             game_progress.turns_left_of_buff[0] = 5;
+        }
+
+        // Enemy reaction
+        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+        // Enemy cannot special if it is out of special moves
+        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+            enemy_action = rand::thread_rng().gen_range(0..=2);
+        }
+
+        let enemy_act_string = if enemy_action == 0 {
+            format!("Enemy attacks!")
+        } else if enemy_action == 1 {
+            format!("Enemy defends!")
+        } else if enemy_action == 2 {
+            format!("Enemy elemental!")
+        } else {
+            game_progress.spec_moves_left[1] -= 1;
+            format!("Enemy special!")
+        };
+        let text = PooledText {
+            text: format!("{}", enemy_act_string),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+
+        let turn_result = calculate_turn(
+            &player_stg,
+            &player_def,
+            player_type,
+            0,
+            &enemy_stg,
+            &enemy_def,
+            enemy_type,
+            enemy_action,
+            *type_system,
+        );
+
+        player_health.health -= turn_result.1;
+        if player_health.health <= 0 {
+            game_progress.num_living_monsters -= 1;
+            let next_monster = game_progress.next_monster_cyclic(player_entity);
+            if next_monster.is_none() {
+                let text = PooledText {
+                    text: format!("Defeated."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                end_battle!(commands, game_progress, player_entity, enemy_entity);
+            } else {
+                let text = PooledText {
+                    text: format!("Monster defeated. Switching."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
+                commands.entity(player_entity).remove::<SelectedMonster>();
+                commands
+                    .entity(player_entity)
+                    .remove_bundle::<SpriteBundle>();
+                commands.entity(player_entity).remove::<PlayerMonster>();
+                commands.entity(player_entity).remove::<Monster>();
+                commands
+                    .entity(*next_monster.unwrap())
+                    .insert(SelectedMonster);
+            }
         }
     }
 }
@@ -885,6 +1459,25 @@ fn calculate_turn(
     }
 
     if player_action == 2 {
+        // Elemental move
+        result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+            * result.0 as f32)
+            .trunc() as usize;
+    } else if player_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.0 += calculate_turn(
+            player_stg,
+            player_def,
+            player_type,
+            0,
+            enemy_stg,
+            enemy_def,
+            enemy_type,
+            enemy_action,
+            type_system,
+        ).0 as usize;
+        // Then simulate elemental
         result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
             * result.0 as f32)
             .trunc() as usize;
@@ -894,12 +1487,25 @@ fn calculate_turn(
         result.1 = (type_system.type_modifier[*enemy_type as usize][*player_type as usize]
             * result.1 as f32)
             .trunc() as usize;
+    } else if enemy_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.1 += calculate_turn(
+            player_stg,
+            player_def,
+            player_type,
+            player_action,
+            enemy_stg,
+            enemy_def,
+            enemy_type,
+            0,
+            type_system,
+        ).1 as usize;
+        // Then simulate elemental
+        result.1 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+            * result.1 as f32)
+            .trunc() as usize;
     }
-
-    info!(
-        "Player deals {} damage, enemy deals {} damage...",
-        result.0, result.1
-    );
 
     (result.0 as isize, result.1 as isize)
 }

@@ -6,12 +6,14 @@ use crate::{
     quests::*,
     Chunk,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 /// Number of total consumable item types
 pub(crate) const NUM_ITEM_TYPES: usize = 2;
 /// Number of total buff/debuff types
 // pub(crate) const NUM_STATUS_TYPES: usize = 3; // Commented out because it is currently unused
+/// Number of special moves each player can use per battle, across all monsters
+pub(crate) const SPECIALS_PER_BATTLE: usize = 2;
 
 #[derive(Default, Debug)]
 pub(crate) struct WorldMap {
@@ -55,6 +57,7 @@ pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32) {
     (x as f32 * WIN_W, y as f32 * WIN_H)
 }
 
+#[derive(Clone)]
 pub(crate) struct GameProgress {
     /// the level of our player, which is also the level we should spawn the monsters
     pub(crate) current_level: usize,
@@ -90,6 +93,10 @@ pub(crate) struct GameProgress {
     /// Number of turns remaining with a given buff applied
     /// Strength Buff = 0, Slowness = 1, Blindness = 2
     pub(crate) turns_left_of_buff: Vec<usize>,
+    /// Count of special moves available for player (index 0) and 
+    /// enemy (index 1)
+    /// Reset at the end of every battle to SPECIALS_PER_BATTLE.
+    pub(crate) spec_moves_left: Vec<usize>,
     /// Active player quests
     pub(crate) quests_active: Vec<Quest>,
 }
@@ -104,7 +111,6 @@ impl GameProgress {
         self.monster_entity_to_stats.insert(entity, stats);
         self.num_monsters += 1;
         self.num_living_monsters += 1;
-        info!("you have {} monsters now.", self.num_monsters);
     }
 
     // pub fn next_monster(&mut self, last_monster: Entity) -> Option<&Entity> {
@@ -120,11 +126,6 @@ impl GameProgress {
         }
         let monster_id_entity_len = self.monster_id_entity.len();
         let our_id = self.entity_monster_id.get(&last_monster);
-        info!(
-            "Trying {} with length {}",
-            ((*our_id.unwrap() + 1) % monster_id_entity_len),
-            monster_id_entity_len
-        );
 
         self.monster_id_entity
             .get(&((*our_id.unwrap() + 1) % monster_id_entity_len))
@@ -216,6 +217,7 @@ impl Default for GameProgress {
             enemy_stats: Default::default(),
             player_inventory: vec![0; 9],
             turns_left_of_buff: vec![0; 3],
+            spec_moves_left: vec![SPECIALS_PER_BATTLE; 2],
             quests_active: Vec::new(),
         }
     }
@@ -305,4 +307,17 @@ impl Default for TypeSystem {
             type_modifier: modifier_map,
         }
     }
+}
+
+/// Text that will be pooled in the queue for text to write to the screen
+#[derive(Debug, Clone)]
+pub struct PooledText {
+    pub text: String,
+    pub pooled: bool,
+}
+
+/// Buffer of text to write to UI
+#[derive(Debug, Clone, Default)]
+pub struct TextBuffer {
+    pub bottom_text: VecDeque<PooledText>,
 }
