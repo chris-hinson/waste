@@ -1,9 +1,10 @@
-use std::net::{SocketAddr};
-use std::{io};
-use serde::{Serialize, Deserialize};
+use bevy::prelude::{Component, Entity};
+use serde::{Deserialize, Serialize};
+use std::io;
+use std::net::SocketAddr;
 
 /// Bevy Event wrapper around BattleActions
-pub struct BattleEvent(BattleAction);
+pub struct BattleEvent(pub BattleAction);
 
 /// BattleActions as an enum separates the desired result for data sent to apply
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -44,3 +45,62 @@ impl Message {
         }
     }
 }
+
+// Shared networking components and data
+
+pub(crate) const MULT_BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
+
+/// Represents the type of mode the host and/or client chose to play
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum MultiplayerMode {
+    PvP,
+    PvE,
+}
+
+/// Resource to contain the mode selected by a player
+///
+/// Default initialization will select PvP
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct MultiplayerModeSelected {
+    pub(crate) mode: MultiplayerMode,
+}
+
+impl Default for MultiplayerModeSelected {
+    fn default() -> Self {
+        Self {
+            mode: MultiplayerMode::PvP,
+        }
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct MultBattleBackground;
+
+#[derive(Component)]
+pub(crate) struct MultMonster;
+
+#[derive(Component)]
+pub(crate) struct MultPlayerMonster;
+
+#[derive(Component)]
+pub(crate) struct MultEnemyMonster;
+
+#[derive(Component)]
+pub(crate) struct SelectedEnemyMonster;
+
+// Unit structs to help identify the specific UI components for player's or enemy's monster health/level
+// since there may be many Text components
+#[derive(Component)]
+pub(crate) struct MultPlayerHealth;
+
+#[derive(Component)]
+pub(crate) struct MultEnemyHealth;
+
+#[derive(Component)]
+pub(crate) struct MultBattleUIElement;
+
+pub(crate) struct AttackEvent(Entity);
+
+pub(crate) struct DefendEvent(Entity);
+
+pub(crate) struct HealEvent(Entity);
