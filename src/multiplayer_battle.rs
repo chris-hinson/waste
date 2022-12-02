@@ -50,12 +50,6 @@ pub (crate) struct MultEnemyHealth;
 #[derive(Component)]
 pub(crate) struct MultBattleUIElement;
 
-pub(crate) struct AttackEvent(Entity);
-
-pub(crate) struct DefendEvent(Entity);
-
-pub(crate) struct HealEvent(Entity);
-
 pub struct MultBattlePlugin;
 
 // Builds plugin for multiplayer battles
