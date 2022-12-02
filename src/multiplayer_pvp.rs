@@ -11,7 +11,7 @@ use crate::monster::{
 use crate::networking::{
     BattleAction, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
     MultEnemyMonster, MultMonster, MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster,
-    MULT_BATTLE_BACKGROUND, AttackEvent,
+    MULT_BATTLE_BACKGROUND, MonsterTypeEvent, AttackEvent, ElementalAttackEvent, DefendEvent,
 };
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
@@ -36,6 +36,7 @@ impl Plugin for MultPvPPlugin {
         )
         .add_system_set(
             ConditionSet::new()
+                
                 // Only run handlers on MultiplayerBattle state
                 .run_in_state(GameState::MultiplayerPvPBattle)
                 .with_system(spawn_mult_player_monster)
@@ -50,8 +51,14 @@ impl Plugin for MultPvPPlugin {
 }
 
 pub(crate) fn recv_packets(
+    
     game_client: Res<GameClient>, 
+    
     mut commands: Commands,
+    mut monster_type_event: EventWriter<MonsterTypeEvent>,
+    mut attack_event: EventWriter<AttackEvent>,
+    mut elemental_attack_event: EventWriter<ElementalAttackEvent>,
+    mut defend_event: EventWriter<DefendEvent>,
     mut player_monster: Query<
     (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
     (With<SelectedMonster>)>,
@@ -63,8 +70,9 @@ pub(crate) fn recv_packets(
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(msg) => {
+                //info!("from here: {}, {:#?}", msg, &buf[..msg]);
                 let deserialized_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
-                let action_type = deserialized_msg.action;
+                let action_type = deserialized_msg.action.clone();
                 info!("Action type: {:#?}", action_type);
 
                 // In an actual Bevy event system rather than handling each possible action
@@ -77,51 +85,8 @@ pub(crate) fn recv_packets(
                 // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventReader.html
                 // https://bevy-cheatbook.github.io/programming/events.html
                 if action_type == BattleAction::MonsterType {
-                    let payload = usize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
-                    info!("{:#?}", payload);
-                    // Create structs for opponent's monster
-                    let enemy_monster_stats = MonsterStats {
-                        typing: convert_num_to_element(payload),
-                        lvl: Level { level: 1 },
-                        hp: Health {
-                            max_health: 100,
-                            health: 100,
-                        },
-                        stg: Strength {
-                            atk: 2,
-                            crt: 25,
-                            crt_dmg: 2,
-                        },
-                        def: Defense {
-                            def: 1,
-                            crt_res: 10,
-                        },
-                        moves: Moves { known: 2 },
-                    };
-                    commands
-                        .spawn()
-                        .insert_bundle(enemy_monster_stats)
-                        .insert(SelectedEnemyMonster);
-
-                    commands.insert_resource(ReadyToSpawnEnemy {});
-                }
-                else if action_type == BattleAction::Attack {
-                    let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
-                    // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-                    info!("Your new health should be {:#?}", payload);
-                    
-                    // decrease health of player's monster after incoming attacks
-                    let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
-                    player_monster.single_mut();
-
-                    player_health.health = payload;
-                }
-                else if action_type == BattleAction::Defend {
-                    let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-                    info!("Payload is {:#?}", payload);
-                }
-                else if action_type == BattleAction::Quit {
-
+                    let payload = usize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
+                    monster_type_event.send(MonsterTypeEvent {message: deserialized_msg.clone() });
                 }
             }
             Err(err) => {
@@ -134,6 +99,67 @@ pub(crate) fn recv_packets(
             }
         }
     }
+}
+
+fn handle_monster_type_event(
+    mut monster_type_event_reader: EventReader<MonsterTypeEvent>,
+    mut commands: Commands,
+) {
+    for ev in monster_type_event_reader.iter() {
+        info!("{:#?}", ev.message);
+        let mut payload = usize::from_ne_bytes(ev.message.payload.clone().try_into().unwrap());
+
+        // Create structs for opponent's monster
+        let enemy_monster_stats = MonsterStats {
+            typing: convert_num_to_element(payload),
+            lvl: Level { level: 1 },
+            hp: Health {
+                max_health: 10,
+                health: 10,
+            },
+            stg: Strength {
+                atk: 2,
+                crt: 25,
+                crt_dmg: 2,
+            },
+            def: Defense {
+                def: 1,
+                crt_res: 10,
+            },
+            moves: Moves { known: 2 },
+        };
+        commands
+            .spawn()
+            .insert_bundle(enemy_monster_stats)
+            .insert(SelectedEnemyMonster);
+
+                    commands.insert_resource(ReadyToSpawnEnemy {});
+                }
+            //     else if action_type == BattleAction::Attack {
+            //         let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
+            //         // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+            //         info!("Your new health should be {:#?}", payload);
+                    
+            //         // decrease health of player's monster after incoming attacks
+            //         let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
+            //         player_monster.single_mut();
+
+            //         player_health.health = payload;
+            //     }
+            //     else if action_type == BattleAction::Defend {
+            //         let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+            //         info!("Payload is {:#?}", payload);
+            //     }
+            //     else if action_type == BattleAction::Quit {
+
+            //     }
+            // }
+            // Err(err) => {
+            //     if err.kind() != io::ErrorKind::WouldBlock {
+            //         // An ACTUAL error occurred
+            //         error!("{}", err);
+            //     }
+
 }
 
 fn convert_num_to_element(num: usize) -> Element {
