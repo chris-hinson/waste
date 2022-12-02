@@ -247,7 +247,9 @@ fn setup_menu(
     let socket_addresses = get_addr();
     println!("Choosing socket address from: {:?}", socket_addresses);
     let udp_socket = UdpSocket::bind(&socket_addresses[..]).unwrap();
-    let socket_addr = udp_socket.local_addr().expect("Couldn't retrieve local address from socket.");
+    let socket_addr = udp_socket
+        .local_addr()
+        .expect("Couldn't retrieve local address from socket.");
     // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
     info!("Successfully bound socket to {}", socket_addr);

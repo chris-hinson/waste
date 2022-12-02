@@ -140,7 +140,7 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::Special => todo!(),
         // not todo, intended for pve
         FriendMonsterType => todo!(),
-         BossMonsterType => todo!(),
+        BossMonsterType => todo!(),
     }
 }
 

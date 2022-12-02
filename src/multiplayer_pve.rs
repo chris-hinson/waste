@@ -2,7 +2,8 @@
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MultCamera;
 use crate::game_client::{
-    self, get_randomized_port, GameClient, Package, PlayerType, ReadyToSpawnEnemy, ReadyToSpawnFriend
+    self, get_randomized_port, GameClient, Package, PlayerType, ReadyToSpawnEnemy,
+    ReadyToSpawnFriend,
 };
 use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
@@ -10,8 +11,8 @@ use crate::monster::{
 };
 use crate::networking::{
     BattleAction, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
-    MultEnemyMonster, MultMonster, MultPlayerHealth, MultPlayerMonster, MultFriendHealth, 
-    MultFriendMonster, SelectedEnemyMonster, SelectedFriendMonster, MULT_BATTLE_BACKGROUND, 
+    MultEnemyMonster, MultFriendHealth, MultFriendMonster, MultMonster, MultPlayerHealth,
+    MultPlayerMonster, SelectedEnemyMonster, SelectedFriendMonster, MULT_BATTLE_BACKGROUND,
 };
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
@@ -38,7 +39,9 @@ impl Plugin for MultPvEPlugin {
                 // Only run handlers on MultiplayerBattle state
                 .run_in_state(GameState::MultiplayerPvEBattle)
                 .with_system(spawn_mult_player_monster)
-                .with_system(spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>())
+                .with_system(
+                    spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>(),
+                )
                 //.with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(mult_key_press_handler)
                 .with_system(recv_packets)
@@ -84,7 +87,6 @@ pub(crate) fn setup_mult_battle(
         .udp_socket
         .send(&bincode::serialize(&msg).unwrap());
 }
-
 
 /// Function to receive messages from our teammate and
 /// either handle them directly or (ideally) fire an event
@@ -180,8 +182,8 @@ pub(crate) fn setup_pve_battle_stats(
         )
         .insert(MultPlayerHealth)
         .insert(MultBattleUIElement);
-    
-        commands
+
+    commands
         .spawn_bundle(
             // Create a TextBundle that has a Text with a list of sections.
             TextBundle::from_sections([
@@ -274,7 +276,7 @@ pub(crate) fn send_message(message: Message) {
         }
         BattleAction::Initialize => todo!(),
         BattleAction::MonsterStats => todo!(),
-        
+
         BattleAction::FriendMonsterType => {
             let payload = message.payload;
         }
@@ -376,7 +378,6 @@ pub(crate) fn spawn_mult_friend_monster(
 
     let (ct, _) = cameras.single();
 
-    
     let (selected_type, selected_monster) = selected_monster_query.single();
 
     commands
@@ -385,7 +386,7 @@ pub(crate) fn spawn_mult_friend_monster(
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
-                flip_x: true, // guess what this does
+                flip_x: true,  // guess what this does
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
