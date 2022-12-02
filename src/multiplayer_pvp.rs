@@ -2,7 +2,7 @@
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MultCamera;
 use crate::game_client::{
-    self, get_randomized_port, GameClient, PlayerType, ReadyToSpawnEnemy,
+    self, get_randomized_port, GameClient, PlayerType, ReadyToSpawnEnemy, EnemyMonsterSpawned
 };
 use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
@@ -11,7 +11,7 @@ use crate::monster::{
 use crate::networking::{
     BattleAction, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
     MultEnemyMonster, MultMonster, MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster,
-    MULT_BATTLE_BACKGROUND,
+    MULT_BATTLE_BACKGROUND, AttackEvent,
 };
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
@@ -41,7 +41,7 @@ impl Plugin for MultPvPPlugin {
                 .with_system(spawn_mult_player_monster)
                 .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(update_mult_battle_stats)
-                .with_system(mult_key_press_handler)
+                .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
                 .with_system(recv_packets)
                 .into(),
         )
@@ -49,15 +49,23 @@ impl Plugin for MultPvPPlugin {
     }
 }
 
-pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands) {
+pub(crate) fn recv_packets(
+    game_client: Res<GameClient>, 
+    mut commands: Commands,
+    mut player_monster: Query<
+    (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+    (With<SelectedMonster>)>,
+    mut enemy_monster: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>)>
+    ) {
     loop {
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(msg) => {
-                info!("from here: {}, {:#?}", msg, &buf[..msg]);
                 let deserialized_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
                 let action_type = deserialized_msg.action;
-                info!("{:#?}", action_type);
+                info!("Action type: {:#?}", action_type);
 
                 // In an actual Bevy event system rather than handling each possible action
                 // as it is received in this handler (to avoid having massively bloated handlers
@@ -76,8 +84,8 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
                         typing: convert_num_to_element(payload),
                         lvl: Level { level: 1 },
                         hp: Health {
-                            max_health: 10,
-                            health: 10,
+                            max_health: 100,
+                            health: 100,
                         },
                         stg: Strength {
                             atk: 2,
@@ -96,6 +104,24 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
                         .insert(SelectedEnemyMonster);
 
                     commands.insert_resource(ReadyToSpawnEnemy {});
+                }
+                else if action_type == BattleAction::Attack {
+                    let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
+                    // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+                    info!("Your new health should be {:#?}", payload);
+                    
+                    // decrease health of player's monster after incoming attacks
+                    let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
+                    player_monster.single_mut();
+
+                    player_health.health = payload;
+                }
+                else if action_type == BattleAction::Defend {
+                    let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+                    info!("Payload is {:#?}", payload);
+                }
+                else if action_type == BattleAction::Quit {
+
                 }
             }
             Err(err) => {
@@ -124,22 +150,22 @@ fn convert_num_to_element(num: usize) -> Element {
     }
 }
 
-pub(crate) fn send_message(message: Message) {
-    match message.action {
-        BattleAction::Attack => {
-            let payload = message.payload;
-            //info!("{:#?}", from_utf8(&payload).unwrap());
-        }
-        BattleAction::Initialize => todo!(),
-        BattleAction::MonsterStats => todo!(),
-        BattleAction::MonsterType => {
-            let payload = message.payload;
-        }
-        BattleAction::Defend => todo!(),
-        BattleAction::Heal => todo!(),
-        BattleAction::Special => todo!(),
-    }
-}
+// pub(crate) fn send_message(message: Message) {
+//     match message.action {
+//         BattleAction::Attack => {
+//             let payload = message.payload;
+//             //info!("{:#?}", from_utf8(&payload).unwrap());
+//         }
+//         BattleAction::Initialize => todo!(),
+//         BattleAction::MonsterStats => todo!(),
+//         BattleAction::MonsterType => {
+//             let payload = message.payload;
+//         }
+//         BattleAction::Defend => todo!(),
+//         BattleAction::Heal => todo!(),
+//         BattleAction::Special => todo!(),
+//     }
+// }
 
 pub(crate) fn setup_mult_battle(
     mut commands: Commands,
@@ -326,7 +352,6 @@ pub(crate) fn spawn_mult_player_monster(
         .insert(MultMonster);
 }
 
-// TODO: spawn enemy's monster when data is sent from other player
 pub(crate) fn spawn_mult_enemy_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -365,33 +390,66 @@ pub(crate) fn spawn_mult_enemy_monster(
         .insert(MultMonster);
 
     commands.remove_resource::<ReadyToSpawnEnemy>();
+    commands.insert_resource(EnemyMonsterSpawned {});
 }
 
 pub(crate) fn mult_key_press_handler(
     input: Res<Input<KeyCode>>,
     mut commands: Commands,
-    mut my_monster: Query<
+    mut player_monster: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (With<SelectedMonster>),
+    >,
+    mut enemy_monster: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
     >,
     asset_server: Res<AssetServer>,
     game_client: Res<GameClient>,
 ) {
+    if enemy_monster.is_empty() {
+        info!("Monsters are missing!");
+        return;
+    }
+
+    // Get player and opponent monster data out of the query
+    let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
+        player_monster.single_mut();
+
+    let (mut enemy_health, enemy_stg, enemy_def, enemy_entity, enemy_type) =
+        enemy_monster.single_mut();
+
     if input.just_pressed(KeyCode::A) {
         // ATTACK
         info!("Attack!");
 
-        send_message(Message {
-            // destination: (game_client.socket.socket_addr),
-            action: (BattleAction::Attack),
-            payload: "i attacked you".to_string().into_bytes(),
-        });
+        enemy_health.health -= player_stg.atk as isize;
+
+        let msg = Message {
+            action: BattleAction::Attack,
+            payload: enemy_health.health.to_ne_bytes().to_vec(),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
+
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT
         info!("Quit!")
     } else if input.just_pressed(KeyCode::D) {
         // DEFEND
-        info!("Defend!")
+        info!("Defend!");
+
+        let msg = Message {
+            action: BattleAction::Defend,
+            payload: "Sent defend message".to_string().into_bytes(),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
+
     } else if input.just_pressed(KeyCode::E) {
         // ELEMENTAL
         info!("Elemental attack!")

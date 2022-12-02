@@ -6,7 +6,7 @@ use crate::{
 };
 use crate::{
     game_client::{GameClient, PlayerType},
-    monster::{MonsterStats, SelectedMonster},
+    monster::{MonsterStats, SelectedMonster, Defense, Level, Moves, Health, Strength},
     GameState,
 };
 use bevy::prelude::*;
@@ -168,7 +168,22 @@ fn host_listen_for_confirmation(
                 if val == "TRUE" {
                     // Give the player a monster
                     let initial_monster_stats = MonsterStats {
-                        ..Default::default()
+                        typing: rand::random(),
+                        lvl: Level { level: 1 },
+                        hp: Health {
+                            max_health: 100,
+                            health: 100,
+                        },
+                        stg: Strength {
+                            atk: 2,
+                            crt: 25,
+                            crt_dmg: 2,
+                        },
+                        def: Defense {
+                            def: 1,
+                            crt_res: 10,
+                        },
+                        moves: Moves { known: 2 },
                     };
                     commands
                         .spawn()
