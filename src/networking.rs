@@ -15,13 +15,6 @@ pub enum BattleAction {
     Heal,
     Special,
 }
-
-// pub enum NetworkEvent {
-//     Message(SocketAddr, Bytes),
-//     RecvError(io::Error),
-//     SendError(io::Error, Message)
-// }
-
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Message {
@@ -37,7 +30,6 @@ impl Message {
     /// Creates and returns a new Message.
     pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
         Self {
-            // destination,
             action,
             payload,
         }
@@ -96,9 +88,8 @@ pub(crate) struct MultEnemyHealth;
 
 #[derive(Component)]
 pub(crate) struct MultBattleUIElement;
-
+pub(crate) struct MonsterTypeEvent(Entity);
 pub(crate) struct AttackEvent(Entity);
-
+pub(crate) struct ElementalAttackEvent(Entity);
 pub(crate) struct DefendEvent(Entity);
-
 pub(crate) struct HealEvent(Entity);
