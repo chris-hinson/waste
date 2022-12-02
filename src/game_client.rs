@@ -1,8 +1,6 @@
 use rand::seq::SliceRandom;
-use std::fmt;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::net::{SocketAddr, UdpSocket};
 
-const SIZE: usize = 50;
 
 #[derive(PartialEq)]
 pub(crate) enum PlayerType {
@@ -27,25 +25,24 @@ pub(crate) struct ClientMarker {}
 pub(crate) struct HostMarker {}
 pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
-
 pub(crate) struct ReadyToSpawnEnemy {}
 
-#[derive(Debug)]
-pub(crate) struct Package {
-    pub(crate) message: String,
-}
+// #[derive(Debug)]
+// pub(crate) struct Package {
+//     pub(crate) message: String,
+// }
 
-impl Package {
-    pub(crate) fn new(message: String) -> Self {
-        Package { message }
-    }
-}
+// impl Package {
+//     pub(crate) fn new(message: String) -> Self {
+//         Package { message }
+//     }
+// }
 
-impl fmt::Display for Package {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
+// impl fmt::Display for Package {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "{}", self.message)
+//     }
+// }
 
 /// Choose a random port of the known, normally open UDP ports
 pub(crate) fn get_randomized_port() -> i32 {
