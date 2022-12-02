@@ -15,6 +15,7 @@ pub enum BattleAction {
     Defend,
     Heal,
     Special,
+    Quit
 }
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

@@ -27,6 +27,8 @@ pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
 pub(crate) struct ReadyToSpawnEnemy {}
 
+pub(crate) struct EnemyMonsterSpawned {}
+
 // #[derive(Debug)]
 // pub(crate) struct Package {
 //     pub(crate) message: String,

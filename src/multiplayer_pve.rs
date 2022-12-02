@@ -106,22 +106,22 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
 }
 
 /// Function to send message to our teammate
-pub(crate) fn send_message(message: Message) {
-    match message.action {
-        BattleAction::Attack => {
-            let payload = message.payload;
-            //info!("{:#?}", from_utf8(&payload).unwrap());
-        }
-        BattleAction::Initialize => todo!(),
-        BattleAction::MonsterStats => todo!(),
-        BattleAction::MonsterType => {
-            let payload = message.payload;
-        }
-        BattleAction::Defend => todo!(),
-        BattleAction::Heal => todo!(),
-        BattleAction::Special => todo!(),
-    }
-}
+// pub(crate) fn send_message(message: Message) {
+//     match message.action {
+//         BattleAction::Attack => {
+//             let payload = message.payload;
+//             //info!("{:#?}", from_utf8(&payload).unwrap());
+//         }
+//         BattleAction::Initialize => todo!(),
+//         BattleAction::MonsterStats => todo!(),
+//         BattleAction::MonsterType => {
+//             let payload = message.payload;
+//         }
+//         BattleAction::Defend => todo!(),
+//         BattleAction::Heal => todo!(),
+//         BattleAction::Special => todo!(),
+//     }
+// }
 
 pub(crate) fn mult_key_press_handler(
     input: Res<Input<KeyCode>>,
@@ -135,13 +135,13 @@ pub(crate) fn mult_key_press_handler(
 ) {
     if input.just_pressed(KeyCode::A) {
         // ATTACK
-        info!("Attack!");
+        // info!("Attack!");
 
-        send_message(Message {
-            // destination: (game_client.socket.socket_addr),
-            action: (BattleAction::Attack),
-            payload: "i attacked the enemy".to_string().into_bytes(),
-        });
+        // send_message(Message {
+        //     // destination: (game_client.socket.socket_addr),
+        //     action: (BattleAction::Attack),
+        //     payload: "i attacked the enemy".to_string().into_bytes(),
+        // });
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT
         info!("Quit!")
