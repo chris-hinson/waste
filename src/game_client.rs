@@ -29,6 +29,8 @@ pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
 
 pub(crate) struct ReadyToSpawnEnemy {}
+pub(crate) struct ReadyToSpawnFriend {}
+
 
 #[derive(Debug)]
 pub(crate) struct Package {

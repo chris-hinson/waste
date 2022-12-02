@@ -138,6 +138,9 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::Defend => todo!(),
         BattleAction::Heal => todo!(),
         BattleAction::Special => todo!(),
+        // not todo, intended for pve
+        FriendMonsterType => todo!(),
+         BossMonsterType => todo!(),
     }
 }
 
