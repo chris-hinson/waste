@@ -2,7 +2,7 @@
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
 use crate::game_client::{
-    self, get_addr, get_randomized_port, ClientMarker, GameClient, HostMarker, Package, PlayerType,
+    self, get_addr, get_randomized_port, ClientMarker, GameClient, HostMarker, PlayerType,
     SocketInfo,
 };
 use crate::networking::{MultiplayerMode, MultiplayerModeSelected};

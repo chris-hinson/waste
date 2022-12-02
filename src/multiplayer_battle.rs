@@ -1,52 +1,85 @@
 #![allow(unused)]
-use crate::backgrounds::{Tile, WIN_H, WIN_W};
-use crate::camera::MultCamera;
-use crate::game_client::{
-    self, get_randomized_port, GameClient, PlayerType, ReadyToSpawnEnemy,
-};
-use crate::monster::{
-    get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
-    PartyMonster, SelectedMonster, Strength,
-};
-use crate::networking::{
-    BattleAction, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
-    MultEnemyMonster, MultMonster, MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster,
-    MULT_BATTLE_BACKGROUND,
-};
-use crate::GameState;
 use bevy::{prelude::*, ui::*};
-use bincode;
 use iyes_loopless::prelude::*;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
-use std::net::{Ipv4Addr, UdpSocket};
+use crate::game_client::{GameClient, self, PlayerType, Package, get_randomized_port, ReadyToSpawnEnemy};
+use crate::monster::{
+    get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats,
+    PartyMonster, SelectedMonster, Strength, Moves,
+};
+use crate::networking::{BattleAction, Message};
+use crate::{
+	GameState
+};
 use std::str::from_utf8;
 use std::{io, thread};
+use std::net::{UdpSocket, Ipv4Addr};
+use crate::camera::{MultCamera};
+use crate::backgrounds::{
+	WIN_H, WIN_W, 
+	Tile
+};
+use bincode;
+use serde::{Serialize, Deserialize};
 
-pub struct MultPvPPlugin;
+const MULT_BATTLE_BACKGROUND: &str = "backgrounds/battlescreen_desert_1.png";
+
+#[derive(Component)]
+pub(crate) struct MultBattleBackground;
+
+#[derive(Component)]
+pub(crate) struct MultMonster;
+
+#[derive(Component)]
+pub(crate) struct MultPlayerMonster;
+
+#[derive(Component)]
+pub(crate) struct MultEnemyMonster;
+
+#[derive(Component)]
+pub(crate) struct SelectedEnemyMonster;
+
+// Unit structs to help identify the specific UI components for player's or enemy's monster health/level
+// since there may be many Text components
+#[derive(Component)]
+pub (crate) struct MultPlayerHealth;
+
+#[derive(Component)]
+pub (crate) struct MultEnemyHealth;
+
+#[derive(Component)]
+pub(crate) struct MultBattleUIElement;
+
+pub(crate) struct AttackEvent(Entity);
+
+pub(crate) struct DefendEvent(Entity);
+
+pub(crate) struct HealEvent(Entity);
+
+pub struct MultBattlePlugin;
 
 // Builds plugin for multiplayer battles
-impl Plugin for MultPvPPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_enter_system_set(
-            GameState::MultiplayerPvPBattle,
+impl Plugin for MultBattlePlugin {
+	fn build(&self, app: &mut App) {
+		app
+		.add_enter_system_set(GameState::MultiplayerBattle, 
             SystemSet::new()
                 .with_system(setup_mult_battle)
-                .with_system(setup_mult_battle_stats), // .with_system(send_monster)
+                .with_system(setup_mult_battle_stats)
+                // .with_system(send_monster)
         )
-        .add_system_set(
-            ConditionSet::new()
-                // Only run handlers on MultiplayerBattle state
-                .run_in_state(GameState::MultiplayerPvPBattle)
+		.add_system_set(ConditionSet::new()
+			// Only run handlers on MultiplayerBattle state
+			.run_in_state(GameState::MultiplayerBattle)
                 .with_system(spawn_mult_player_monster)
-                .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
+                .with_system(spawn_mult_enemy_monster
+                    .run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(update_mult_battle_stats)
                 .with_system(mult_key_press_handler)
                 .with_system(recv_packets)
-                .into(),
-        )
-        .add_exit_system(GameState::MultiplayerPvPBattle, despawn_mult_battle);
-    }
+        .into())
+		.add_exit_system(GameState::MultiplayerBattle, despawn_mult_battle);
+	}
 }
 
 pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands) {
@@ -56,22 +89,24 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
             Ok(msg) => {
                 info!("from here: {}, {:#?}", msg, &buf[..msg]);
                 let deserialized_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
-                let action_type = deserialized_msg.action;
+                let action = deserialized_msg.action;
+                
                 info!("{:#?}", action_type);
-
+                
                 // In an actual Bevy event system rather than handling each possible action
-                // as it is received in this handler (to avoid having massively bloated handlers
+                // as it is received in this handler (to avoid having massively bloated handlers 
                 // like the ones in battle.rs 😢), what this system should do is fire a Bevy event
                 // specific to each type of action and with the necessary information to handle it wrapped
                 // inside. That way, some other Bevy system can handle this work ONLY IF the event was
-                // fired to tell it to do so.
+                // fired to tell it to do so. 
                 // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventWriter.html
                 // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventReader.html
                 // https://bevy-cheatbook.github.io/programming/events.html
                 if action_type == BattleAction::MonsterType {
-                    let payload = usize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
+                    let payload = usize::from_ne_bytes(deserialized_msgpayload.try_into().unwrap());
                     info!("{:#?}", payload);
-                    // Create structs for opponent's monster
+
+                    // Create structs for opponent's monster 
                     let enemy_monster_stats = MonsterStats {
                         typing: convert_num_to_element(payload),
                         lvl: Level { level: 1 },
@@ -99,11 +134,11 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
                 }
             }
             Err(err) => {
-                if err.kind() != io::ErrorKind::WouldBlock {
+                if err.kind() != io::ErrorKind::WouldBlock { 
                     // An ACTUAL error occurred
                     error!("{}", err);
                 }
-
+                
                 break;
             }
         }
@@ -120,7 +155,7 @@ fn convert_num_to_element(num: usize) -> Element {
         5 => Element::Robot,
         6 => Element::Clean,
         7 => Element::Filth,
-        _ => std::process::exit(256),
+        _ => std::process::exit(256)
     }
 }
 
@@ -134,76 +169,70 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::MonsterStats => todo!(),
         BattleAction::MonsterType => {
             let payload = message.payload;
-        }
+            
+        },
         BattleAction::Defend => todo!(),
         BattleAction::Heal => todo!(),
         BattleAction::Special => todo!(),
     }
 }
 
-pub(crate) fn setup_mult_battle(
-    mut commands: Commands,
+pub(crate) fn setup_mult_battle(mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<Entity, (With<Camera2d>, Without<MultCamera>)>,
     game_client: Res<GameClient>,
     selected_monster_query: Query<(&Element), (With<SelectedMonster>)>,
-) {
+) { 
+
     cameras.for_each(|camera| {
-        commands.entity(camera).despawn();
-    });
+		commands.entity(camera).despawn();
+	});
 
     //creates camera for multiplayer battle background
     let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(MultCamera);
 
-    commands
-        .spawn_bundle(SpriteBundle {
-            texture: asset_server.load(MULT_BATTLE_BACKGROUND),
-            transform: Transform::from_xyz(0., 0., 2.),
-            ..default()
-        })
-        .insert(MultBattleBackground);
+    commands.spawn_bundle(SpriteBundle {
+        texture: asset_server.load(MULT_BATTLE_BACKGROUND),
+        transform: Transform::from_xyz(0., 0., 2.),
+        ..default()
+    })  
+    .insert(MultBattleBackground);
 
-    // send type of monster to other player
+    // send type of monster to other player 
     let (selected_type) = selected_monster_query.single();
     let num_type = *selected_type as usize;
+    
+    let msg = Message {action: BattleAction::MonsterType, payload: num_type.to_ne_bytes().to_vec()};
+    game_client.socket.udp_socket.send(&bincode::serialize(&msg).unwrap());    
 
-    let msg = Message {
-        action: BattleAction::MonsterType,
-        payload: num_type.to_ne_bytes().to_vec(),
-    };
-    game_client
-        .socket
-        .udp_socket
-        .send(&bincode::serialize(&msg).unwrap());
 }
 
 pub(crate) fn setup_mult_battle_stats(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    mut commands: Commands, 
+	asset_server: Res<AssetServer>,
     game_client: Res<GameClient>,
 ) {
-    commands
-        .spawn_bundle(
-            // Create a TextBundle that has a Text with a list of sections.
-            TextBundle::from_sections([
-                // health header for player's monster
-                TextSection::new(
-                    "Health:",
-                    TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
-                        color: Color::BLACK,
-                    },
-                ),
-                // health of player's monster
-                TextSection::from_style(TextStyle {
+    commands.spawn_bundle(
+        // Create a TextBundle that has a Text with a list of sections.
+        TextBundle::from_sections([
+            // health header for player's monster
+            TextSection::new(
+                "Health:",
+                TextStyle {
                     font: asset_server.load("buttons/joystix monospace.ttf"),
                     font_size: 40.0,
                     color: Color::BLACK,
-                }),
-            ])
-            .with_style(Style {
+                },
+            ),
+            // health of player's monster
+            TextSection::from_style(TextStyle {
+                font: asset_server.load("buttons/joystix monospace.ttf"),
+                font_size: 40.0,
+                color: Color::BLACK,
+            }),
+        ])
+        .with_style(Style {
                 align_self: AlignSelf::FlexEnd,
                 position_type: PositionType::Absolute,
                 position: UiRect {
@@ -212,10 +241,11 @@ pub(crate) fn setup_mult_battle_stats(
                     ..default()
                 },
                 ..default()
-            }),
-        )
-        .insert(MultPlayerHealth)
-        .insert(MultBattleUIElement);
+            },
+        ),
+    )
+    .insert(MultPlayerHealth)
+    .insert(MultBattleUIElement);
 
     commands
         .spawn_bundle(
@@ -251,6 +281,8 @@ pub(crate) fn setup_mult_battle_stats(
         //.insert(MonsterBundle::default())
         .insert(MultEnemyHealth)
         .insert(MultBattleUIElement);
+
+    
 }
 
 pub(crate) fn update_mult_battle_stats(
@@ -260,14 +292,8 @@ pub(crate) fn update_mult_battle_stats(
         Query<&mut Health, With<SelectedMonster>>,
         Query<&mut Health, With<SelectedEnemyMonster>>,
     )>,
-    mut player_health_text_query: Query<
-        &mut Text,
-        (With<MultPlayerHealth>, Without<MultEnemyHealth>),
-    >,
-    mut enemy_health_text_query: Query<
-        &mut Text,
-        (With<MultEnemyHealth>, Without<MultPlayerHealth>),
-    >,
+    mut player_health_text_query: Query<&mut Text, (With<MultPlayerHealth>, Without<MultEnemyHealth>)>,
+    mut enemy_health_text_query: Query<&mut Text, (With<MultEnemyHealth>, Without<MultPlayerHealth>)>,
 ) {
     let mut my_health = 0;
     let mut enemy_health = 0;
@@ -291,7 +317,10 @@ pub(crate) fn update_mult_battle_stats(
 pub(crate) fn spawn_mult_player_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    cameras: Query<
+        (&Transform, Entity),
+        (With<MultCamera>),
+    >,
     selected_monster_query: Query<(&Element, Entity), (With<SelectedMonster>)>,
 ) {
     if cameras.is_empty() {
@@ -326,11 +355,15 @@ pub(crate) fn spawn_mult_player_monster(
         .insert(MultMonster);
 }
 
+
 // TODO: spawn enemy's monster when data is sent from other player
 pub(crate) fn spawn_mult_enemy_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    cameras: Query<
+        (&Transform, Entity),
+        (With<MultCamera>),
+    >,
     selected_monster_query: Query<(&Element, Entity), (With<SelectedEnemyMonster>)>,
 ) {
     if cameras.is_empty() {
@@ -354,7 +387,7 @@ pub(crate) fn spawn_mult_enemy_monster(
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
                 flip_y: false, // flips our little buddy, you guessed it, in the y direction
-                flip_x: false, // guess what this does
+                flip_x: false,  // guess what this does
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
@@ -363,7 +396,7 @@ pub(crate) fn spawn_mult_enemy_monster(
         })
         .insert(MultEnemyMonster)
         .insert(MultMonster);
-
+    
     commands.remove_resource::<ReadyToSpawnEnemy>();
 }
 
@@ -376,32 +409,32 @@ pub(crate) fn mult_key_press_handler(
     >,
     asset_server: Res<AssetServer>,
     game_client: Res<GameClient>,
-) {
-    if input.just_pressed(KeyCode::A) {
-        // ATTACK
+) { 
+    if input.just_pressed(KeyCode::A) { // ATTACK
         info!("Attack!");
 
-        send_message(Message {
-            // destination: (game_client.socket.socket_addr),
-            action: (BattleAction::Attack),
-            payload: "i attacked you".to_string().into_bytes(),
+        send_message(Message { 
+            // destination: (game_client.socket.socket_addr), 
+            action: (BattleAction::Attack), 
+            payload: "i attacked you".to_string().into_bytes()
         });
-    } else if input.just_pressed(KeyCode::Q) {
-        // ABORT
+    }
+    else if input.just_pressed(KeyCode::Q) { // ABORT
         info!("Quit!")
-    } else if input.just_pressed(KeyCode::D) {
-        // DEFEND
+    } 
+    else if input.just_pressed(KeyCode::D) { // DEFEND
         info!("Defend!")
-    } else if input.just_pressed(KeyCode::E) {
-        // ELEMENTAL
+
+    } 
+    else if input.just_pressed(KeyCode::E) { // ELEMENTAL
         info!("Elemental attack!")
     }
 }
 
-fn despawn_mult_battle(
-    mut commands: Commands,
-    // camera_query: Query<Entity,  With<MenuCamera>>,
-    // background_query: Query<Entity, With<MultMenuBackground>>,
+fn despawn_mult_battle(mut commands: Commands,
+	// camera_query: Query<Entity,  With<MenuCamera>>,
+	// background_query: Query<Entity, With<MultMenuBackground>>,
     // mult_ui_element_query: Query<Entity, With<MultMenuUIElement>>
-) {
+){
+
 }
