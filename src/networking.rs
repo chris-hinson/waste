@@ -2,10 +2,11 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct BattleEvent(pub BattleAction);
 
 /// BattleActions as an enum separates the desired result for data sent to apply
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum BattleAction {
     Initialize,
     MonsterStats,
@@ -16,7 +17,7 @@ pub enum BattleAction {
     Special,
 }
 // Message structs represent the data within the message on a larger sense of scale.
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Message {
     /// The destination to send the message.
     // The action ID to identify what data was sent
@@ -88,8 +89,11 @@ pub(crate) struct MultEnemyHealth;
 
 #[derive(Component)]
 pub(crate) struct MultBattleUIElement;
-pub(crate) struct MonsterTypeEvent(Entity);
+
+#[derive(Debug)]
+pub(crate) struct MonsterTypeEvent {
+    pub(crate) message: Message
+}
 pub(crate) struct AttackEvent(Entity);
 pub(crate) struct ElementalAttackEvent(Entity);
 pub(crate) struct DefendEvent(Entity);
-pub(crate) struct HealEvent(Entity);
