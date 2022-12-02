@@ -1,8 +1,7 @@
 use rand::seq::SliceRandom;
 use std::net::{SocketAddr, UdpSocket};
 
-
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub(crate) enum PlayerType {
     Host,
     Client,
@@ -27,6 +26,8 @@ pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
 pub(crate) struct ReadyToSpawnEnemy {}
 pub(crate) struct ReadyToSpawnFriend {}
+
+pub(crate) struct EnemyMonsterSpawned {}
 
 // #[derive(Debug)]
 // pub(crate) struct Package {

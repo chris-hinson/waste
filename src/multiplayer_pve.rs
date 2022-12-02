@@ -288,6 +288,7 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::Special => todo!(),
         // this is a prank don't todo!
         BattleAction::MonsterType => todo!(),
+        BattleAction::Quit => todo!(),
     }
 }
 
@@ -303,13 +304,13 @@ pub(crate) fn mult_key_press_handler(
 ) {
     if input.just_pressed(KeyCode::A) {
         // ATTACK
-        info!("Attack!");
+        // info!("Attack!");
 
-        send_message(Message {
-            // destination: (game_client.socket.socket_addr),
-            action: (BattleAction::Attack),
-            payload: "i attacked the enemy".to_string().into_bytes(),
-        });
+        // send_message(Message {
+        //     // destination: (game_client.socket.socket_addr),
+        //     action: (BattleAction::Attack),
+        //     payload: "i attacked the enemy".to_string().into_bytes(),
+        // });
     } else if input.just_pressed(KeyCode::Q) {
         // ABORT
         info!("Quit!")

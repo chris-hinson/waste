@@ -2,30 +2,26 @@ use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct BattleEvent(pub BattleAction);
 
 /// BattleActions as an enum separates the desired result for data sent to apply
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum BattleAction {
-    Initialize,
     MonsterStats,
     MonsterType,
     FriendMonsterType,
     BossMonsterType,
     Attack,
     Defend,
-    Heal,
     Special,
+    Quit,
+    StartTurn,
+    FinishTurn,
+    TurnResult,
 }
-
-// pub enum NetworkEvent {
-//     Message(SocketAddr, Bytes),
-//     RecvError(io::Error),
-//     SendError(io::Error, Message)
-// }
-
 // Message structs represent the data within the message on a larger sense of scale.
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Message {
     /// The destination to send the message.
     // The action ID to identify what data was sent
@@ -38,11 +34,7 @@ pub struct Message {
 impl Message {
     /// Creates and returns a new Message.
     pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
-        Self {
-            // destination,
-            action,
-            payload,
-        }
+        Self { action, payload }
     }
 }
 
@@ -108,8 +100,23 @@ pub(crate) struct MultEnemyHealth;
 #[derive(Component)]
 pub(crate) struct MultBattleUIElement;
 
-pub(crate) struct AttackEvent(Entity);
+#[derive(Debug)]
+pub(crate) struct MonsterTypeEvent {
+    pub(crate) message: Message,
+}
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct BattleData {
+    pub(crate) act: u8,
+    pub(crate) atk: u8,
+    pub(crate) crt: u8,
+    pub(crate) def: u8,
+    pub(crate) ele: u8,
+}
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ClientActionEvent(pub(crate) BattleData);
 
-pub(crate) struct DefendEvent(Entity);
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct HostActionEvent(pub(crate) BattleData);
 
-pub(crate) struct HealEvent(Entity);
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TurnResultEvent(pub(crate) (isize,isize));
