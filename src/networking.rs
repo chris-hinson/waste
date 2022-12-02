@@ -1,7 +1,5 @@
 use bevy::prelude::{Component, Entity};
 use serde::{Deserialize, Serialize};
-use std::io;
-use std::net::SocketAddr;
 
 /// Bevy Event wrapper around BattleActions
 pub struct BattleEvent(pub BattleAction);

@@ -2,7 +2,7 @@
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MultCamera;
 use crate::game_client::{
-    self, get_randomized_port, GameClient, Package, PlayerType, ReadyToSpawnEnemy,
+    self, get_randomized_port, GameClient, PlayerType, ReadyToSpawnEnemy,
     ReadyToSpawnFriend,
 };
 use crate::monster::{
