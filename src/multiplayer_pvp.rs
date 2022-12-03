@@ -8,12 +8,13 @@ use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
     PartyMonster, SelectedMonster, Strength,
 };
+use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
-    AttackEvent, BattleAction, DefendEvent, ElementalAttackEvent, Message, MonsterTypeEvent,
+    BattleAction, BattleData, ClientActionEvent, HostActionEvent, Message, MonsterTypeEvent,
     MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster, MultMonster,
     MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster, MULT_BATTLE_BACKGROUND,
 };
-use crate::world::TypeSystem;
+use crate::world::{PooledText, TextBuffer, TypeSystem};
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use bincode;
@@ -28,17 +29,17 @@ use std::{io, thread};
 #[derive(Clone, Copy)]
 pub(crate) struct TurnFlag(pub(crate) bool);
 
-impl FromWorld for TurnFlag {
-    fn from_world(world: &mut World) -> Self {
-        let player_type = world
-            .get_resource::<GameClient>()
-            .expect("unable to retrieve player type for initialization")
-            .player_type;
+// impl FromWorld for TurnFlag {
+//     fn from_world(world: &mut World) -> Self {
+//         let player_type = world
+//             .get_resource::<GameClient>()
+//             .expect("unable to retrieve player type for initialization")
+//             .player_type;
 
-        // Host gets to go first
-        Self(player_type == PlayerType::Host)
-    }
-}
+//         // Host gets to go first
+//         Self(player_type == PlayerType::Host)
+//     }
+// }
 
 // Host side:
 // - Pick action 0-3 (based off of host's key_press_handler)
@@ -61,7 +62,7 @@ impl FromWorld for TurnFlag {
 //   + Caches action chosen by host in ActionCache(usize)
 //   + This flips TurnFlag to true
 // - Picks their own action (0-3) (with client version of key_press_handler)
-//   + client_key_press_handler needs to query the resource ActionCache(usize) to 
+//   + client_key_press_handler needs to query the resource ActionCache(usize) to
 //     get the action out of the recv_packet system to do turn calculation
 //   + They will be denied by keypress handler if not their turn)
 //   + Sends a BattleAction::FinishTurn with their own action and stats
@@ -69,10 +70,15 @@ impl FromWorld for TurnFlag {
 //   + Updates stats locally based on result
 //   + Flips TurnFlag to false
 
-
 // turn(host): choose action, disable turn, send
 // turn(client): choose action, disable turn, calculate result, send
 // turn(host): calculate result, next turn...
+
+#[derive(Component, Debug, Default)]
+pub(crate) struct CachedData(BattleData);
+
+#[derive(Component, Debug, Default)]
+pub(crate) struct CachedAction(usize);
 
 // Builds plugin for multiplayer battles
 pub struct MultPvPPlugin;
@@ -82,7 +88,9 @@ impl Plugin for MultPvPPlugin {
             GameState::MultiplayerPvPBattle,
             SystemSet::new()
                 .with_system(setup_mult_battle)
-                .with_system(setup_mult_battle_stats), // .with_system(send_monster)
+                .with_system(setup_mult_battle_stats)
+                .with_system(init_host_turnflag.run_if(is_host))
+                .with_system(init_client_turnflag.run_if(is_client)),
         )
         .add_system_set(
             ConditionSet::new()
@@ -91,25 +99,55 @@ impl Plugin for MultPvPPlugin {
                 .with_system(spawn_mult_player_monster)
                 .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(update_mult_battle_stats)
-                .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
-                .with_system(recv_packets)
+                // .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
+                .with_system(
+                    host_action_handler
+                        .run_if_resource_exists::<EnemyMonsterSpawned>()
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_host),
+                )
+                .with_system(
+                    host_end_turn_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_host),
+                )
+                .with_system(
+                    client_action_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_client),
+                )
+                .with_system(
+                    client_end_turn_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_client),
+                )
+                .with_system(recv_packets.run_if_resource_exists::<TurnFlag>())
                 .with_system(handle_monster_type_event)
-                .with_system(handle_attack_event)
                 .into(),
         )
         // Turn flag keeps track of whether or not it is our turn currently
-        .init_resource::<TurnFlag>()
+        // GameClient resource has not been initialized at this point
+        .init_resource::<CachedData>()
+        .init_resource::<CachedAction>()
+        .add_event::<HostActionEvent>()
+        .add_event::<ClientActionEvent>()
         .add_exit_system(GameState::MultiplayerPvPBattle, despawn_mult_battle);
     }
+}
+
+pub(crate) fn init_host_turnflag(mut commands: Commands) {
+    commands.insert_resource(TurnFlag(true));
+}
+
+pub(crate) fn init_client_turnflag(mut commands: Commands) {
+    commands.insert_resource(TurnFlag(false));
 }
 
 pub(crate) fn recv_packets(
     game_client: Res<GameClient>,
     mut commands: Commands,
     mut monster_type_event: EventWriter<MonsterTypeEvent>,
-    mut attack_event: EventWriter<AttackEvent>,
-    mut elemental_attack_event: EventWriter<ElementalAttackEvent>,
-    mut defend_event: EventWriter<DefendEvent>,
+    mut host_action_event: EventWriter<HostActionEvent>,
     mut player_monster: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (With<SelectedMonster>),
@@ -118,6 +156,9 @@ pub(crate) fn recv_packets(
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (Without<SelectedMonster>, With<SelectedEnemyMonster>),
     >,
+    mut turn: ResMut<TurnFlag>,
+    mut battle_data: ResMut<CachedData>,
+    mut text_buffer: ResMut<TextBuffer>,
 ) {
     loop {
         let mut buf = [0; 512];
@@ -127,41 +168,48 @@ pub(crate) fn recv_packets(
                 let deserialized_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
                 let action_type = deserialized_msg.action.clone();
                 info!("Action type: {:#?}", action_type);
+                info!("Payload is: {:?}", deserialized_msg.payload.clone());
 
-                // In an actual Bevy event system rather than handling each possible action
-                // as it is received in this handler (to avoid having massively bloated handlers
-                // like the ones in battle.rs 😢), what this system should do is fire a Bevy event
-                // specific to each type of action and with the necessary information to handle it wrapped
-                // inside. That way, some other Bevy system can handle this work ONLY IF the event was
-                // fired to tell it to do so.
-                // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventWriter.html
-                // https://docs.rs/bevy/latest/bevy/ecs/event/struct.EventReader.html
-                // https://bevy-cheatbook.github.io/programming/events.html
                 if action_type == BattleAction::MonsterType {
                     let payload =
                         usize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
                     monster_type_event.send(MonsterTypeEvent {
                         message: deserialized_msg.clone(),
                     });
-                } else if action_type == BattleAction::Attack {
-                    let payload =
-                        isize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
-                    // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-
-                    attack_event.send(AttackEvent {
-                        message: deserialized_msg.clone(),
-                    });
-                    // let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
-                    // info!("Your new health should be {:#?}", payload);
-
-                    // // decrease health of player's monster after incoming attacks
-                    // let (mut player_health, mut player_stg, player_def, player_entity, player_type) =
-                    // player_monster.single_mut();
-
-                    // player_health.health = payload;
-                } else if action_type == BattleAction::Defend {
-                    let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-                    info!("Payload is {:#?}", payload);
+                } else if action_type == BattleAction::StartTurn {
+                    // info!("Payload is: {:?}", deserialized_msg.payload.clone());
+                    turn.0 = true;
+                    let text = PooledText {
+                        text: format!("Your turn!"),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    let payload = deserialized_msg.payload.clone();
+                    battle_data.0 = BattleData {
+                        act: (payload[0]),
+                        atk: (payload[1]),
+                        crt: (payload[2]),
+                        def: (payload[3]),
+                        ele: (payload[4]),
+                    };
+                } else if action_type == BattleAction::FinishTurn {
+                    turn.0 = true;
+                    let text = PooledText {
+                        text: format!("Your turn!"),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    let payload = deserialized_msg.payload.clone();
+                    host_action_event.send(HostActionEvent(BattleData {
+                        act: (payload[0]),
+                        atk: (payload[1]),
+                        crt: (payload[2]),
+                        def: (payload[3]),
+                        ele: (payload[4]),
+                    }));
+                } else {
+                    warn!("Unrecognized action type");
+                    break;
                 }
             }
             Err(err) => {
@@ -173,6 +221,199 @@ pub(crate) fn recv_packets(
                 break;
             }
         }
+    }
+}
+
+fn client_action_handler(
+    mut commands: Commands,
+    input: Res<Input<KeyCode>>,
+    mut client_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    mut turn: ResMut<TurnFlag>,
+    game_client: Res<GameClient>,
+    mut battle_data: ResMut<CachedData>,
+    mut client_action_event: EventWriter<ClientActionEvent>,
+    mut client_cached_action: ResMut<CachedAction>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+    if client_monster_query.is_empty() {
+        error!("client cannot find monster.");
+        return;
+    }
+
+    // info!("client flag status: {:?}", turn.0);
+
+    let (client_hp, client_stg, client_def, client_entity, client_element) =
+        client_monster_query.single();
+
+    // turn.0 accesses status of TurnFlag (what's in 0th index)
+    if turn.0 == true {
+        // This is client's turn
+        if input.just_pressed(KeyCode::A) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(0);
+            action_and_data.push(client_stg.atk as u8);
+            action_and_data.push(client_stg.crt as u8);
+            action_and_data.push(client_def.def as u8);
+            action_and_data.push(*client_element as u8);
+            let msg = Message {
+                action: BattleAction::FinishTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            client_action_event.send(ClientActionEvent(battle_data.0));
+            client_cached_action.0 = 0;
+        }
+        if input.just_pressed(KeyCode::D) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(1);
+            action_and_data.push(client_stg.atk as u8);
+            action_and_data.push(client_stg.crt as u8);
+            action_and_data.push(client_def.def as u8);
+            action_and_data.push(*client_element as u8);
+            let msg = Message {
+                action: BattleAction::FinishTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            client_action_event.send(ClientActionEvent(battle_data.0));
+            client_cached_action.0 = 1;
+        }
+        if input.just_pressed(KeyCode::E) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(2);
+            action_and_data.push(client_stg.atk as u8);
+            action_and_data.push(client_stg.crt as u8);
+            action_and_data.push(client_def.def as u8);
+            action_and_data.push(*client_element as u8);
+            let msg = Message {
+                action: BattleAction::FinishTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            client_action_event.send(ClientActionEvent(battle_data.0));
+            client_cached_action.0 = 2;
+        }
+        if input.just_pressed(KeyCode::S) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(3);
+            action_and_data.push(client_stg.atk as u8);
+            action_and_data.push(client_stg.crt as u8);
+            action_and_data.push(client_def.def as u8);
+            action_and_data.push(*client_element as u8);
+            let msg = Message {
+                action: BattleAction::FinishTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            client_action_event.send(ClientActionEvent(battle_data.0));
+            client_cached_action.0 = 3;
+        }
+    }
+}
+
+pub(crate) fn client_end_turn_handler(
+    mut commands: Commands,
+    mut action_event: EventReader<ClientActionEvent>,
+    mut client_cached_action: ResMut<CachedAction>,
+    mut battle_data: ResMut<CachedData>,
+    mut client_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    mut enemy_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
+    >,
+    game_client: Res<GameClient>,
+    type_system: Res<TypeSystem>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+    let mut wrapped_data: Option<BattleData> = None;
+    for event in action_event.iter() {
+        info!("Got action event");
+        wrapped_data = Some(event.clone().0);
+        info!("Client received data: {:?}", wrapped_data.unwrap());
+    }
+
+    if wrapped_data.is_none() {
+        return;
+    }
+
+    let data = wrapped_data.unwrap();
+
+    let (mut client_hp, client_stg, client_def, client_entity, client_element) =
+        client_monster_query.single_mut();
+
+    let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
+        enemy_monster_query.single_mut();
+
+    let turn_result = mult_calculate_turn(
+        client_stg.atk as u8,
+        client_stg.crt as u8,
+        client_def.def as u8,
+        *client_element as u8,
+        client_cached_action.0 as u8,
+        data.atk,
+        data.crt,
+        data.def,
+        data.ele,
+        data.act,
+        *type_system,
+    );
+
+    info!("turn result: {:?}", turn_result);
+
+    client_hp.health -= turn_result.1;
+    enemy_hp.health -= turn_result.0;
+
+    if (client_hp.health <= 0 && enemy_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Draw!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        // TODO: Game over, return to main menu
+        info!("Draw! Attemping to go to start screen...");
+        commands.insert_resource(NextState(GameState::Start));
+    } else if (client_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Player 1 (host) won!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        info!("Player 1 (host) won!");
+        commands.insert_resource(NextState(GameState::Start));
+    } else if (enemy_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Player 2 (client) won!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        info!("Player 2 (client) won!");
+        commands.insert_resource(NextState(GameState::Start));
     }
 }
 
@@ -212,28 +453,224 @@ fn handle_monster_type_event(
     }
 }
 
-fn handle_attack_event(
-    mut attack_event_reader: EventReader<AttackEvent>,
+fn host_action_handler(
     mut commands: Commands,
-    mut player_monster: Query<
+    input: Res<Input<KeyCode>>,
+    mut host_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (With<SelectedMonster>),
     >,
-    mut enemy_monster: Query<
+    mut turn: ResMut<TurnFlag>,
+    game_client: Res<GameClient>,
+    mut battle_data: ResMut<CachedData>,
+    mut host_cached_action: ResMut<CachedAction>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+    if host_monster_query.is_empty() {
+        error!("Host cannot find monster.");
+        return;
+    }
+
+    // info!("Host flag status: {:?}", turn.0);
+
+    let (host_hp, host_stg, host_def, host_entity, host_element) = host_monster_query.single();
+
+    // turn.0 accesses status of TurnFlag (what's in 0th index)
+    if turn.0 == true {
+        // This is host's turn
+        // info!("Host may act");
+        if input.just_pressed(KeyCode::A) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(0);
+            action_and_data.push(host_stg.atk as u8);
+            action_and_data.push(host_stg.crt as u8);
+            action_and_data.push(host_def.def as u8);
+            action_and_data.push(*host_element as u8);
+            let msg = Message {
+                action: BattleAction::StartTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            battle_data.0 = BattleData {
+                act: 0,
+                atk: host_stg.atk as u8,
+                crt: host_stg.crt as u8,
+                def: host_def.def as u8,
+                ele: *host_element as u8,
+            }; //cache data
+
+            host_cached_action.0 = 0;
+        }
+        if input.just_pressed(KeyCode::D) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(1);
+            action_and_data.push(host_stg.atk as u8);
+            action_and_data.push(host_stg.crt as u8);
+            action_and_data.push(host_def.def as u8);
+            action_and_data.push(*host_element as u8);
+            let msg = Message {
+                action: BattleAction::StartTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            battle_data.0 = BattleData {
+                act: 1,
+                atk: host_stg.atk as u8,
+                crt: host_stg.crt as u8,
+                def: host_def.def as u8,
+                ele: *host_element as u8,
+            }; //cache data
+
+            host_cached_action.0 = 1;
+        }
+        if input.just_pressed(KeyCode::E) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(2);
+            action_and_data.push(host_stg.atk as u8);
+            action_and_data.push(host_stg.crt as u8);
+            action_and_data.push(host_def.def as u8);
+            action_and_data.push(*host_element as u8);
+            let msg = Message {
+                action: BattleAction::StartTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            battle_data.0 = BattleData {
+                act: 2,
+                atk: host_stg.atk as u8,
+                crt: host_stg.crt as u8,
+                def: host_def.def as u8,
+                ele: *host_element as u8,
+            }; //cache data
+
+            host_cached_action.0 = 2;
+        }
+        if input.just_pressed(KeyCode::S) {
+            turn.0 = false; // flip TurnFlag to false
+            let mut action_and_data: Vec<u8> = Vec::new();
+            action_and_data.push(3);
+            action_and_data.push(host_stg.atk as u8);
+            action_and_data.push(host_stg.crt as u8);
+            action_and_data.push(host_def.def as u8);
+            action_and_data.push(*host_element as u8);
+            let msg = Message {
+                action: BattleAction::StartTurn,
+                payload: action_and_data,
+            };
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            battle_data.0 = BattleData {
+                act: 3,
+                atk: host_stg.atk as u8,
+                crt: host_stg.crt as u8,
+                def: host_def.def as u8,
+                ele: *host_element as u8,
+            }; //cache data
+
+            host_cached_action.0 = 3;
+        }
+    }
+}
+
+pub(crate) fn host_end_turn_handler(
+    mut commands: Commands,
+    mut action_event: EventReader<HostActionEvent>,
+    mut turn: ResMut<TurnFlag>,
+    mut host_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    mut enemy_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (Without<SelectedMonster>, With<SelectedEnemyMonster>),
     >,
+    game_client: Res<GameClient>,
+    type_system: Res<TypeSystem>,
+    cached_host_action: Res<CachedAction>,
+    mut battle_data: ResMut<CachedData>,
+    mut text_buffer: ResMut<TextBuffer>,
 ) {
-    for ev in attack_event_reader.iter() {
-        info!("{:#?}", ev.message);
-        let payload = isize::from_ne_bytes(ev.message.payload.clone().try_into().unwrap());
+    let mut wrapped_data: Option<BattleData> = None;
+    for event in action_event.iter() {
+        info!("Got action event");
+        wrapped_data = Some(event.0);
+        info!("Host received data: {:?}", wrapped_data.unwrap());
+    }
 
-        // decrease health of player's monster after incoming attacks
-        let (mut player_health, mut player_stg, player_def, player_entity, player_type) =
-            player_monster.single_mut();
+    if wrapped_data.is_none() {
+        return;
+    }
 
-        info!("Your new health should be {:#?}", payload);
-        player_health.health = payload;
+    let data = wrapped_data.unwrap();
+
+    let (mut host_hp, host_stg, host_def, host_entity, host_element) =
+        host_monster_query.single_mut();
+
+    let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
+        enemy_monster_query.single_mut();
+
+    let turn_result = mult_calculate_turn(
+        host_stg.atk as u8,
+        host_stg.crt as u8,
+        host_def.def as u8,
+        *host_element as u8,
+        cached_host_action.0 as u8,
+        data.atk,
+        data.crt,
+        data.def,
+        data.ele,
+        data.act,
+        *type_system,
+    );
+
+    info!("turn result: {:?}", turn_result);
+
+    host_hp.health -= turn_result.1;
+    enemy_hp.health -= turn_result.0;
+
+    if (host_hp.health <= 0 && enemy_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Draw!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        // TODO: Game over, return to main menu
+        info!("Draw! Attemping to go to start screen...");
+        commands.insert_resource(NextState(GameState::Start));
+    } else if (host_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Player 2 (client) won!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        info!("Player 2 (client) won!");
+        commands.insert_resource(NextState(GameState::Start));
+    } else if (enemy_hp.health <= 0) {
+        let text = PooledText {
+            text: format!("Player 1 (host) won!"),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+        info!("Player 1 (host) won!");
+        commands.insert_resource(NextState(GameState::Start));
     }
 }
 
@@ -478,75 +915,35 @@ pub(crate) fn spawn_mult_enemy_monster(
     commands.insert_resource(EnemyMonsterSpawned {});
 }
 
-/// Handler to deal with individual keybinds
-pub(crate) fn mult_key_press_handler(
-    input: Res<Input<KeyCode>>,
-    mut commands: Commands,
-    mut player_monster: Query<
-        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (With<SelectedMonster>),
-    >,
-    mut enemy_monster: Query<
-        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
-    >,
-    asset_server: Res<AssetServer>,
-    game_client: Res<GameClient>,
-    type_system: Res<TypeSystem>,
-) {
-    if enemy_monster.is_empty() {
-        info!("Monsters are missing!");
-        return;
-    }
-
-    // Get player and opponent monster data out of the query
-    let (mut player_health, mut player_stg, player_def, player_entity, player_type) =
-        player_monster.single_mut();
-
-    let (mut enemy_health, enemy_stg, enemy_def, enemy_entity, enemy_type) =
-        enemy_monster.single_mut();
-
-    if input.just_pressed(KeyCode::A) {
-        // ATTACK
-        info!("Attack!");
-
-        enemy_health.health -= player_stg.atk as isize;
-
-        let msg = Message {
-            action: BattleAction::Attack,
-            payload: enemy_health.health.to_ne_bytes().to_vec(),
-        };
-        game_client
-            .socket
-            .udp_socket
-            .send(&bincode::serialize(&msg).unwrap());
-    } else if input.just_pressed(KeyCode::Q) {
-        // ABORT
-        info!("Quit!")
-    } else if input.just_pressed(KeyCode::D) {
-        // DEFEND
-        info!("Defend!");
-
-        let msg = Message {
-            action: BattleAction::Defend,
-            payload: "Sent defend message".to_string().into_bytes(),
-        };
-        game_client
-            .socket
-            .udp_socket
-            .send(&bincode::serialize(&msg).unwrap());
-    } else if input.just_pressed(KeyCode::E) {
-        // ELEMENTAL
-        info!("Elemental attack!")
-    }
-}
-
 fn despawn_mult_battle(
     mut commands: Commands,
-    // camera_query: Query<Entity,  With<MenuCamera>>,
-    // background_query: Query<Entity, With<MultMenuBackground>>,
-    // mult_ui_element_query: Query<Entity, With<MultMenuUIElement>>
+    camera_query: Query<Entity, With<MultCamera>>,
+    background_query: Query<Entity, With<MultBattleBackground>>,
+    monster_query: Query<Entity, With<MultMonster>>,
+    mult_battle_ui_element_query: Query<Entity, With<MultBattleUIElement>>,
+    selected_monster_query: Query<Entity, (With<SelectedMonster>)>,
 ) {
+    if background_query.is_empty() {
+        error!("background is not here!");
+    }
+
+    background_query.for_each(|background| {
+        commands.entity(background).despawn();
+    });
+
+    monster_query.for_each(|monster| {
+        commands.entity(monster).despawn_recursive();
+    });
+
+    if mult_battle_ui_element_query.is_empty() {
+        error!("ui elements are not here!");
+    }
+
+    mult_battle_ui_element_query.for_each(|mult_battle_ui_element| {
+        commands.entity(mult_battle_ui_element).despawn_recursive();
+    });
+
+    selected_monster_query.for_each(|monster| commands.entity(monster).despawn_recursive());
 }
 
 /// Calculate effects of the current combined turn.
@@ -561,8 +958,6 @@ fn despawn_mult_battle(
 /// host can then send this tuple to the client to update their information, as well as update it
 /// host-side
 ///
-/// ## Return Tuple
-/// result.0 will always be applied to host, and result.1 will always be applied to client.
 ///
 /// ## Action IDs
 /// 0 - attack
@@ -577,15 +972,17 @@ fn despawn_mult_battle(
 /// This function takes no information to tell it whether or not a buff is applied, and relies on the person with the
 /// buff applied modifying their strength by adding the buff modifier to it and then undoing that after the turn
 /// is calculated.
-fn calculate_turn(
-    player_stg: &Strength,
-    player_def: &Defense,
-    player_type: &Element,
-    player_action: usize,
-    enemy_stg: &Strength,
-    enemy_def: &Defense,
-    enemy_type: &Element,
-    enemy_action: usize,
+fn mult_calculate_turn(
+    player_atk: u8,
+    player_crt: u8,
+    player_def: u8,
+    player_type: u8,
+    player_action: u8,
+    enemy_atk: u8,
+    enemy_crt: u8,
+    enemy_def: u8,
+    enemy_type: u8,
+    enemy_action: u8,
     type_system: TypeSystem,
 ) -> (isize, isize) {
     if player_action == 1 || enemy_action == 1 {
@@ -599,51 +996,53 @@ fn calculate_turn(
     );
     // player attacks
     // If our attack is less than the enemy's defense, we do 0 damage
-    if player_stg.atk <= enemy_def.def {
+    if player_atk <= enemy_def {
         result.0 = 0;
     } else {
         // if we have damage, we do that much damage
         // I've only implemented crits for now, dodge and element can follow
-        result.0 = player_stg.atk - enemy_def.def;
-        if player_stg.crt > enemy_def.crt_res {
-            // calculate crit chance and apply crit damage
-            let crit_chance = player_stg.crt - enemy_def.crt_res;
-            let crit = rand::thread_rng().gen_range(0..=100);
-            if crit <= crit_chance {
-                info!("You had a critical strike!");
-                result.0 *= player_stg.crt_dmg;
-            }
-        }
+        result.0 = (player_atk - enemy_def) as usize;
+        // if player_crt > 15 {
+        //     // calculate crit chance and apply crit damage
+        //     let crit_chance = player_crt - 15;
+        //     let crit = rand::thread_rng().gen_range(0..=100);
+        //     if crit <= crit_chance {
+        //         info!("You had a critical strike!");
+        //         result.0 *= 2;
+        //     }
+        // }
     }
     // same for enemy
-    if enemy_stg.atk <= player_def.def {
+    if enemy_atk <= player_def {
         result.1 = 0;
     } else {
-        result.1 = enemy_stg.atk - player_def.def;
-        if enemy_stg.crt > player_def.crt_res {
-            let crit_chance = enemy_stg.crt - player_def.crt_res;
-            let crit = rand::thread_rng().gen_range(0..=100);
-            if crit <= crit_chance {
-                info!("Enemy had a critical strike!");
-                result.1 *= enemy_stg.crt_dmg;
-            }
-        }
+        result.1 = (enemy_atk - player_def) as usize;
+        // if enemy_crt > 15 {
+        //     let crit_chance = enemy_crt - 15;
+        //     let crit = rand::thread_rng().gen_range(0..=100);
+        //     if crit <= crit_chance {
+        //         info!("Enemy had a critical strike!");
+        //         result.1 *= 2;
+        //     }
+        // }
     }
 
     if player_action == 2 {
         // Elemental move
-        result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+        result.0 = (type_system.type_modifier[player_type as usize][enemy_type as usize]
             * result.0 as f32)
             .trunc() as usize;
     } else if player_action == 3 {
         // Multi-move
         // Do an attack first
-        result.0 += calculate_turn(
-            player_stg,
+        result.0 += mult_calculate_turn(
+            player_atk,
+            player_crt,
             player_def,
             player_type,
             0,
-            enemy_stg,
+            enemy_atk,
+            enemy_crt,
             enemy_def,
             enemy_type,
             enemy_action,
@@ -651,24 +1050,26 @@ fn calculate_turn(
         )
         .0 as usize;
         // Then simulate elemental
-        result.0 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+        result.0 = (type_system.type_modifier[player_type as usize][enemy_type as usize]
             * result.0 as f32)
             .trunc() as usize;
     }
 
     if enemy_action == 2 {
-        result.1 = (type_system.type_modifier[*enemy_type as usize][*player_type as usize]
+        result.1 = (type_system.type_modifier[enemy_type as usize][player_type as usize]
             * result.1 as f32)
             .trunc() as usize;
     } else if enemy_action == 3 {
         // Multi-move
         // Do an attack first
-        result.1 += calculate_turn(
-            player_stg,
+        result.1 += mult_calculate_turn(
+            player_atk,
+            player_crt,
             player_def,
             player_type,
             player_action,
-            enemy_stg,
+            enemy_atk,
+            enemy_crt,
             enemy_def,
             enemy_type,
             0,
@@ -676,7 +1077,7 @@ fn calculate_turn(
         )
         .1 as usize;
         // Then simulate elemental
-        result.1 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+        result.1 = (type_system.type_modifier[enemy_type as usize][player_type as usize]
             * result.1 as f32)
             .trunc() as usize;
     }

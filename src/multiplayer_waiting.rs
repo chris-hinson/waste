@@ -175,7 +175,7 @@ fn host_listen_for_confirmation(
                             health: 100,
                         },
                         stg: Strength {
-                            atk: 2,
+                            atk: 10,
                             crt: 25,
                             crt_dmg: 2,
                         },
@@ -258,7 +258,7 @@ fn client_listen_for_confirmation(
                             health: 100,
                         },
                         stg: Strength {
-                            atk: 2,
+                            atk: 10,
                             crt: 25,
                             crt_dmg: 2,
                         },

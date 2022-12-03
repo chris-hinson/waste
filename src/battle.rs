@@ -1457,7 +1457,7 @@ fn calculate_turn(
         )
         .1 as usize;
         // Then simulate elemental
-        result.1 = (type_system.type_modifier[*player_type as usize][*enemy_type as usize]
+        result.1 = (type_system.type_modifier[*enemy_type as usize][*player_type as usize]
             * result.1 as f32)
             .trunc() as usize;
     }

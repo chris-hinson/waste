@@ -8,14 +8,14 @@ pub struct BattleEvent(pub BattleAction);
 /// BattleActions as an enum separates the desired result for data sent to apply
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum BattleAction {
-    Initialize,
     MonsterStats,
     MonsterType,
     Attack,
     Defend,
-    Heal,
     Special,
-    Quit
+    Quit,
+    StartTurn,
+    FinishTurn,
 }
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -31,10 +31,7 @@ pub struct Message {
 impl Message {
     /// Creates and returns a new Message.
     pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
-        Self {
-            action,
-            payload,
-        }
+        Self { action, payload }
     }
 }
 
@@ -93,10 +90,17 @@ pub(crate) struct MultBattleUIElement;
 
 #[derive(Debug)]
 pub(crate) struct MonsterTypeEvent {
-    pub(crate) message: Message
+    pub(crate) message: Message,
 }
-pub(crate) struct AttackEvent {
-    pub(crate) message: Message
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct BattleData {
+    pub(crate) act: u8,
+    pub(crate) atk: u8,
+    pub(crate) crt: u8,
+    pub(crate) def: u8,
+    pub(crate) ele: u8,
 }
-pub(crate) struct ElementalAttackEvent(Entity);
-pub(crate) struct DefendEvent(Entity);
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ClientActionEvent(pub(crate) BattleData);
+
+pub(crate) struct HostActionEvent(pub(crate) BattleData);
