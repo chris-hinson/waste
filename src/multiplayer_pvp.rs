@@ -3,13 +3,13 @@
 // should fix it. Do not encourage poor coding practice!
 #![allow(unused_must_use)]
 #![allow(unused_mut)]
+#![allow(unused_parens)]
 use crate::camera::MultCamera;
 use crate::game_client::{
-    EnemyMonsterSpawned, GameClient, PlayerType, ReadyToSpawnEnemy,
+    EnemyMonsterSpawned, GameClient, ReadyToSpawnEnemy,
 };
 use crate::monster::{
-    get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
-    PartyMonster, SelectedMonster, Strength,
+    get_monster_sprite_for_type, Defense, Element, Health, Level, MonsterStats, Moves, SelectedMonster, Strength,
 };
 use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
@@ -17,14 +17,12 @@ use crate::networking::{
     MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster, MultMonster,
     MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster, MULT_BATTLE_BACKGROUND, TurnResultEvent,
 };
-use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress};
+use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::{prelude::*};
 use bincode;
 use iyes_loopless::prelude::*;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
-use std::net::{Ipv4Addr, UdpSocket};
 use std::{io};
 
 /// Flag to determine whether this
@@ -143,14 +141,6 @@ pub(crate) fn recv_packets(
     mut monster_type_event: EventWriter<MonsterTypeEvent>,
     mut host_action_event: EventWriter<HostActionEvent>,
     mut turn_result_event: EventWriter<TurnResultEvent>,
-    mut player_monster: Query<
-        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (With<SelectedMonster>),
-    >,
-    mut enemy_monster: Query<
-        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
-    >,
     mut turn: ResMut<TurnFlag>,
     mut battle_data: ResMut<CachedData>,
     mut text_buffer: ResMut<TextBuffer>,
@@ -166,8 +156,6 @@ pub(crate) fn recv_packets(
                 info!("Payload is: {:?}", deserialized_msg.payload.clone());
 
                 if action_type == BattleAction::MonsterType {
-                    let payload =
-                        usize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
                     monster_type_event.send(MonsterTypeEvent {
                         message: deserialized_msg.clone(),
                     });
@@ -237,13 +225,10 @@ fn client_action_handler(
     input: Res<Input<KeyCode>>,
     mut client_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (With<SelectedMonster>),
+        With<SelectedMonster>,
     >,
     mut turn: ResMut<TurnFlag>,
     game_client: Res<GameClient>,
-    mut battle_data: ResMut<CachedData>,
-    mut client_action_event: EventWriter<ClientActionEvent>,
-    mut client_cached_action: ResMut<CachedAction>,
     mut text_buffer: ResMut<TextBuffer>,
     mut game_progress: ResMut<GameProgress>,
 ) {
@@ -254,7 +239,7 @@ fn client_action_handler(
 
     // info!("client flag status: {:?}", turn.0);
 
-    let (client_hp, client_stg, client_def, client_entity, client_element) =
+    let (_client_hp, client_stg, client_def, _client_entity, client_element) =
         client_monster_query.single();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
@@ -318,24 +303,31 @@ fn client_action_handler(
             // client_action_event.send(ClientActionEvent(battle_data.0));
             // client_cached_action.0 = 2;
         } else if input.just_pressed(KeyCode::S) {
-            turn.0 = false; // flip TurnFlag to false
-            let mut action_and_data: Vec<u8> = Vec::new();
-            action_and_data.push(3);
-            action_and_data.push(client_stg.atk as u8);
-            action_and_data.push(client_stg.crt as u8);
-            action_and_data.push(client_def.def as u8);
-            action_and_data.push(*client_element as u8);
-            let msg = Message {
-                action: BattleAction::FinishTurn,
-                payload: action_and_data,
-            };
-            game_client
-                .socket
-                .udp_socket
-                .send(&bincode::serialize(&msg).unwrap());
-
-            // client_action_event.send(ClientActionEvent(battle_data.0));
-            // client_cached_action.0 = 3;
+            if game_progress.spec_moves_left[0] > 0 {
+                turn.0 = false; // flip TurnFlag to false
+                game_progress.spec_moves_left[0] -= 1;
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(3);
+                action_and_data.push(client_stg.atk as u8);
+                action_and_data.push(client_stg.crt as u8);
+                action_and_data.push(client_def.def as u8);
+                action_and_data.push(*client_element as u8);
+                let msg = Message {
+                    action: BattleAction::FinishTurn,
+                    payload: action_and_data,
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+            } else {
+                let text = PooledText {
+                    text: format!("No special moves left."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
         } else if input.just_pressed(KeyCode::Key1) {
             // Heal item usage handler
             // We're gonnna do this kind of hacky
@@ -402,18 +394,14 @@ pub(crate) fn client_end_turn_handler(
     mut commands: Commands,
     // mut action_event: EventReader<ClientActionEvent>,
     mut results_event: EventReader<TurnResultEvent>,
-    mut client_cached_action: ResMut<CachedAction>,
-    mut battle_data: ResMut<CachedData>,
     mut client_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (With<SelectedMonster>),
+        With<SelectedMonster>,
     >,
     mut enemy_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (Without<SelectedMonster>, With<SelectedEnemyMonster>),
     >,
-    game_client: Res<GameClient>,
-    type_system: Res<TypeSystem>,
     mut text_buffer: ResMut<TextBuffer>,
 ) {
     let mut wrapped_data: Option<(isize, isize)> = None;
@@ -431,10 +419,10 @@ pub(crate) fn client_end_turn_handler(
     info!("Damage dealt to us: {}", data.0);
     info!("Damage dealt to them: {}", data.1);
 
-    let (mut client_hp, client_stg, client_def, client_entity, client_element) =
+    let (mut client_hp, _client_stg, _client_def, _client_entity, _client_element) =
         client_monster_query.single_mut();
 
-    let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
+    let (mut enemy_hp, _enemy_stg, _enemy_def, _enemy_entity, _enemy_element) =
         enemy_monster_query.single_mut();
 
     client_hp.health -= data.0;
@@ -525,7 +513,7 @@ fn host_action_handler(
 
     // info!("Host flag status: {:?}", turn.0);
 
-    let (mut host_hp, host_stg, host_def, host_entity, host_element) = host_monster_query.single_mut();
+    let (_host_hp, host_stg, host_def, _host_entity, host_element) = host_monster_query.single_mut();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
     if turn.0 == true {
@@ -610,31 +598,41 @@ fn host_action_handler(
 
             host_cached_action.0 = 2;
         } else if input.just_pressed(KeyCode::S) {
-            turn.0 = false; // flip TurnFlag to false
-            let mut action_and_data: Vec<u8> = Vec::new();
-            action_and_data.push(3);
-            action_and_data.push(host_stg.atk as u8);
-            action_and_data.push(host_stg.crt as u8);
-            action_and_data.push(host_def.def as u8);
-            action_and_data.push(*host_element as u8);
-            let msg = Message {
-                action: BattleAction::StartTurn,
-                payload: action_and_data,
-            };
-            game_client
-                .socket
-                .udp_socket
-                .send(&bincode::serialize(&msg).unwrap());
-
-            battle_data.0 = BattleData {
-                act: 3,
-                atk: host_stg.atk as u8,
-                crt: host_stg.crt as u8,
-                def: host_def.def as u8,
-                ele: *host_element as u8,
-            }; //cache data
-
-            host_cached_action.0 = 3;
+            if game_progress.spec_moves_left[0] > 0 {
+                turn.0 = false; // flip TurnFlag to false
+                game_progress.spec_moves_left[0] -= 1;
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(3);
+                action_and_data.push(host_stg.atk as u8);
+                action_and_data.push(host_stg.crt as u8);
+                action_and_data.push(host_def.def as u8);
+                action_and_data.push(*host_element as u8);
+                let msg = Message {
+                    action: BattleAction::StartTurn,
+                    payload: action_and_data,
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+    
+                battle_data.0 = BattleData {
+                    act: 3,
+                    atk: host_stg.atk as u8,
+                    crt: host_stg.crt as u8,
+                    def: host_def.def as u8,
+                    ele: *host_element as u8,
+                }; //cache data
+    
+                host_cached_action.0 = 3;
+            } else {
+                let text = PooledText {
+                    text: format!("No special moves left."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
         } else if input.just_pressed(KeyCode::Key1) {
             // Heal item usage handler
             // We're gonnna do this kind of hacky
@@ -711,7 +709,6 @@ fn host_action_handler(
 pub(crate) fn host_end_turn_handler(
     mut commands: Commands,
     mut action_event: EventReader<HostActionEvent>,
-    mut turn: ResMut<TurnFlag>,
     mut host_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (With<SelectedMonster>),
@@ -723,7 +720,6 @@ pub(crate) fn host_end_turn_handler(
     game_client: Res<GameClient>,
     type_system: Res<TypeSystem>,
     cached_host_action: Res<CachedAction>,
-    mut battle_data: ResMut<CachedData>,
     mut text_buffer: ResMut<TextBuffer>,
 ) {
     let mut wrapped_data: Option<BattleData> = None;
@@ -739,10 +735,10 @@ pub(crate) fn host_end_turn_handler(
 
     let data = wrapped_data.unwrap();
 
-    let (mut host_hp, host_stg, host_def, host_entity, host_element) =
+    let (mut host_hp, host_stg, host_def, _host_entity, host_element) =
         host_monster_query.single_mut();
 
-    let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
+    let (mut enemy_hp, _enemy_stg, _enemy_def, _enemy_entity, _enemy_element) =
         enemy_monster_query.single_mut();
 
     let mut turn_result = mult_calculate_turn(
@@ -861,6 +857,7 @@ pub(crate) fn setup_mult_battle(
     // Give ourselves items
     game_progress.player_inventory[0] = 2;
     game_progress.player_inventory[1] = 2;
+    game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
 
     commands
         .spawn_bundle(SpriteBundle {
@@ -887,7 +884,6 @@ pub(crate) fn setup_mult_battle(
 pub(crate) fn setup_mult_battle_stats(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    game_client: Res<GameClient>,
 ) {
     commands
         .spawn_bundle(
@@ -1074,11 +1070,11 @@ pub(crate) fn spawn_mult_enemy_monster(
 
 fn despawn_mult_battle(
     mut commands: Commands,
-    camera_query: Query<Entity, With<MultCamera>>,
     background_query: Query<Entity, With<MultBattleBackground>>,
     monster_query: Query<Entity, With<MultMonster>>,
     mult_battle_ui_element_query: Query<Entity, With<MultBattleUIElement>>,
     selected_monster_query: Query<Entity, (With<SelectedMonster>)>,
+    mut game_progress: ResMut<GameProgress>,
 ) {
     if background_query.is_empty() {
         error!("background is not here!");
@@ -1101,6 +1097,10 @@ fn despawn_mult_battle(
     });
 
     selected_monster_query.for_each(|monster| commands.entity(monster).despawn_recursive());
+
+    game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
+    game_progress.player_inventory[0] = 0;
+    game_progress.player_inventory[1] = 0;
 }
 
 /// Calculate effects of the current combined turn.
