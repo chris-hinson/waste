@@ -1248,6 +1248,12 @@ pub(crate) fn key_press_handler(
                         .insert(SelectedMonster);
                 }
             }
+        } else {
+            let text = PooledText {
+                text: format!("No heal items to use."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
         }
     } else if input.just_pressed(KeyCode::Key2) {
         // USE STRENGTH BUFF HANDLER
@@ -1262,70 +1268,76 @@ pub(crate) fn key_press_handler(
             game_progress.player_inventory[1] -= 1;
             // Make it so we have turns left of this buff
             game_progress.turns_left_of_buff[0] = 5;
-        }
 
-        // Enemy reaction
-        let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+            // Enemy reaction
+            let mut enemy_action = rand::thread_rng().gen_range(0..=3);
 
-        // Enemy cannot special if it is out of special moves
-        if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
-            enemy_action = rand::thread_rng().gen_range(0..=2);
-        }
-
-        let enemy_act_string = if enemy_action == 0 {
-            format!("Enemy attacks!")
-        } else if enemy_action == 1 {
-            format!("Enemy defends!")
-        } else if enemy_action == 2 {
-            format!("Enemy elemental!")
-        } else {
-            game_progress.spec_moves_left[1] -= 1;
-            format!("Enemy special!")
-        };
-        let text = PooledText {
-            text: format!("{}", enemy_act_string),
-            pooled: false,
-        };
-        text_buffer.bottom_text.push_back(text);
-
-        let turn_result = calculate_turn(
-            &player_stg,
-            &player_def,
-            player_type,
-            0,
-            &enemy_stg,
-            &enemy_def,
-            enemy_type,
-            enemy_action,
-            *type_system,
-        );
-
-        player_health.health -= turn_result.1;
-        if player_health.health <= 0 {
-            game_progress.num_living_monsters -= 1;
-            let next_monster = game_progress.next_monster_cyclic(player_entity);
-            if next_monster.is_none() {
-                let text = PooledText {
-                    text: format!("Defeated."),
-                    pooled: false,
-                };
-                text_buffer.bottom_text.push_back(text);
-                end_battle!(commands, game_progress, player_entity, enemy_entity);
-            } else {
-                let text = PooledText {
-                    text: format!("Monster defeated. Switching."),
-                    pooled: false,
-                };
-                text_buffer.bottom_text.push_back(text);
-                switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
-                commands.entity(player_entity).remove::<SelectedMonster>();
-                commands
-                    .entity(player_entity)
-                    .remove_bundle::<SpriteBundle>();
-                commands
-                    .entity(*next_monster.unwrap())
-                    .insert(SelectedMonster);
+            // Enemy cannot special if it is out of special moves
+            if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
+                enemy_action = rand::thread_rng().gen_range(0..=2);
             }
+
+            let enemy_act_string = if enemy_action == 0 {
+                format!("Enemy attacks!")
+            } else if enemy_action == 1 {
+                format!("Enemy defends!")
+            } else if enemy_action == 2 {
+                format!("Enemy elemental!")
+            } else {
+                game_progress.spec_moves_left[1] -= 1;
+                format!("Enemy special!")
+            };
+            let text = PooledText {
+                text: format!("{}", enemy_act_string),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+
+            let turn_result = calculate_turn(
+                &player_stg,
+                &player_def,
+                player_type,
+                0,
+                &enemy_stg,
+                &enemy_def,
+                enemy_type,
+                enemy_action,
+                *type_system,
+            );
+
+            player_health.health -= turn_result.1;
+            if player_health.health <= 0 {
+                game_progress.num_living_monsters -= 1;
+                let next_monster = game_progress.next_monster_cyclic(player_entity);
+                if next_monster.is_none() {
+                    let text = PooledText {
+                        text: format!("Defeated."),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    end_battle!(commands, game_progress, player_entity, enemy_entity);
+                } else {
+                    let text = PooledText {
+                        text: format!("Monster defeated. Switching."),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                    switch_event.send(SwitchMonsterEvent(*next_monster.unwrap()));
+                    commands.entity(player_entity).remove::<SelectedMonster>();
+                    commands
+                        .entity(player_entity)
+                        .remove_bundle::<SpriteBundle>();
+                    commands
+                        .entity(*next_monster.unwrap())
+                        .insert(SelectedMonster);
+                }
+            }
+        } else {
+            let text = PooledText {
+                text: format!("No buff items to use."),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
         }
     }
 }

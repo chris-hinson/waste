@@ -373,6 +373,48 @@ fn client_action_handler(
                 text_buffer.bottom_text.push_back(text); 
                 // Does not waste turn
             }
+        } else if input.just_pressed(KeyCode::Key2) {
+            // Client strength buff handler
+            if game_progress.player_inventory[1] > 0 { 
+                // Add heal amount to us
+                // Update health
+                turn.0 = false; // flip our flop
+
+                // Consume the buff item
+                game_progress.player_inventory[1] -= 1;
+                game_progress.turns_left_of_buff[0] = 3;
+
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(5); // use buff item
+                action_and_data.push(client_stg.atk as u8);
+                action_and_data.push(client_stg.crt as u8);
+                action_and_data.push(client_def.def as u8);
+                action_and_data.push(*client_element as u8);
+
+                let msg = Message {
+                    action: BattleAction::StartTurn,
+                    payload: action_and_data,
+                };
+
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+
+                // Output
+                let text = PooledText {
+                    text: format!("Used buff item. {} remaining", game_progress.player_inventory[1]),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+            } else {
+                let text = PooledText {
+                    text: format!("No buff items to use."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
         } else if input.just_pressed(KeyCode::Q) {
             // Quit battle
             let msg = Message {
@@ -513,7 +555,7 @@ fn host_action_handler(
 
     // info!("Host flag status: {:?}", turn.0);
 
-    let (_host_hp, host_stg, host_def, _host_entity, host_element) = host_monster_query.single_mut();
+    let (_host_hp, mut host_stg, host_def, _host_entity, host_element) = host_monster_query.single_mut();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
     if turn.0 == true {
@@ -673,8 +715,6 @@ fn host_action_handler(
                 // classic double cache moment!!
                 host_cached_action.0 = 4;
                 
-                // Consume the heal item
-                game_progress.player_inventory[0] -= 1;
                 // Output
                 let text = PooledText {
                     text: format!("Used heal item. {} remaining", game_progress.player_inventory[0]),
@@ -684,6 +724,58 @@ fn host_action_handler(
             } else {
                 let text = PooledText {
                     text: format!("No heal items to use."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
+        } else if input.just_pressed(KeyCode::Key2) {
+            // Host strength buff handler
+            if game_progress.player_inventory[1] > 0 { 
+                // Add heal amount to us
+                // Update health
+                turn.0 = false; // flip our flop
+
+                // Consume the buff item
+                game_progress.player_inventory[1] -= 1;
+                game_progress.turns_left_of_buff[0] = 3;
+
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(5); // use buff item
+                action_and_data.push(host_stg.atk as u8);
+                action_and_data.push(host_stg.crt as u8);
+                action_and_data.push(host_def.def as u8);
+                action_and_data.push(*host_element as u8);
+
+                let msg = Message {
+                    action: BattleAction::StartTurn,
+                    payload: action_and_data,
+                };
+
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+
+                battle_data.0 = BattleData {
+                    act: 5,
+                    atk: host_stg.atk as u8,
+                    crt: host_stg.crt as u8,
+                    def: host_def.def as u8,
+                    ele: *host_element as u8,
+                }; //cache data
+
+                host_cached_action.0 = 5;
+
+                // Output
+                let text = PooledText {
+                    text: format!("Used buff item. {} remaining", game_progress.player_inventory[1]),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+            } else {
+                let text = PooledText {
+                    text: format!("No buff items to use."),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -721,6 +813,7 @@ pub(crate) fn host_end_turn_handler(
     type_system: Res<TypeSystem>,
     cached_host_action: Res<CachedAction>,
     mut text_buffer: ResMut<TextBuffer>,
+    mut game_progress: ResMut<GameProgress>,
 ) {
     let mut wrapped_data: Option<BattleData> = None;
     for event in action_event.iter() {
@@ -741,13 +834,38 @@ pub(crate) fn host_end_turn_handler(
     let (mut enemy_hp, _enemy_stg, _enemy_def, _enemy_entity, _enemy_element) =
         enemy_monster_query.single_mut();
 
+    
+    
+    // Client buff 
+    if data.act == 5 {
+        game_progress.turns_left_of_buff[1] = 3;
+    }
+    
+    // Check whether host has buff damage
+    let host_atk_modifier = if game_progress.turns_left_of_buff[0] > 0 {
+        info!("Host buffed!");
+        game_progress.turns_left_of_buff[0] -= 1;
+        5
+    } else {
+        0
+    };
+
+    // Check whether client has buff damage
+    let client_atk_modifier = if game_progress.turns_left_of_buff[1] > 0 {
+        info!("Client buffed!");
+        game_progress.turns_left_of_buff[1] -= 1;
+        5
+    } else {
+        0
+    };
+
     let mut turn_result = mult_calculate_turn(
-        host_stg.atk as u8,
+        (host_stg.atk + host_atk_modifier) as u8,
         host_stg.crt as u8,
         host_def.def as u8,
         *host_element as u8,
         cached_host_action.0 as u8,
-        data.atk,
+        (data.atk + client_atk_modifier) as u8,
         data.crt,
         data.def,
         data.ele,
@@ -858,6 +976,7 @@ pub(crate) fn setup_mult_battle(
     game_progress.player_inventory[0] = 2;
     game_progress.player_inventory[1] = 2;
     game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
+    game_progress.turns_left_of_buff[0] = 0;
 
     commands
         .spawn_bundle(SpriteBundle {
@@ -1101,6 +1220,8 @@ fn despawn_mult_battle(
     game_progress.spec_moves_left[0] = SPECIALS_PER_BATTLE;
     game_progress.player_inventory[0] = 0;
     game_progress.player_inventory[1] = 0;
+    game_progress.turns_left_of_buff[0] = 0;
+    game_progress.turns_left_of_buff[1] = 0;
 }
 
 /// Calculate effects of the current combined turn.
@@ -1245,11 +1366,11 @@ fn mult_calculate_turn(
             .trunc() as usize;
     }
 
-    if player_action == 4 {
+    if player_action == 4 || player_action == 5 {
         result.0 = 0_usize;
     }
 
-    if enemy_action == 4 {
+    if enemy_action == 4 || enemy_action == 5 {
         result.1 = 0_usize;
     }
 
