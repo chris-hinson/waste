@@ -6,7 +6,7 @@ use crate::{
 };
 use crate::{
     game_client::{GameClient, PlayerType},
-    monster::{MonsterStats, SelectedMonster, Defense, Level, Moves, Health, Strength},
+    monster::{Defense, Health, Level, MonsterStats, Moves, SelectedMonster, Strength},
     GameState,
 };
 use bevy::prelude::*;
@@ -98,14 +98,14 @@ pub(crate) fn mult_waiting_text(mut commands: Commands, asset_server: Res<AssetS
         .insert(MultWaitText);
 }
 
-fn is_host(game_client: ResMut<GameClient>) -> bool {
+pub(crate) fn is_host(game_client: ResMut<GameClient>) -> bool {
     if game_client.player_type == PlayerType::Host {
         return true;
     }
     false
 }
 
-fn is_client(game_client: ResMut<GameClient>) -> bool {
+pub(crate) fn is_client(game_client: ResMut<GameClient>) -> bool {
     if game_client.player_type == PlayerType::Client {
         return true;
     }
@@ -251,7 +251,22 @@ fn client_listen_for_confirmation(
                         .expect("Client was not able to send message to host");
                     // Give the player a monster in the waiting state so we can send monster info to other player in setup_mult_battle
                     let initial_monster_stats = MonsterStats {
-                        ..Default::default()
+                        typing: rand::random(),
+                        lvl: Level { level: 1 },
+                        hp: Health {
+                            max_health: 100,
+                            health: 100,
+                        },
+                        stg: Strength {
+                            atk: 2,
+                            crt: 25,
+                            crt_dmg: 2,
+                        },
+                        def: Defense {
+                            def: 1,
+                            crt_res: 10,
+                        },
+                        moves: Moves { known: 2 },
                     };
                     commands
                         .spawn()

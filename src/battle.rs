@@ -1330,6 +1330,34 @@ pub(crate) fn key_press_handler(
     }
 }
 
+/// Calculate effects of the current combined turn.
+///
+/// # Usage
+/// With explicit turn ordering, the host will take their turn first, choosing an action ID. The
+/// host will then send this action number to the client and ask them to return their own action ID.
+/// The client will have to send its monster stats to the host as well as the action ID in case of
+/// the use of a buff which modifies strength.
+/// Once the host receives this ID and the stats, it has everything it needs to call this function
+/// and calculate the results of the turn, and get a tuple of the damage for both players. The
+/// host can then send this tuple to the client to update their information, as well as update it
+/// host-side
+///
+/// ## Return Tuple
+/// result.0 will always be applied to host, and result.1 will always be applied to client.
+///
+/// ## Action IDs
+/// 0 - attack
+///
+/// 1 - defend
+///
+/// 2 - elemental
+///
+/// 3 - special
+///
+/// ## Strength Buff Modifiers
+/// This function takes no information to tell it whether or not a buff is applied, and relies on the person with the
+/// buff applied modifying their strength by adding the buff modifier to it and then undoing that after the turn
+/// is calculated.
 fn calculate_turn(
     player_stg: &Strength,
     player_def: &Defense,

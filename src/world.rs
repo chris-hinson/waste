@@ -223,8 +223,20 @@ impl Default for GameProgress {
     }
 }
 
+/// A type system representing modifiers for damage dealt when using elemental attacks.
+///
+/// # Usage
+/// Access the type modifier map via the member `type_modifier: [[f32; 8]; 8]`.
 #[derive(Clone, Copy)]
 pub(crate) struct TypeSystem {
+    /// Modifier map
+    ///
+    /// # Usage
+    /// To get damage multiplier for an attacking type to a victim type, use:
+    /// ```rust
+    /// let modifier = type_modifier[attacking_element as usize][damaged_element as usize];
+    /// ```
+    /// Multiplying this modifier by base damage gives the elemental modified damage.
     pub type_modifier: [[f32; 8]; 8],
 }
 
