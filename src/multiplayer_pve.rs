@@ -2,18 +2,20 @@
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MultCamera;
 use crate::game_client::{
-    self, get_randomized_port, GameClient, PlayerType, ReadyToSpawnEnemy,
+    self, get_randomized_port, GameClient, EnemyMonsterSpawned, PlayerType, ReadyToSpawnEnemy,
     ReadyToSpawnFriend,
 };
 use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
     PartyMonster, SelectedMonster, Strength,
 };
+use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
-    BattleAction, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
+    BattleAction, BattleData, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
     MultEnemyMonster, MultFriendHealth, MultFriendMonster, MultMonster, MultPlayerHealth,
     MultPlayerMonster, SelectedEnemyMonster, SelectedFriendMonster, MULT_BATTLE_BACKGROUND,
 };
+use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::{prelude::*, ui::*};
 use bincode;
@@ -26,27 +28,40 @@ use std::{io, thread};
 
 pub struct MultPvEPlugin;
 
+/// Flag to determine whether this
+#[derive(Clone, Copy)]
+pub(crate) struct TurnFlag(pub(crate) bool);
+
+#[derive(Component, Debug, Default)]
+pub(crate) struct CachedData(BattleData);
+
+#[derive(Component, Debug, Default)]
+pub(crate) struct CachedAction(usize);
+
 impl Plugin for MultPvEPlugin {
     fn build(&self, app: &mut App) {
         app.add_enter_system_set(
             GameState::MultiplayerPvEBattle,
             SystemSet::new()
                 .with_system(setup_mult_battle) // .with_system(send_monster)
-                .with_system(setup_pve_battle_stats),
+                .with_system(setup_pve_battle_stats)
+                .with_system(init_host_turnflag.run_if(is_host))
+                .with_system(init_client_turnflag.run_if(is_client)),
         )
         .add_system_set(
             ConditionSet::new()
                 // Only run handlers on MultiplayerBattle state
                 .run_in_state(GameState::MultiplayerPvEBattle)
                 .with_system(spawn_mult_player_monster)
-                .with_system(
-                    spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>(),
-                )
-                //.with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
+                .with_system(create_boss_monster.run_if(is_host))
+                .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
+                .with_system(spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>())
                 .with_system(mult_key_press_handler)
                 .with_system(recv_packets)
                 .into(),
         )
+        .init_resource::<CachedData>()
+        .init_resource::<CachedAction>()
         .add_exit_system(GameState::MultiplayerPvEBattle, despawn_mult_battle);
     }
 }
@@ -267,7 +282,7 @@ fn convert_num_to_element(num: usize) -> Element {
     }
 }
 
-/// Function to send message to our teammate
+/// (outdated) Function to send message to our teammate 
 pub(crate) fn send_message(message: Message) {
     match message.action {
         BattleAction::Attack => {
@@ -293,6 +308,14 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::FinishTurn => todo!(),
         BattleAction::TurnResult => todo!(),
     }
+}
+
+pub(crate) fn init_host_turnflag(mut commands: Commands) {
+    commands.insert_resource(TurnFlag(true));
+}
+
+pub(crate) fn init_client_turnflag(mut commands: Commands) {
+    commands.insert_resource(TurnFlag(false));
 }
 
 pub(crate) fn mult_key_press_handler(
@@ -324,6 +347,84 @@ pub(crate) fn mult_key_press_handler(
         // ELEMENTAL
         info!("Elemental attack!")
     }
+}
+
+pub(crate) fn create_boss_monster(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    selected_monster_query: Query<(&Element, Entity), (With<SelectedEnemyMonster>)>,
+) {
+    if cameras.is_empty() {
+        error!("No spawned camera...?");
+        return;
+    }
+
+    if selected_monster_query.is_empty() {
+        error!("No selected monster...?");
+        return;
+    }
+
+    let (ct, _) = cameras.single();
+
+    // why doesn't this update
+    let (selected_type, selected_monster) = selected_monster_query.single();
+
+    commands
+        .entity(selected_monster)
+        .remove_bundle::<SpriteBundle>()
+        .insert_bundle(SpriteBundle {
+            sprite: Sprite {
+                flip_y: false, // flips our little buddy, you guessed it, in the y direction
+                flip_x: false,  // guess what this does
+                ..default()
+            },
+            texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
+            transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 5.),
+            ..default()
+        })
+        .insert(MultEnemyMonster)
+        .insert(MultMonster);
+}
+
+pub(crate) fn spawn_mult_enemy_monster(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    selected_monster_query: Query<(&Element, Entity), (With<SelectedEnemyMonster>)>,
+) {
+    if cameras.is_empty() {
+        error!("No spawned camera...?");
+        return;
+    }
+
+    if selected_monster_query.is_empty() {
+        error!("No selected monster...?");
+        return;
+    }
+
+    let (ct, _) = cameras.single();
+
+    let (selected_type, selected_monster) = selected_monster_query.single();
+
+    commands
+        .entity(selected_monster)
+        .remove_bundle::<SpriteBundle>()
+        .insert_bundle(SpriteBundle {
+            sprite: Sprite {
+                flip_y: false, // flips our little buddy, you guessed it, in the y direction
+                flip_x: false, // guess what this does
+                ..default()
+            },
+            texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
+            transform: Transform::from_xyz(ct.translation.x + 400., ct.translation.y - 100., 5.),
+            ..default()
+        })
+        .insert(MultEnemyMonster)
+        .insert(MultMonster);
+
+    commands.remove_resource::<ReadyToSpawnEnemy>();
+    commands.insert_resource(EnemyMonsterSpawned {});
 }
 
 pub(crate) fn spawn_mult_player_monster(
@@ -394,7 +495,7 @@ pub(crate) fn spawn_mult_friend_monster(
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
-            transform: Transform::from_xyz(ct.translation.x - 50., ct.translation.y - 100., 5.),
+            transform: Transform::from_xyz(ct.translation.x - 100., ct.translation.y - 100., 5.),
             ..default()
         })
         .insert(MultFriendMonster)

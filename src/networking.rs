@@ -122,3 +122,6 @@ pub(crate) struct HostActionEvent(pub(crate) BattleData);
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TurnResultEvent(pub(crate) (isize,isize));
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PvETurnResultEvent(pub(crate) (isize,isize,isize));
