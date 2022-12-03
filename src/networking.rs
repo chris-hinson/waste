@@ -12,6 +12,8 @@ pub enum BattleAction {
     Initialize,
     MonsterStats,
     MonsterType,
+    FriendMonsterType,
+    BossMonsterType,
     Attack,
     Defend,
     Heal,
@@ -83,15 +85,24 @@ pub(crate) struct MultMonster;
 pub(crate) struct MultPlayerMonster;
 
 #[derive(Component)]
+pub(crate) struct MultFriendMonster;
+
+#[derive(Component)]
 pub(crate) struct MultEnemyMonster;
 
 #[derive(Component)]
 pub(crate) struct SelectedEnemyMonster;
 
+#[derive(Component)]
+pub(crate) struct SelectedFriendMonster;
+
 // Unit structs to help identify the specific UI components for player's or enemy's monster health/level
 // since there may be many Text components
 #[derive(Component)]
 pub(crate) struct MultPlayerHealth;
+
+#[derive(Component)]
+pub(crate) struct MultFriendHealth;
 
 #[derive(Component)]
 pub(crate) struct MultEnemyHealth;
