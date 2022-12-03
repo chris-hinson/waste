@@ -1,6 +1,15 @@
+// Warn about poor coding practices resulting in massive code bloat
 #![warn(unused)]
-#![warn(unsafe_code)]
+// Deny poor coding practices with quiet negative consequences
+#![deny(unsafe_code)]
 #![deny(unreachable_code)]
+#![deny(while_true)]
+#![deny(where_clauses_object_safety)]
+#![deny(private_in_public)]
+// Deny only by clippy
+#![deny(clippy::empty_loop)]
+#![deny(clippy::while_immutable_condition)]
+#![deny(clippy::self_assignment)]
 use bevy::{prelude::*, window::PresentMode};
 
 use iyes_loopless::prelude::*;
@@ -90,7 +99,6 @@ fn main() {
         .init_resource::<TypeSystem>()
         .init_resource::<ProcGen>()
         .init_resource::<MultiplayerModeSelected>()
-        .add_event::<MonsterTypeEvent>()
         .init_resource::<TextBuffer>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu

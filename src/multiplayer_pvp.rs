@@ -1,8 +1,11 @@
-#![allow(unused)]
-use crate::backgrounds::{Tile, WIN_H, WIN_W};
+// Do not EVER #![allow(unused)], only allow specific unused which are reasonable
+// for our implementation. If variables are unused then this should fire a warning and you
+// should fix it. Do not encourage poor coding practice!
+#![allow(unused_must_use)]
+#![allow(unused_mut)]
 use crate::camera::MultCamera;
 use crate::game_client::{
-    self, get_randomized_port, EnemyMonsterSpawned, GameClient, PlayerType, ReadyToSpawnEnemy,
+    EnemyMonsterSpawned, GameClient, PlayerType, ReadyToSpawnEnemy,
 };
 use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
@@ -12,18 +15,17 @@ use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
     BattleAction, BattleData, ClientActionEvent, HostActionEvent, Message, MonsterTypeEvent,
     MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster, MultMonster,
-    MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster, MULT_BATTLE_BACKGROUND,
+    MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster, MULT_BATTLE_BACKGROUND, TurnResultEvent,
 };
 use crate::world::{PooledText, TextBuffer, TypeSystem};
 use crate::GameState;
-use bevy::{prelude::*, ui::*};
+use bevy::{prelude::*};
 use bincode;
 use iyes_loopless::prelude::*;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, UdpSocket};
-use std::str::from_utf8;
-use std::{io, thread};
+use std::{io};
 
 /// Flag to determine whether this
 #[derive(Clone, Copy)]
@@ -55,6 +57,7 @@ pub(crate) struct TurnFlag(pub(crate) bool);
 //   + Queries ActionCache and uses the client action taken out of the event, both of which were setup prior
 //   + Calculates local updates with `calculate_turn` and the above actions
 //   + Updates stats locally based on result
+//   + Sends a TurnsResult packet containing the calculated turn
 //   + Flips TurnFlag to true
 //
 // Client side:
@@ -66,9 +69,11 @@ pub(crate) struct TurnFlag(pub(crate) bool);
 //     get the action out of the recv_packet system to do turn calculation
 //   + They will be denied by keypress handler if not their turn)
 //   + Sends a BattleAction::FinishTurn with their own action and stats
-//   + Calculates the result with `calculate_turn`
-//   + Updates stats locally based on result
 //   + Flips TurnFlag to false
+// - recv_packet receives BattleAction::TurnResult
+//   + Contains data necessary to apply turn update locally
+//   + Can either directly make these modifications in recv_packet or 
+//     fire a TurnResultEvent and have a client_do_turn_result_handler that handles.
 
 // turn(host): choose action, disable turn, send
 // turn(client): choose action, disable turn, calculate result, send
@@ -99,7 +104,6 @@ impl Plugin for MultPvPPlugin {
                 .with_system(spawn_mult_player_monster)
                 .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(update_mult_battle_stats)
-                // .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
                 .with_system(
                     host_action_handler
                         .run_if_resource_exists::<EnemyMonsterSpawned>()
@@ -129,8 +133,10 @@ impl Plugin for MultPvPPlugin {
         // GameClient resource has not been initialized at this point
         .init_resource::<CachedData>()
         .init_resource::<CachedAction>()
+        .add_event::<MonsterTypeEvent>()
         .add_event::<HostActionEvent>()
         .add_event::<ClientActionEvent>()
+        .add_event::<TurnResultEvent>()
         .add_exit_system(GameState::MultiplayerPvPBattle, despawn_mult_battle);
     }
 }
@@ -148,6 +154,7 @@ pub(crate) fn recv_packets(
     mut commands: Commands,
     mut monster_type_event: EventWriter<MonsterTypeEvent>,
     mut host_action_event: EventWriter<HostActionEvent>,
+    mut turn_result_event: EventWriter<TurnResultEvent>,
     mut player_monster: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
         (With<SelectedMonster>),
@@ -207,6 +214,17 @@ pub(crate) fn recv_packets(
                         def: (payload[3]),
                         ele: (payload[4]),
                     }));
+                } else if action_type == BattleAction::TurnResult {
+
+                    // Only ever happens on the client's side
+                    let payload = deserialized_msg.payload.clone();
+                    let results_tuple = bincode::deserialize::<(isize, isize)>(&payload).expect("could not deserialize turn result");
+
+                    // Have everything we need to do update without even calling calculate turn
+                    turn_result_event.send(TurnResultEvent(results_tuple));
+
+                } else if action_type == BattleAction::Quit {
+                    // Handle quit
                 } else {
                     warn!("Unrecognized action type");
                     break;
@@ -268,8 +286,8 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            client_action_event.send(ClientActionEvent(battle_data.0));
-            client_cached_action.0 = 0;
+            // client_action_event.send(ClientActionEvent(battle_data.0));
+            // client_cached_action.0 = 0;
         }
         if input.just_pressed(KeyCode::D) {
             turn.0 = false; // flip TurnFlag to false
@@ -288,8 +306,8 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            client_action_event.send(ClientActionEvent(battle_data.0));
-            client_cached_action.0 = 1;
+            // client_action_event.send(ClientActionEvent(battle_data.0));
+            // client_cached_action.0 = 1;
         }
         if input.just_pressed(KeyCode::E) {
             turn.0 = false; // flip TurnFlag to false
@@ -308,8 +326,8 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            client_action_event.send(ClientActionEvent(battle_data.0));
-            client_cached_action.0 = 2;
+            // client_action_event.send(ClientActionEvent(battle_data.0));
+            // client_cached_action.0 = 2;
         }
         if input.just_pressed(KeyCode::S) {
             turn.0 = false; // flip TurnFlag to false
@@ -328,15 +346,16 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            client_action_event.send(ClientActionEvent(battle_data.0));
-            client_cached_action.0 = 3;
+            // client_action_event.send(ClientActionEvent(battle_data.0));
+            // client_cached_action.0 = 3;
         }
-    }
+    } // end turn checker
 }
 
 pub(crate) fn client_end_turn_handler(
     mut commands: Commands,
-    mut action_event: EventReader<ClientActionEvent>,
+    // mut action_event: EventReader<ClientActionEvent>,
+    mut results_event: EventReader<TurnResultEvent>,
     mut client_cached_action: ResMut<CachedAction>,
     mut battle_data: ResMut<CachedData>,
     mut client_monster_query: Query<
@@ -351,11 +370,10 @@ pub(crate) fn client_end_turn_handler(
     type_system: Res<TypeSystem>,
     mut text_buffer: ResMut<TextBuffer>,
 ) {
-    let mut wrapped_data: Option<BattleData> = None;
-    for event in action_event.iter() {
-        info!("Got action event");
+    let mut wrapped_data: Option<(isize, isize)> = None;
+    for event in results_event.iter() {
+        info!("Got results event");
         wrapped_data = Some(event.clone().0);
-        info!("Client received data: {:?}", wrapped_data.unwrap());
     }
 
     if wrapped_data.is_none() {
@@ -363,6 +381,9 @@ pub(crate) fn client_end_turn_handler(
     }
 
     let data = wrapped_data.unwrap();
+    
+    info!("Damage dealt to us: {}", data.0);
+    info!("Damage dealt to them: {}", data.1);
 
     let (mut client_hp, client_stg, client_def, client_entity, client_element) =
         client_monster_query.single_mut();
@@ -370,26 +391,10 @@ pub(crate) fn client_end_turn_handler(
     let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
         enemy_monster_query.single_mut();
 
-    let turn_result = mult_calculate_turn(
-        client_stg.atk as u8,
-        client_stg.crt as u8,
-        client_def.def as u8,
-        *client_element as u8,
-        client_cached_action.0 as u8,
-        data.atk,
-        data.crt,
-        data.def,
-        data.ele,
-        data.act,
-        *type_system,
-    );
+    client_hp.health -= data.0;
+    enemy_hp.health -= data.1;
 
-    info!("turn result: {:?}", turn_result);
-
-    client_hp.health -= turn_result.1;
-    enemy_hp.health -= turn_result.0;
-
-    if (client_hp.health <= 0 && enemy_hp.health <= 0) {
+    if client_hp.health <= 0 && enemy_hp.health <= 0 {
         let text = PooledText {
             text: format!("Draw!"),
             pooled: false,
@@ -398,7 +403,7 @@ pub(crate) fn client_end_turn_handler(
         // TODO: Game over, return to main menu
         info!("Draw! Attemping to go to start screen...");
         commands.insert_resource(NextState(GameState::Start));
-    } else if (client_hp.health <= 0) {
+    } else if client_hp.health <= 0 {
         let text = PooledText {
             text: format!("Player 1 (host) won!"),
             pooled: false,
@@ -406,7 +411,7 @@ pub(crate) fn client_end_turn_handler(
         text_buffer.bottom_text.push_back(text);
         info!("Player 1 (host) won!");
         commands.insert_resource(NextState(GameState::Start));
-    } else if (enemy_hp.health <= 0) {
+    } else if enemy_hp.health <= 0 {
         let text = PooledText {
             text: format!("Player 2 (client) won!"),
             pooled: false,
@@ -587,7 +592,7 @@ fn host_action_handler(
 
             host_cached_action.0 = 3;
         }
-    }
+    } // end turn check if statement
 }
 
 pub(crate) fn host_end_turn_handler(
@@ -646,7 +651,7 @@ pub(crate) fn host_end_turn_handler(
     host_hp.health -= turn_result.1;
     enemy_hp.health -= turn_result.0;
 
-    if (host_hp.health <= 0 && enemy_hp.health <= 0) {
+    if host_hp.health <= 0 && enemy_hp.health <= 0 {
         let text = PooledText {
             text: format!("Draw!"),
             pooled: false,
@@ -655,7 +660,7 @@ pub(crate) fn host_end_turn_handler(
         // TODO: Game over, return to main menu
         info!("Draw! Attemping to go to start screen...");
         commands.insert_resource(NextState(GameState::Start));
-    } else if (host_hp.health <= 0) {
+    } else if host_hp.health <= 0 {
         let text = PooledText {
             text: format!("Player 2 (client) won!"),
             pooled: false,
@@ -663,7 +668,7 @@ pub(crate) fn host_end_turn_handler(
         text_buffer.bottom_text.push_back(text);
         info!("Player 2 (client) won!");
         commands.insert_resource(NextState(GameState::Start));
-    } else if (enemy_hp.health <= 0) {
+    } else if enemy_hp.health <= 0 {
         let text = PooledText {
             text: format!("Player 1 (host) won!"),
             pooled: false,
@@ -672,6 +677,27 @@ pub(crate) fn host_end_turn_handler(
         info!("Player 1 (host) won!");
         commands.insert_resource(NextState(GameState::Start));
     }
+
+    // Host is the only person who does calculate, so they need to send that data to the
+    // client now 
+    // let damage_to_client = isize::to_ne_bytes(turn_result.0);
+    // let damage_to_host = isize::to_ne_bytes(turn_result.1);
+    // let wrapped = vec![damage_to_client, damage_to_host];
+    let bytes = bincode::serialize(&turn_result).expect("couldn't serialize turn result");
+
+    // Build packet out of this
+    let message = Message {
+        action: BattleAction::TurnResult,
+        payload: bytes,
+    };
+
+    // Be aware that this double serializes!
+    // recv_packet needs to double deserialize!
+    game_client
+        .socket
+        .udp_socket
+        .send(&bincode::serialize(&message).unwrap());
+
 }
 
 /// Take the type integer received and turn it into an actual Element
@@ -1002,29 +1028,29 @@ fn mult_calculate_turn(
         // if we have damage, we do that much damage
         // I've only implemented crits for now, dodge and element can follow
         result.0 = (player_atk - enemy_def) as usize;
-        // if player_crt > 15 {
-        //     // calculate crit chance and apply crit damage
-        //     let crit_chance = player_crt - 15;
-        //     let crit = rand::thread_rng().gen_range(0..=100);
-        //     if crit <= crit_chance {
-        //         info!("You had a critical strike!");
-        //         result.0 *= 2;
-        //     }
-        // }
+        if player_crt > 15 {
+            // calculate crit chance and apply crit damage
+            let crit_chance = player_crt - 15;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                info!("You had a critical strike!");
+                result.0 *= 2;
+            }
+        }
     }
     // same for enemy
     if enemy_atk <= player_def {
         result.1 = 0;
     } else {
         result.1 = (enemy_atk - player_def) as usize;
-        // if enemy_crt > 15 {
-        //     let crit_chance = enemy_crt - 15;
-        //     let crit = rand::thread_rng().gen_range(0..=100);
-        //     if crit <= crit_chance {
-        //         info!("Enemy had a critical strike!");
-        //         result.1 *= 2;
-        //     }
-        // }
+        if enemy_crt > 15 {
+            let crit_chance = enemy_crt - 15;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                info!("Enemy had a critical strike!");
+                result.1 *= 2;
+            }
+        }
     }
 
     if player_action == 2 {
