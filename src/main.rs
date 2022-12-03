@@ -91,9 +91,6 @@ fn main() {
         .init_resource::<ProcGen>()
         .init_resource::<MultiplayerModeSelected>()
         .add_event::<MonsterTypeEvent>()
-        .add_event::<AttackEvent>()
-        .add_event::<ElementalAttackEvent>()
-        .add_event::<DefendEvent>()
         .init_resource::<TextBuffer>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
