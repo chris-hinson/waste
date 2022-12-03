@@ -39,13 +39,14 @@ impl Plugin for MultPvPPlugin {
                 
                 // Only run handlers on MultiplayerBattle state
                 .run_in_state(GameState::MultiplayerPvPBattle)
-                .with_system(spawn_mult_player_monster)
-                .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
-                .with_system(update_mult_battle_stats)
-                .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
-                .with_system(recv_packets)
+                    .with_system(spawn_mult_player_monster)
+                    .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
+                    .with_system(update_mult_battle_stats)
+                    .with_system(mult_key_press_handler.run_if_resource_exists::<EnemyMonsterSpawned>())
+                    .with_system(recv_packets)
                 .into(),
         )
+            .add_system(handle_monster_type_event)
         .add_exit_system(GameState::MultiplayerPvPBattle, despawn_mult_battle);
     }
 }
@@ -134,7 +135,7 @@ fn handle_monster_type_event(
             .insert(SelectedEnemyMonster);
 
                     commands.insert_resource(ReadyToSpawnEnemy {});
-                }
+    }
             //     else if action_type == BattleAction::Attack {
             //         let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
             //         // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
