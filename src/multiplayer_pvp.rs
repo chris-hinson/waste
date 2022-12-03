@@ -686,6 +686,9 @@ fn host_action_handler(
                 // Update health
                 // host_hp.health = isize::max(host_hp.health+10, host_hp.max_health as isize);
                 turn.0 = false; // flip our flop
+                
+                // Consume the heal item
+                game_progress.player_inventory[0] -= 1;
 
                 let mut action_and_data: Vec<u8> = Vec::new();
                 action_and_data.push(4); // use heal item
