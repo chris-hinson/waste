@@ -1,4 +1,3 @@
-#![allow(clippy::while_immutable_condition)]
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 //use colored::Colorize;

@@ -109,8 +109,3 @@ pub(crate) struct HostActionEvent(pub(crate) BattleData);
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TurnResultEvent(pub(crate) (isize,isize));
-
-/// Resource to say whether the game client hasn't been initialized yet
-#[derive(Default, Clone, Copy, Debug)]
-pub(crate) struct GameClientNotInitialized();
-

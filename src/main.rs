@@ -100,7 +100,6 @@ fn main() {
         .init_resource::<ProcGen>()
         .init_resource::<MultiplayerModeSelected>()
         .init_resource::<TextBuffer>()
-        .init_resource::<GameClientNotInitialized>()
         .add_plugins(DefaultPlugins)
         // Starts game at main menu
         // Initial state should be "loopless"
