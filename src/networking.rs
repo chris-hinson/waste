@@ -19,6 +19,8 @@ pub enum BattleAction {
     StartTurn,
     FinishTurn,
     TurnResult,
+    Initialize,
+    Heal
 }
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
