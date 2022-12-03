@@ -89,6 +89,25 @@ pub(crate) fn recv_packets(
                     let payload = usize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
                     monster_type_event.send(MonsterTypeEvent {message: deserialized_msg.clone() });
                 }
+                else if action_type == BattleAction::Attack {
+                    // let payload = isize::from_ne_bytes(deserialized_msg.payload.clone().try_into().unwrap());
+                    // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+                    // info!("Your new health should be {:#?}", payload);
+
+                    // attack_event.send(AttackEvent {message: deserialized_msg.clone() });
+                    let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
+                    info!("Your new health should be {:#?}", payload);
+
+                    // decrease health of player's monster after incoming attacks
+                    let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
+                    player_monster.single_mut();
+
+                    player_health.health = payload;
+                }
+                else if action_type == BattleAction::Defend {
+                    let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
+                    info!("Payload is {:#?}", payload);
+                }
             }
             Err(err) => {
                 if err.kind() != io::ErrorKind::WouldBlock {
@@ -115,8 +134,8 @@ fn handle_monster_type_event(
             typing: convert_num_to_element(payload),
             lvl: Level { level: 1 },
             hp: Health {
-                max_health: 10,
-                health: 10,
+                max_health: 100,
+                health: 100,
             },
             stg: Strength {
                 atk: 2,
@@ -134,33 +153,31 @@ fn handle_monster_type_event(
             .insert_bundle(enemy_monster_stats)
             .insert(SelectedEnemyMonster);
 
-                    commands.insert_resource(ReadyToSpawnEnemy {});
+        commands.insert_resource(ReadyToSpawnEnemy {});
     }
-            //     else if action_type == BattleAction::Attack {
-            //         let payload = isize::from_ne_bytes(deserialized_msg.payload.try_into().unwrap());
-            //         // let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-            //         info!("Your new health should be {:#?}", payload);
-                    
-            //         // decrease health of player's monster after incoming attacks
-            //         let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
-            //         player_monster.single_mut();
 
-            //         player_health.health = payload;
-            //     }
-            //     else if action_type == BattleAction::Defend {
-            //         let payload = from_utf8(&deserialized_msg.payload).unwrap().to_string();
-            //         info!("Payload is {:#?}", payload);
-            //     }
-            //     else if action_type == BattleAction::Quit {
+}
 
-            //     }
-            // }
-            // Err(err) => {
-            //     if err.kind() != io::ErrorKind::WouldBlock {
-            //         // An ACTUAL error occurred
-            //         error!("{}", err);
-            //     }
+fn handle_attack_event (
+    mut attack_event_reader: EventReader<MonsterTypeEvent>,
+    mut commands: Commands,
+    mut player_monster: Query<
+    (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+    (With<SelectedMonster>)>,
+    mut enemy_monster: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>)>
+) {
+    for ev in attack_event_reader.iter() {
+        info!("{:#?}", ev.message);
+        let payload = isize::from_ne_bytes(ev.message.payload.clone().try_into().unwrap());
 
+        // decrease health of player's monster after incoming attacks
+        let (mut player_health, mut player_stg, player_def, player_entity, player_type) = 
+        player_monster.single_mut();
+
+        player_health.health = payload;
+    }
 }
 
 fn convert_num_to_element(num: usize) -> Element {
