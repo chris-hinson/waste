@@ -17,7 +17,7 @@ use crate::networking::{
     MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster, MultMonster,
     MultPlayerHealth, MultPlayerMonster, SelectedEnemyMonster, MULT_BATTLE_BACKGROUND, TurnResultEvent,
 };
-use crate::world::{PooledText, TextBuffer, TypeSystem};
+use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress};
 use crate::GameState;
 use bevy::{prelude::*};
 use bincode;
@@ -30,18 +30,6 @@ use std::{io};
 /// Flag to determine whether this
 #[derive(Clone, Copy)]
 pub(crate) struct TurnFlag(pub(crate) bool);
-
-// impl FromWorld for TurnFlag {
-//     fn from_world(world: &mut World) -> Self {
-//         let player_type = world
-//             .get_resource::<GameClient>()
-//             .expect("unable to retrieve player type for initialization")
-//             .player_type;
-
-//         // Host gets to go first
-//         Self(player_type == PlayerType::Host)
-//     }
-// }
 
 // Host side:
 // - Pick action 0-3 (based off of host's key_press_handler)
@@ -225,6 +213,8 @@ pub(crate) fn recv_packets(
 
                 } else if action_type == BattleAction::Quit {
                     // Handle quit
+                    info!("Player disconnected...");
+                    commands.insert_resource(NextState(GameState::Start));
                 } else {
                     warn!("Unrecognized action type");
                     break;
@@ -255,6 +245,7 @@ fn client_action_handler(
     mut client_action_event: EventWriter<ClientActionEvent>,
     mut client_cached_action: ResMut<CachedAction>,
     mut text_buffer: ResMut<TextBuffer>,
+    mut game_progress: ResMut<GameProgress>,
 ) {
     if client_monster_query.is_empty() {
         error!("client cannot find monster.");
@@ -288,8 +279,7 @@ fn client_action_handler(
 
             // client_action_event.send(ClientActionEvent(battle_data.0));
             // client_cached_action.0 = 0;
-        }
-        if input.just_pressed(KeyCode::D) {
+        } else if input.just_pressed(KeyCode::D) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(1);
@@ -308,8 +298,7 @@ fn client_action_handler(
 
             // client_action_event.send(ClientActionEvent(battle_data.0));
             // client_cached_action.0 = 1;
-        }
-        if input.just_pressed(KeyCode::E) {
+        } else if input.just_pressed(KeyCode::E) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(2);
@@ -328,8 +317,7 @@ fn client_action_handler(
 
             // client_action_event.send(ClientActionEvent(battle_data.0));
             // client_cached_action.0 = 2;
-        }
-        if input.just_pressed(KeyCode::S) {
+        } else if input.just_pressed(KeyCode::S) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(3);
@@ -348,6 +336,64 @@ fn client_action_handler(
 
             // client_action_event.send(ClientActionEvent(battle_data.0));
             // client_cached_action.0 = 3;
+        } else if input.just_pressed(KeyCode::Key1) {
+            // Heal item usage handler
+            // We're gonnna do this kind of hacky
+            // In order to tell the client that we actually healed we need to pretend like they
+            // dealt damage to us, so if we chose heal when they return their damage we have to subtract our 
+            // heal amount from it
+            if game_progress.player_inventory[0] > 0 { 
+                // Add heal amount to us
+                // Update health
+                // host_hp.health = isize::max(host_hp.health+10, host_hp.max_health as isize);
+
+                turn.0 = false; // flip TurnFlag to false
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(4);
+                action_and_data.push(client_stg.atk as u8);
+                action_and_data.push(client_stg.crt as u8);
+                action_and_data.push(client_def.def as u8);
+                action_and_data.push(*client_element as u8);
+
+                let msg = Message {
+                    action: BattleAction::FinishTurn,
+                    payload: action_and_data,
+                };
+
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+                
+                // Consume the heal item
+                game_progress.player_inventory[0] -= 1;
+                // Output
+                let text = PooledText {
+                    text: format!("Used heal item. {} remaining", game_progress.player_inventory[0]),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+            } else {
+                let text = PooledText {
+                    text: format!("No heal items to use."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
+        } else if input.just_pressed(KeyCode::Q) {
+            // Quit battle
+            let msg = Message {
+                action: BattleAction::Quit,
+                payload: Vec::new(),
+            };
+
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            commands.insert_resource(NextState(GameState::Start));
         }
     } // end turn checker
 }
@@ -467,6 +513,7 @@ fn host_action_handler(
     >,
     mut turn: ResMut<TurnFlag>,
     game_client: Res<GameClient>,
+    mut game_progress: ResMut<GameProgress>,
     mut battle_data: ResMut<CachedData>,
     mut host_cached_action: ResMut<CachedAction>,
     mut text_buffer: ResMut<TextBuffer>,
@@ -478,7 +525,7 @@ fn host_action_handler(
 
     // info!("Host flag status: {:?}", turn.0);
 
-    let (host_hp, host_stg, host_def, host_entity, host_element) = host_monster_query.single();
+    let (mut host_hp, host_stg, host_def, host_entity, host_element) = host_monster_query.single_mut();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
     if turn.0 == true {
@@ -510,8 +557,7 @@ fn host_action_handler(
             }; //cache data
 
             host_cached_action.0 = 0;
-        }
-        if input.just_pressed(KeyCode::D) {
+        } else if input.just_pressed(KeyCode::D) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(1);
@@ -537,8 +583,7 @@ fn host_action_handler(
             }; //cache data
 
             host_cached_action.0 = 1;
-        }
-        if input.just_pressed(KeyCode::E) {
+        } else if input.just_pressed(KeyCode::E) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(2);
@@ -564,8 +609,7 @@ fn host_action_handler(
             }; //cache data
 
             host_cached_action.0 = 2;
-        }
-        if input.just_pressed(KeyCode::S) {
+        } else if input.just_pressed(KeyCode::S) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
             action_and_data.push(3);
@@ -591,6 +635,75 @@ fn host_action_handler(
             }; //cache data
 
             host_cached_action.0 = 3;
+        } else if input.just_pressed(KeyCode::Key1) {
+            // Heal item usage handler
+            // We're gonnna do this kind of hacky
+            // In order to tell the client that we actually healed we need to pretend like they
+            // dealt damage to us, so if we chose heal when they return their damage we have to subtract our 
+            // heal amount from it
+            if game_progress.player_inventory[0] > 0 { 
+                // Add heal amount to us
+                // Update health
+                // host_hp.health = isize::max(host_hp.health+10, host_hp.max_health as isize);
+                turn.0 = false; // flip our flop
+
+                let mut action_and_data: Vec<u8> = Vec::new();
+                action_and_data.push(4); // use heal item
+                action_and_data.push(host_stg.atk as u8);
+                action_and_data.push(host_stg.crt as u8);
+                action_and_data.push(host_def.def as u8);
+                action_and_data.push(*host_element as u8);
+
+                let msg = Message {
+                    action: BattleAction::StartTurn,
+                    payload: action_and_data,
+                };
+
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+
+                battle_data.0 = BattleData {
+                    act: 4, // why double cache hmm?
+                    atk: host_stg.atk as u8,
+                    crt: host_stg.crt as u8,
+                    def: host_def.def as u8,
+                    ele: *host_element as u8,
+                }; //cache data
+
+                // classic double cache moment!!
+                host_cached_action.0 = 4;
+                
+                // Consume the heal item
+                game_progress.player_inventory[0] -= 1;
+                // Output
+                let text = PooledText {
+                    text: format!("Used heal item. {} remaining", game_progress.player_inventory[0]),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+            } else {
+                let text = PooledText {
+                    text: format!("No heal items to use."),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text); 
+                // Does not waste turn
+            }
+        } else if input.just_pressed(KeyCode::Q) {
+            // Quit battle
+            let msg = Message {
+                action: BattleAction::Quit,
+                payload: Vec::new(),
+            };
+
+            game_client
+                .socket
+                .udp_socket
+                .send(&bincode::serialize(&msg).unwrap());
+
+            commands.insert_resource(NextState(GameState::Start));
         }
     } // end turn check if statement
 }
@@ -632,7 +745,7 @@ pub(crate) fn host_end_turn_handler(
     let (mut enemy_hp, enemy_stg, enemy_def, enemy_entity, enemy_element) =
         enemy_monster_query.single_mut();
 
-    let turn_result = mult_calculate_turn(
+    let mut turn_result = mult_calculate_turn(
         host_stg.atk as u8,
         host_stg.crt as u8,
         host_def.def as u8,
@@ -645,6 +758,19 @@ pub(crate) fn host_end_turn_handler(
         data.act,
         *type_system,
     );
+
+    // Check for heals
+    if cached_host_action.0 == 4 {
+        // We healed on this turn
+        let heal_amount = 10 - turn_result.1;
+        turn_result.1 = -heal_amount;
+    }
+
+    // Client heal
+    if data.act == 4 { 
+        let heal_amount = 10 - turn_result.0;
+        turn_result.0 = -heal_amount;
+    }
 
     info!("turn result: {:?}", turn_result);
 
@@ -722,6 +848,7 @@ pub(crate) fn setup_mult_battle(
     cameras: Query<Entity, (With<Camera2d>, Without<MultCamera>)>,
     game_client: Res<GameClient>,
     selected_monster_query: Query<(&Element), (With<SelectedMonster>)>,
+    mut game_progress: ResMut<GameProgress>,
 ) {
     cameras.for_each(|camera| {
         commands.entity(camera).despawn();
@@ -730,6 +857,10 @@ pub(crate) fn setup_mult_battle(
     //creates camera for multiplayer battle background
     let camera = Camera2dBundle::default();
     commands.spawn_bundle(camera).insert(MultCamera);
+
+    // Give ourselves items
+    game_progress.player_inventory[0] = 2;
+    game_progress.player_inventory[1] = 2;
 
     commands
         .spawn_bundle(SpriteBundle {
@@ -993,6 +1124,12 @@ fn despawn_mult_battle(
 /// 2 - elemental
 ///
 /// 3 - special
+/// 
+/// 4 - use heal item
+/// 
+/// 5 - use buff item, I don't think we  need this
+/// 
+/// 255 - no action (used for item usage, which simply updates monster stats)
 ///
 /// ## Strength Buff Modifiers
 /// This function takes no information to tell it whether or not a buff is applied, and relies on the person with the
@@ -1106,6 +1243,14 @@ fn mult_calculate_turn(
         result.1 = (type_system.type_modifier[enemy_type as usize][player_type as usize]
             * result.1 as f32)
             .trunc() as usize;
+    }
+
+    if player_action == 4 {
+        result.0 = 0_usize;
+    }
+
+    if enemy_action == 4 {
+        result.1 = 0_usize;
     }
 
     (result.0 as isize, result.1 as isize)
