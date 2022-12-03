@@ -95,6 +95,8 @@ pub(crate) struct MultBattleUIElement;
 pub(crate) struct MonsterTypeEvent {
     pub(crate) message: Message
 }
-pub(crate) struct AttackEvent(Entity);
+pub(crate) struct AttackEvent {
+    pub(crate) message: Message
+}
 pub(crate) struct ElementalAttackEvent(Entity);
 pub(crate) struct DefendEvent(Entity);
