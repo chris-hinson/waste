@@ -41,33 +41,34 @@ impl FromWorld for TurnFlag {
 }
 
 // Host side:
-// - Starts turn
-// - Pick action 0-3 (based off of keypress)
-// - Send their action choice and stats in a BattleAction::Turn
-// - Await a BattleAction::Turn which will contain the action the client took (0-3) and their stats
+// - Pick action 0-3 (based off of host's key_press_handler)
+//   + Cache this action in a ActionCache(usize)
+// - Send their action choice and stats to client in a BattleAction::StartTurn
+//   + Flip TurnFlag to false
+// - recv_packet receives BattleAction::FinishTurn which will contain the action the client took (0-3) and their stats
+//   + Client stats will be stored via updating local entities
+//   + Client's action will be sent to handler for FinishTurnEvent within the event
 //   + They will be denied by keypress handler if they try to press again when not their turn
-//   + Receiver will flip TurnFlag
-// - Calculate the result with `calculate_turn`
-// - Updates stats locally based on result
+//   + Receiver will fire a FinishTurnEvent
+// - handler function for FinishTurnEvent will run
+//   + Queries ActionCache and uses the client action taken out of the event, both of which were setup prior
+//   + Calculates local updates with `calculate_turn` and the above actions
+//   + Updates stats locally based on result
+//   + Flips TurnFlag to true
 //
 // Client side:
-// - Waits to receive BattleAction::Turn
-//   + This flips TurnFlag
-// - Picks their own action (0-3)
-//    + They will be denied by keypress handler if not their turn)
-// - Sends a BattleAction::Turn with their own action and stats
-// - Calculates the result with `calculate_return`
-// - Updates stats locally based on result
+// - recv_packet receives BattleAction::StartTurn
+//   + Caches action chosen by host in ActionCache(usize)
+//   + This flips TurnFlag to true
+// - Picks their own action (0-3) (with client version of key_press_handler)
+//   + client_key_press_handler needs to query the resource ActionCache(usize) to 
+//     get the action out of the recv_packet system to do turn calculation
+//   + They will be denied by keypress handler if not their turn)
+//   + Sends a BattleAction::FinishTurn with their own action and stats
+//   + Calculates the result with `calculate_turn`
+//   + Updates stats locally based on result
+//   + Flips TurnFlag to false
 
-// turn_action_handler will need to work generally as follows:
-// - Runs when a TurnActionReceivedEvent or similar is fired
-// - Will take the action and stats received from the other player, and do
-//   a calculation of the turn effects locally using `calculate_turn` and then 
-//   update the UI (this will occur naturally once stats are updated)
-
-// recv_packet handler for BattleAction::Turn
-// - Will flip the turn flag, allowing us to now take our turn
-// - Will 
 
 // turn(host): choose action, disable turn, send
 // turn(client): choose action, disable turn, calculate result, send
