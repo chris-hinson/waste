@@ -289,6 +289,9 @@ pub(crate) fn send_message(message: Message) {
         // this is a prank don't todo!
         BattleAction::MonsterType => todo!(),
         BattleAction::Quit => todo!(),
+        BattleAction::StartTurn => todo!(),
+        BattleAction::FinishTurn => todo!(),
+        BattleAction::TurnResult => todo!(),
     }
 }
 
