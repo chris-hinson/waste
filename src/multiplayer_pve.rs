@@ -14,6 +14,7 @@ use crate::networking::{
     BattleAction, BattleData, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
     MultEnemyMonster, MultFriendHealth, MultFriendMonster, MultMonster, MultPlayerHealth,
     MultPlayerMonster, SelectedEnemyMonster, SelectedFriendMonster, MULT_BATTLE_BACKGROUND,
+    ClientActionEvent, HostActionEvent, MonsterTypeEvent, PvETurnResultEvent
 };
 use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress, SPECIALS_PER_BATTLE};
 use crate::GameState;
@@ -57,11 +58,36 @@ impl Plugin for MultPvEPlugin {
                 .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>())
                 .with_system(mult_key_press_handler)
-                .with_system(recv_packets)
+                .with_system(
+                    host_action_handler
+                        .run_if_resource_exists::<EnemyMonsterSpawned>()
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_host),
+                )
+                .with_system(
+                    host_end_turn_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_host),
+                )
+                .with_system(
+                    client_action_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_client),
+                )
+                .with_system(
+                    client_end_turn_handler
+                        .run_if_resource_exists::<TurnFlag>()
+                        .run_if(is_client),
+                )
+                .with_system(recv_packets.run_if_resource_exists::<TurnFlag>())
                 .into(),
         )
         .init_resource::<CachedData>()
         .init_resource::<CachedAction>()
+        .add_event::<MonsterTypeEvent>()
+        .add_event::<HostActionEvent>()
+        .add_event::<ClientActionEvent>()
+        .add_event::<PvETurnResultEvent>()
         .add_exit_system(GameState::MultiplayerPvEBattle, despawn_mult_battle);
     }
 }
@@ -106,17 +132,23 @@ pub(crate) fn setup_mult_battle(
 /// Function to receive messages from our teammate and
 /// either handle them directly or (ideally) fire an event
 /// to trigger a system to handle it.
-pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands) {
+pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands, 
+    mut monster_type_event: EventWriter<MonsterTypeEvent>,
+    mut host_action_event: EventWriter<HostActionEvent>,
+    mut turn_result_event: EventWriter<PvETurnResultEvent>,
+    mut turn: ResMut<TurnFlag>,
+    mut battle_data: ResMut<CachedData>,
+    mut text_buffer: ResMut<TextBuffer>,) {
     loop {
         let mut buf = [0; 512];
         match game_client.socket.udp_socket.recv(&mut buf) {
             Ok(msg) => {
                 info!("from here: {}, {:#?}", msg, &buf[..msg]);
                 let decoded_msg: Message = bincode::deserialize(&buf[..msg]).unwrap();
-                let action_type = decoded_msg.action;
+                let action_type = decoded_msg.action.clone();
                 let payload = usize::from_ne_bytes(decoded_msg.payload.try_into().unwrap());
-                info!("{:#?}", action_type);
-                info!("{:#?}", payload);
+                info!("Action type: {:#?}", action_type);
+                info!("Payload is: {:#?}", payload);
 
                 // Fill in event fires to handle incoming data
                 if action_type == BattleAction::FriendMonsterType {
@@ -145,6 +177,37 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands)
                         .insert(SelectedFriendMonster);
 
                     commands.insert_resource(ReadyToSpawnFriend {});
+                // only called for client
+                } else if action_type == BattleAction::BossMonsterType {
+
+                    let boss_monster_stats = MonsterStats {
+                        typing: convert_num_to_element(payload),
+                        // payload just contains element at the moment
+                        lvl: Level { level: 1 },
+                        hp: Health {
+                            max_health: 10,
+                            health: 10,
+                        },
+                        stg: Strength {
+                            atk: 2,
+                            crt: 25,
+                            crt_dmg: 2,
+                        },
+                        def: Defense {
+                            def: 1,
+                            crt_res: 10,
+                        },
+                        moves: Moves { known: 2 },
+                    };
+                    commands
+                        .spawn()
+                        .insert_bundle(boss_monster_stats)
+                        .insert(SelectedEnemyMonster);
+
+                    commands.insert_resource(ReadyToSpawnEnemy {});
+
+                } else if action_type == BattleAction::PvETurnResult {
+
                 }
             }
             Err(err) => {
@@ -306,6 +369,7 @@ pub(crate) fn send_message(message: Message) {
         BattleAction::Quit => todo!(),
         BattleAction::StartTurn => todo!(),
         BattleAction::FinishTurn => todo!(),
+        BattleAction::PvETurnResult => todo!(),
         BattleAction::TurnResult => todo!(),
     }
 }
@@ -349,11 +413,82 @@ pub(crate) fn mult_key_press_handler(
     }
 }
 
+fn client_action_handler(
+    mut commands: Commands,
+    input: Res<Input<KeyCode>>,
+    mut client_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        With<SelectedMonster>,
+    >,
+    mut turn: ResMut<TurnFlag>,
+    game_client: Res<GameClient>,
+    mut text_buffer: ResMut<TextBuffer>,
+    mut game_progress: ResMut<GameProgress>,
+) {
+
+}
+
+pub(crate) fn client_end_turn_handler(
+    mut commands: Commands,
+    // mut action_event: EventReader<ClientActionEvent>,
+    mut results_event: EventReader<PvETurnResultEvent>,
+    mut client_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        With<SelectedMonster>,
+    >,
+    mut enemy_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
+    >,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+
+}
+
+fn host_action_handler(
+    mut commands: Commands,
+    input: Res<Input<KeyCode>>,
+    mut host_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    mut turn: ResMut<TurnFlag>,
+    game_client: Res<GameClient>,
+    mut game_progress: ResMut<GameProgress>,
+    mut battle_data: ResMut<CachedData>,
+    mut host_cached_action: ResMut<CachedAction>,
+    mut text_buffer: ResMut<TextBuffer>,
+) {
+
+}
+
+pub(crate) fn host_end_turn_handler(
+    mut commands: Commands,
+    mut action_event: EventReader<HostActionEvent>,
+    mut host_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (With<SelectedMonster>),
+    >,
+    mut enemy_monster_query: Query<
+        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
+        (Without<SelectedMonster>, With<SelectedEnemyMonster>),
+    >,
+    game_client: Res<GameClient>,
+    type_system: Res<TypeSystem>,
+    cached_host_action: Res<CachedAction>,
+    mut text_buffer: ResMut<TextBuffer>,
+    mut game_progress: ResMut<GameProgress>,
+) {
+
+}
+
 pub(crate) fn create_boss_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    game_client: Res<GameClient>,
     selected_monster_query: Query<(&Element, Entity), (With<SelectedEnemyMonster>)>,
+    created_before: Query<(&Element, Entity), (With<MultEnemyMonster>)>,
 ) {
     if cameras.is_empty() {
         error!("No spawned camera...?");
@@ -365,9 +500,12 @@ pub(crate) fn create_boss_monster(
         return;
     }
 
+    if (!created_before.is_empty()) {
+        return;
+    }
+
     let (ct, _) = cameras.single();
 
-    // why doesn't this update
     let (selected_type, selected_monster) = selected_monster_query.single();
 
     commands
@@ -385,6 +523,16 @@ pub(crate) fn create_boss_monster(
         })
         .insert(MultEnemyMonster)
         .insert(MultMonster);
+
+        let num_type = *selected_type as usize;
+        let msg = Message {
+            action: BattleAction::BossMonsterType,
+            payload: num_type.to_ne_bytes().to_vec(),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
 }
 
 pub(crate) fn spawn_mult_enemy_monster(
@@ -426,6 +574,8 @@ pub(crate) fn spawn_mult_enemy_monster(
     commands.remove_resource::<ReadyToSpawnEnemy>();
     commands.insert_resource(EnemyMonsterSpawned {});
 }
+
+
 
 pub(crate) fn spawn_mult_player_monster(
     mut commands: Commands,
