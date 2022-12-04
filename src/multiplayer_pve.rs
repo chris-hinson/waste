@@ -177,9 +177,11 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands,
                         .insert(SelectedFriendMonster);
 
                     commands.insert_resource(ReadyToSpawnFriend {});
-                // only called for client
+                
+                } else if action_type == BattleAction::Initialize {
+                    commands.insert_resource(EnemyMonsterSpawned {});                    
                 } else if action_type == BattleAction::BossMonsterType {
-
+                    // only called for client
                     let boss_monster_stats = MonsterStats {
                         typing: convert_num_to_element(payload),
                         // payload just contains element at the moment
@@ -539,6 +541,7 @@ pub(crate) fn spawn_mult_enemy_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     cameras: Query<(&Transform, Entity), (With<MultCamera>)>,
+    game_client: Res<GameClient>,
     selected_monster_query: Query<(&Element, Entity), (With<SelectedEnemyMonster>)>,
 ) {
     if cameras.is_empty() {
@@ -573,9 +576,16 @@ pub(crate) fn spawn_mult_enemy_monster(
 
     commands.remove_resource::<ReadyToSpawnEnemy>();
 
-    // this function should only run for the client, so this is an improper way to start the loop of host/client responses
-    // as a workaround, perhaps send an Event + Message back to the Host
-    commands.insert_resource(EnemyMonsterSpawned {});
+
+    let num_type = *selected_type as usize;
+        let msg = Message {
+            action: BattleAction::Initialize,
+            payload: num_type.to_ne_bytes().to_vec(),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
 }
 
 
