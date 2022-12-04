@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, Entity};
+use bevy::prelude::{Component};
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
@@ -31,14 +31,6 @@ pub struct Message {
     pub action: BattleAction,
     // The data sent itself.
     pub payload: Vec<u8>,
-}
-
-// function for initializing a new Message
-impl Message {
-    /// Creates and returns a new Message.
-    pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
-        Self { action, payload }
-    }
 }
 
 // Shared networking components and data

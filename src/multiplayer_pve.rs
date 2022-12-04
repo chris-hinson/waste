@@ -1,5 +1,11 @@
+// These will be the only warnings we want to suppress at the end of 
+// the day. During development, it is fine to allow(unused), as long as 
+// warnings are fixed before pull to main.
+// #![allow(unused_must_use)]
+// #![allow(unused_mut)]
+// #![allow(unused_parens)]
+// Development warning suppression
 #![allow(unused)]
-use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MultCamera;
 use crate::game_client::{
     self, get_randomized_port, GameClient, EnemyMonsterSpawned, PlayerType, ReadyToSpawnEnemy,
@@ -9,6 +15,7 @@ use crate::monster::{
     get_monster_sprite_for_type, Boss, Defense, Element, Enemy, Health, Level, MonsterStats, Moves,
     PartyMonster, SelectedMonster, Strength,
 };
+use crate::multiplayer_pvp::convert_num_to_element;
 use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
     BattleAction, BattleData, Message, MultBattleBackground, MultBattleUIElement, MultEnemyHealth,
@@ -57,7 +64,6 @@ impl Plugin for MultPvEPlugin {
                 .with_system(create_boss_monster.run_if(is_host))
                 .with_system(spawn_mult_enemy_monster.run_if_resource_exists::<ReadyToSpawnEnemy>())
                 .with_system(spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>())
-                .with_system(mult_key_press_handler)
                 .with_system(
                     host_action_handler
                         .run_if_resource_exists::<EnemyMonsterSpawned>()
@@ -209,9 +215,12 @@ pub(crate) fn recv_packets(game_client: Res<GameClient>, mut commands: Commands,
                     commands.insert_resource(ReadyToSpawnEnemy {});
 
                 } else if action_type == BattleAction::PvETurnResult {
-
+                    // Will likely fire event with enough information for client
+                    // to update their local stats for themselves, their friend, and
+                    // the boss.
                 }
             }
+            // Error handler
             Err(err) => {
                 if err.kind() != io::ErrorKind::WouldBlock {
                     // An ACTUAL error occurred
@@ -333,49 +342,6 @@ pub(crate) fn setup_pve_battle_stats(
         .insert(MultBattleUIElement);
 }
 
-fn convert_num_to_element(num: usize) -> Element {
-    match num {
-        0 => Element::Scav,
-        1 => Element::Growth,
-        2 => Element::Ember,
-        3 => Element::Flood,
-        4 => Element::Rad,
-        5 => Element::Robot,
-        6 => Element::Clean,
-        7 => Element::Filth,
-        _ => std::process::exit(256),
-    }
-}
-
-/// (outdated) Function to send message to our teammate 
-pub(crate) fn send_message(message: Message) {
-    match message.action {
-        BattleAction::Attack => {
-            let payload = message.payload;
-            //info!("{:#?}", from_utf8(&payload).unwrap());
-        }
-        BattleAction::Initialize => todo!(),
-        BattleAction::MonsterStats => todo!(),
-
-        BattleAction::FriendMonsterType => {
-            let payload = message.payload;
-        }
-        BattleAction::BossMonsterType => {
-            let payload = message.payload;
-        }
-        BattleAction::Defend => todo!(),
-        BattleAction::Heal => todo!(),
-        BattleAction::Special => todo!(),
-        // this is a prank don't todo!
-        BattleAction::MonsterType => todo!(),
-        BattleAction::Quit => todo!(),
-        BattleAction::StartTurn => todo!(),
-        BattleAction::FinishTurn => todo!(),
-        BattleAction::PvETurnResult => todo!(),
-        BattleAction::TurnResult => todo!(),
-    }
-}
-
 pub(crate) fn init_host_turnflag(mut commands: Commands) {
     commands.insert_resource(TurnFlag(true));
 }
@@ -384,37 +350,9 @@ pub(crate) fn init_client_turnflag(mut commands: Commands) {
     commands.insert_resource(TurnFlag(false));
 }
 
-pub(crate) fn mult_key_press_handler(
-    input: Res<Input<KeyCode>>,
-    mut commands: Commands,
-    mut my_monster: Query<
-        (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
-        (With<SelectedMonster>),
-    >,
-    asset_server: Res<AssetServer>,
-    game_client: Res<GameClient>,
-) {
-    if input.just_pressed(KeyCode::A) {
-        // ATTACK
-        // info!("Attack!");
-
-        // send_message(Message {
-        //     // destination: (game_client.socket.socket_addr),
-        //     action: (BattleAction::Attack),
-        //     payload: "i attacked the enemy".to_string().into_bytes(),
-        // });
-    } else if input.just_pressed(KeyCode::Q) {
-        // ABORT
-        info!("Quit!")
-    } else if input.just_pressed(KeyCode::D) {
-        // DEFEND
-        info!("Defend!")
-    } else if input.just_pressed(KeyCode::E) {
-        // ELEMENTAL
-        info!("Elemental attack!")
-    }
-}
-
+/// System to handle keypresses (actions) by the client
+/// 
+/// Needs to give the host enough information to do full turn cycle calculation
 fn client_action_handler(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
@@ -430,6 +368,7 @@ fn client_action_handler(
 
 }
 
+/// System to update local stats with data given by host after a turn cycle finishes
 pub(crate) fn client_end_turn_handler(
     mut commands: Commands,
     // mut action_event: EventReader<ClientActionEvent>,
@@ -447,6 +386,10 @@ pub(crate) fn client_end_turn_handler(
 
 }
 
+/// System to handle keypresses (actions) by client
+/// 
+/// This will most likely have to send data back to the client to let them know it is their turn
+/// as well as update some local stats.
 fn host_action_handler(
     mut commands: Commands,
     input: Res<Input<KeyCode>>,
@@ -464,6 +407,15 @@ fn host_action_handler(
 
 }
 
+/// System to finish a turn cycle's handling
+/// 
+/// This might be complex. It needs to potentially wrap all of the actions
+/// taken by both the host and the client up into a finalized result of damage dealt
+/// (or healing experienced) on all three sides, host/client/boss. It should be the 
+/// **ONLY FUNCTION IN A TURN CYCLE** which calls `mult_calculate_turn`, otherwise we
+/// run into critical desync issues. All calculations and RNG is done host side and then the
+/// final results are given back to the client so they can update their game's stats using 
+/// `client_end_turn_handler`.
 pub(crate) fn host_end_turn_handler(
     mut commands: Commands,
     mut action_event: EventReader<HostActionEvent>,
@@ -484,6 +436,7 @@ pub(crate) fn host_end_turn_handler(
 
 }
 
+/// Initialize a boss monster
 pub(crate) fn create_boss_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -514,9 +467,7 @@ pub(crate) fn create_boss_monster(
         .entity(selected_monster)
         .remove_bundle::<SpriteBundle>()
         .insert_bundle(SpriteBundle {
-            sprite: Sprite {
-                flip_y: false, // flips our little buddy, you guessed it, in the y direction
-                flip_x: false,  // guess what this does
+            sprite: Sprite { 
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
@@ -537,6 +488,10 @@ pub(crate) fn create_boss_monster(
             .send(&bincode::serialize(&msg).unwrap());
 }
 
+/// # Deprecated
+/// Delete ASAP
+/// 
+/// System to spawn the enemy monster on screen. Should be handled instead by `create_boss_monster`.
 pub(crate) fn spawn_mult_enemy_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -563,8 +518,6 @@ pub(crate) fn spawn_mult_enemy_monster(
         .remove_bundle::<SpriteBundle>()
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
-                flip_y: false, // flips our little buddy, you guessed it, in the y direction
-                flip_x: false, // guess what this does
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
@@ -589,7 +542,7 @@ pub(crate) fn spawn_mult_enemy_monster(
 }
 
 
-
+/// System to spawn our monster, on both client and host side.
 pub(crate) fn spawn_mult_player_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -616,8 +569,8 @@ pub(crate) fn spawn_mult_player_monster(
         .remove_bundle::<SpriteBundle>()
         .insert_bundle(SpriteBundle {
             sprite: Sprite {
-                flip_y: false, // flips our little buddy, you guessed it, in the y direction
-                flip_x: true,  // guess what this does
+                flip_y: false,
+                flip_x: true, 
                 ..default()
             },
             texture: asset_server.load(&get_monster_sprite_for_type(*selected_type)),
@@ -628,6 +581,7 @@ pub(crate) fn spawn_mult_player_monster(
         .insert(MultMonster);
 }
 
+/// System to spawn our friend's monster, on both client and host side.
 pub(crate) fn spawn_mult_friend_monster(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -667,10 +621,143 @@ pub(crate) fn spawn_mult_friend_monster(
     commands.remove_resource::<ReadyToSpawnFriend>();
 }
 
+/// Despawn all data associated with the battle and reset
+/// anything in game_progress in case player goes to play another singleplayer
+/// or different kind of multiplayer game.
 fn despawn_mult_battle(
     mut commands: Commands,
     // camera_query: Query<Entity,  With<MenuCamera>>,
     // background_query: Query<Entity, With<MultMenuBackground>>,
     // mult_ui_element_query: Query<Entity, With<MultMenuUIElement>>
 ) {
+}
+
+/// # Placeholder
+/// 
+/// ⚠ This function is currently just a placeholder. 
+/// 
+/// Function to calculate the results of a full turn cycle, including the combined damage
+/// by the host AND client, as well as the boss (enemy) and which player the boss chose to attack.
+fn pve_calculate_turn(
+    player_atk: u8,
+    player_crt: u8,
+    player_def: u8,
+    player_type: u8,
+    player_action: u8,
+    enemy_atk: u8,
+    enemy_crt: u8,
+    enemy_def: u8,
+    enemy_type: u8,
+    enemy_action: u8,
+    type_system: TypeSystem,
+) -> (isize, isize, usize) {
+    if player_action == 1 || enemy_action == 1 {
+        // if either side defends this turn will not have any damage on either side
+        return (0, 0, 0);
+    }
+    // More actions can be added later, we can also consider decoupling the actions from the damage
+    let mut result = (
+        0, // Your damage to enemy
+        0, // Enemy's damage to you
+    );
+    // player attacks
+    // If our attack is less than the enemy's defense, we do 0 damage
+    if player_atk <= enemy_def {
+        result.0 = 0;
+    } else {
+        // if we have damage, we do that much damage
+        // I've only implemented crits for now, dodge and element can follow
+        result.0 = (player_atk - enemy_def) as usize;
+        if player_crt > 15 {
+            // calculate crit chance and apply crit damage
+            let crit_chance = player_crt - 15;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                info!("You had a critical strike!");
+                result.0 *= 2;
+            }
+        }
+    }
+    // same for enemy
+    if enemy_atk <= player_def {
+        result.1 = 0;
+    } else {
+        result.1 = (enemy_atk - player_def) as usize;
+        if enemy_crt > 15 {
+            let crit_chance = enemy_crt - 15;
+            let crit = rand::thread_rng().gen_range(0..=100);
+            if crit <= crit_chance {
+                info!("Enemy had a critical strike!");
+                result.1 *= 2;
+            }
+        }
+    }
+
+    if player_action == 2 {
+        // Elemental move
+        result.0 = (type_system.type_modifier[player_type as usize][enemy_type as usize]
+            * result.0 as f32)
+            .trunc() as usize;
+    } else if player_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.0 += pve_calculate_turn(
+            player_atk,
+            player_crt,
+            player_def,
+            player_type,
+            0,
+            enemy_atk,
+            enemy_crt,
+            enemy_def,
+            enemy_type,
+            enemy_action,
+            type_system,
+        )
+        .0 as usize;
+        // Then simulate elemental
+        result.0 = (type_system.type_modifier[player_type as usize][enemy_type as usize]
+            * result.0 as f32)
+            .trunc() as usize;
+    }
+
+    if enemy_action == 2 {
+        result.1 = (type_system.type_modifier[enemy_type as usize][player_type as usize]
+            * result.1 as f32)
+            .trunc() as usize;
+    } else if enemy_action == 3 {
+        // Multi-move
+        // Do an attack first
+        result.1 += pve_calculate_turn(
+            player_atk,
+            player_crt,
+            player_def,
+            player_type,
+            player_action,
+            enemy_atk,
+            enemy_crt,
+            enemy_def,
+            enemy_type,
+            0,
+            type_system,
+        )
+        .1 as usize;
+        // Then simulate elemental
+        result.1 = (type_system.type_modifier[enemy_type as usize][player_type as usize]
+            * result.1 as f32)
+            .trunc() as usize;
+    }
+
+    // Handle heals, buffs, or trades, which don't actually
+    // do any damage, since this function still needs called if 
+    // one player/enemy decides not to deal damage (as the others might have).
+    if player_action == 4 || player_action == 5 {
+        result.0 = 0_usize;
+    }
+
+    if enemy_action == 4 || enemy_action == 5 {
+        result.1 = 0_usize;
+    }
+
+    (result.0 as isize, result.1 as isize, rand::thread_rng().gen_range(0..=1_usize))
 }
