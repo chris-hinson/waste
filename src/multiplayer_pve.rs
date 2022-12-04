@@ -572,6 +572,9 @@ pub(crate) fn spawn_mult_enemy_monster(
         .insert(MultMonster);
 
     commands.remove_resource::<ReadyToSpawnEnemy>();
+
+    // this function should only run for the client, so this is an improper way to start the loop of host/client responses
+    // as a workaround, perhaps send an Event + Message back to the Host
     commands.insert_resource(EnemyMonsterSpawned {});
 }
 
