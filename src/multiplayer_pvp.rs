@@ -431,7 +431,6 @@ fn client_action_handler(
 
 pub(crate) fn client_end_turn_handler(
     mut commands: Commands,
-    // mut action_event: EventReader<ClientActionEvent>,
     mut results_event: EventReader<TurnResultEvent>,
     mut client_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),

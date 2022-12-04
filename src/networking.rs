@@ -20,6 +20,7 @@ pub enum BattleAction {
     FinishTurn,
     TurnResult,
     PvETurnResult,
+    InitializeClient,
     Initialize,
     Heal
 }
