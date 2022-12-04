@@ -169,7 +169,7 @@ impl GameProgress {
     /// Give the player the reward for the first matching quest found
     ///
     /// @param typing: Element of the monster that was defeated
-    pub(crate) fn get_quest_rewards(&mut self, typing: Element) {
+    pub(crate) fn get_quest_rewards(&mut self, typing: Element) -> Option<(usize, usize)> {
         let num_quests = self.quests_active.len();
         for i in 0..num_quests {
             if self.quests_active[i].target == typing {
@@ -183,9 +183,11 @@ impl GameProgress {
                     reward_amount,
                     item_index_to_name(reward)
                 );
-                return;
+                return Some((reward, reward_amount));
             }
         }
+
+        None
     }
 }
 

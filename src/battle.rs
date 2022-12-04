@@ -6,7 +6,7 @@ use crate::monster::{
 };
 use crate::player::Player;
 use crate::quests::*;
-use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
+use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE, item_index_to_name};
 use crate::GameState;
 use bevy::prelude::*;
 use iyes_loopless::prelude::*;
@@ -636,6 +636,22 @@ pub(crate) fn key_press_handler(
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
+        // Critical check
+        if turn_result.2 { 
+            let text = PooledText {
+                text: "You crit!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+        if turn_result.3 {
+            let text = PooledText {
+                text: "Enemy crits!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+
         player_health.health -= turn_result.1;
         enemy_health.health -= turn_result.0;
 
@@ -677,7 +693,16 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 game_progress.win_boss();
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
@@ -707,7 +732,16 @@ pub(crate) fn key_press_handler(
                     .insert(NPC { quest: new_quest });
             } else {
                 game_progress.win_battle();
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 // if not boss level up once
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.3, 1);
@@ -800,6 +834,22 @@ pub(crate) fn key_press_handler(
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
+        // Critical check
+        if turn_result.2 { 
+            let text = PooledText {
+                text: "You crit!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+        if turn_result.3 {
+            let text = PooledText {
+                text: "Enemy crits!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+
         player_health.health -= turn_result.1;
         enemy_health.health -= turn_result.0;
 
@@ -841,7 +891,16 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 game_progress.win_boss();
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
@@ -871,7 +930,16 @@ pub(crate) fn key_press_handler(
                     .insert(NPC { quest: new_quest });
             } else {
                 game_progress.win_battle();
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 // if not boss level up once
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.3, 1);
@@ -978,6 +1046,22 @@ pub(crate) fn key_press_handler(
         // Reset strength for next turn
         player_stg.atk -= str_buff_damage;
 
+        // Critical check
+        if turn_result.2 { 
+            let text = PooledText {
+                text: "You crit!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+        if turn_result.3 {
+            let text = PooledText {
+                text: "Enemy crits!".to_string(),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
+        }
+
         player_health.health -= turn_result.1;
         enemy_health.health -= turn_result.0;
 
@@ -1019,7 +1103,16 @@ pub(crate) fn key_press_handler(
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 game_progress.win_boss();
                 // if boss level up twice
                 for pm in party_monsters.iter_mut() {
@@ -1049,7 +1142,16 @@ pub(crate) fn key_press_handler(
                     .insert(NPC { quest: new_quest });
             } else {
                 game_progress.win_battle();
-                game_progress.get_quest_rewards(*enemy_type);
+                if let Some((reward, reward_amount)) = game_progress.get_quest_rewards(*enemy_type) {
+                    let text = PooledText {
+                        text: format!(
+                            "Quest complete! You obtain {} {} items!",
+                            reward_amount,
+                            item_index_to_name(reward)),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
+                }
                 // if not boss level up once
                 for pm in party_monsters.iter_mut() {
                     monster_level_up!(commands, game_progress, pm.3, 1);
@@ -1221,6 +1323,15 @@ pub(crate) fn key_press_handler(
                 *type_system,
             );
 
+            // Enemy-only critical check
+            if turn_result.3 {
+                let text = PooledText {
+                    text: "Enemy crits!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+            }
+
             player_health.health -= turn_result.1;
             if player_health.health <= 0 {
                 game_progress.num_living_monsters -= 1;
@@ -1305,6 +1416,15 @@ pub(crate) fn key_press_handler(
                 *type_system,
             );
 
+            // Enemy-only critical check
+            if turn_result.3 {
+                let text = PooledText {
+                    text: "Enemy crits!".to_string(),
+                    pooled: false,
+                };
+                text_buffer.bottom_text.push_back(text);
+            }
+
             player_health.health -= turn_result.1;
             if player_health.health <= 0 {
                 game_progress.num_living_monsters -= 1;
@@ -1380,15 +1500,17 @@ fn calculate_turn(
     enemy_type: &Element,
     enemy_action: usize,
     type_system: TypeSystem,
-) -> (isize, isize) {
+) -> (isize, isize, bool, bool) {
     if player_action == 1 || enemy_action == 1 {
         // if either side defends this turn will not have any damage on either side
-        return (0, 0);
+        return (0, 0, false, false);
     }
     // More actions can be added later, we can also consider decoupling the actions from the damage
     let mut result = (
         0, // Your damage to enemy
         0, // Enemy's damage to you
+        false, // Your critical strike
+        false  // Enemy critical strike
     );
     // player attacks
     // If our attack is less than the enemy's defense, we do 0 damage
@@ -1405,6 +1527,7 @@ fn calculate_turn(
             if crit <= crit_chance {
                 info!("You had a critical strike!");
                 result.0 *= player_stg.crt_dmg;
+                result.2 = true;
             }
         }
     }
@@ -1419,6 +1542,7 @@ fn calculate_turn(
             if crit <= crit_chance {
                 info!("Enemy had a critical strike!");
                 result.1 *= enemy_stg.crt_dmg;
+                result.3 = true;
             }
         }
     }
@@ -1474,5 +1598,5 @@ fn calculate_turn(
             .trunc() as usize;
     }
 
-    (result.0 as isize, result.1 as isize)
+    (result.0 as isize, result.1 as isize, result.2, result.3)
 }
