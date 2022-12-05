@@ -173,24 +173,6 @@ pub(crate) fn move_player(
         text_buffer.bottom_text.push_back(text);
     }
 
-    // Teleport
-    if input.just_released(KeyCode::Equals) {
-        warn!("This is a developer command! I hope you know what you're doing! This can cause a panic!!");
-        println!("Enter x, y coordinates separated by a space:");
-        let mut coords: String = String::new();
-        match io::stdin().read_line(&mut coords) {
-            Ok(_) => {
-                let splitted: Vec<&str> = coords.trim().split(" ").collect();
-                pt.translation.x = splitted[0].parse::<f32>().unwrap_or(pt.translation.x);
-                pt.translation.y = splitted[1].parse::<f32>().unwrap_or(pt.translation.y);
-                // pd.current_chunk = rendering_to_logical(pt.translation.x, pt.translation.y);
-            }
-            Err(_e) => {
-                error!("Couldn't read coordinate: {}", _e);
-            }
-        }
-    }
-
     // Get current coords
     if input.just_released(KeyCode::C) {
         info!(
