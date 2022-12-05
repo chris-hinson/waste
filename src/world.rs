@@ -93,7 +93,7 @@ pub(crate) struct GameProgress {
     /// Number of turns remaining with a given buff applied
     /// Strength Buff = 0, Slowness = 1, Blindness = 2
     pub(crate) turns_left_of_buff: Vec<usize>,
-    /// Count of special moves available for player (index 0) and 
+    /// Count of special moves available for player (index 0) and
     /// enemy (index 1)
     /// Reset at the end of every battle to SPECIALS_PER_BATTLE.
     pub(crate) spec_moves_left: Vec<usize>,
@@ -169,7 +169,7 @@ impl GameProgress {
     /// Give the player the reward for the first matching quest found
     ///
     /// @param typing: Element of the monster that was defeated
-    pub(crate) fn get_quest_rewards(&mut self, typing: Element) {
+    pub(crate) fn get_quest_rewards(&mut self, typing: Element) -> Option<(usize, usize)> {
         let num_quests = self.quests_active.len();
         for i in 0..num_quests {
             if self.quests_active[i].target == typing {
@@ -183,9 +183,11 @@ impl GameProgress {
                     reward_amount,
                     item_index_to_name(reward)
                 );
-                return;
+                return Some((reward, reward_amount));
             }
         }
+
+        None
     }
 }
 
@@ -223,8 +225,20 @@ impl Default for GameProgress {
     }
 }
 
+/// A type system representing modifiers for damage dealt when using elemental attacks.
+///
+/// # Usage
+/// Access the type modifier map via the member `type_modifier: [[f32; 8]; 8]`.
 #[derive(Clone, Copy)]
 pub(crate) struct TypeSystem {
+    /// Modifier map
+    ///
+    /// # Usage
+    /// To get damage multiplier for an attacking type to a victim type, use:
+    /// ```rust
+    /// let modifier = type_modifier[attacking_element as usize][damaged_element as usize];
+    /// ```
+    /// Multiplying this modifier by base damage gives the elemental modified damage.
     pub type_modifier: [[f32; 8]; 8],
 }
 

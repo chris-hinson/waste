@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use rand::distributions::{Distribution, Standard};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // Elemental types
 #[derive(Component, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,26 +16,26 @@ pub(crate) enum Element {
 }
 
 // stats, Components used for MonsterBundle
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct Level {
     pub level: usize,
 }
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Experience(u16);
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct Health {
     pub max_health: usize,
     pub health: isize,
 }
 #[derive(Component, Copy, Clone)]
 pub(crate) struct Vitality(u8);
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct Strength {
     pub atk: usize,
     pub crt: usize,
     pub crt_dmg: usize,
 }
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct Defense {
     pub def: usize,
     pub crt_res: usize,
@@ -50,7 +50,7 @@ pub(crate) struct Speed {
 pub(crate) struct Actions(u8);
 // to keep track of Known Moves a monster has (1-4, has to know 1)
 // also used to keep track of the move in a turn
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct Moves {
     // known is the number of moves a monster knows
     pub known: usize,
@@ -68,7 +68,7 @@ pub(crate) struct Enemy;
 pub(crate) struct Boss;
 
 // bundle stores all relevant compnents of monsters
-#[derive(Bundle, Component, Copy, Clone)]
+#[derive(Bundle, Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct MonsterStats {
     // we need a &str that is texture of our monster
     // might need name as well
@@ -126,7 +126,19 @@ pub(crate) fn get_monster_sprite_for_type(elm: Element) -> String {
     }
 }
 
-// Need to apparently implement distribution for our
+/// Get the path to a monster sprite for a monster of a given element
+pub(crate) fn get_number_from_type(elm: Element) -> usize {
+    match elm {
+        Element::Scav => 0,
+        Element::Growth => 1,
+        Element::Ember => 2,
+        Element::Flood => 3,
+        Element::Rad => 4,
+        Element::Robot => 5,
+        Element::Clean => 6,
+        Element::Filth => 7,
+    }
+}
 // elements enum to be able to pick randomly which type we want
 impl Distribution<Element> for Standard {
     /// Randomly sample the element enum

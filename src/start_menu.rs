@@ -1,8 +1,4 @@
 #![allow(unused)]
-use std::fmt::format;
-use std::net::{UdpSocket, Ipv4Addr, SocketAddr, IpAddr};
-use std::sync::mpsc::{Receiver, channel, Sender};
-use local_ip_address::local_ip;
 use crate::backgrounds::{Tile, WIN_H, WIN_W};
 use crate::camera::MenuCamera;
 use crate::game_client::*;
@@ -10,7 +6,11 @@ use crate::player::Player;
 use crate::{battle, GameState};
 use bevy::{prelude::*, ui::*};
 use iyes_loopless::prelude::*;
+use local_ip_address::local_ip;
 use rand::seq::SliceRandom;
+use std::fmt::format;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 const START_MENU_BACKGROUND: &str = "backgrounds/start_screen.png";
 pub(crate) const TEXT_COLOR: Color = Color::rgb(0.9, 0.9, 0.9);
@@ -115,8 +115,8 @@ pub(crate) fn credits_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	//game_client: Res<GameClient>,
-	// game_channel: Res<GameChannel>,
+    //game_client: Res<GameClient>,
+    // game_channel: Res<GameChannel>,
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -127,32 +127,6 @@ pub(crate) fn credits_button_handler(
                 text.sections[0].value = "Credits".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Credits));
-
-                // let c_sx = game_client.udp_channel.sx.clone();
-
-                // // create thread for player's battle communication
-                // std::thread::spawn(move || {
-                // 	let (tx, rx): (Sender<Package>, Receiver<Package>) = std::sync::mpsc::channel();
-
-                // 	let test_pkg = Package::new(String::from("test msg from thread of player"), Some(tx.clone()));
-
-                // 	c_sx.send(test_pkg).unwrap();
-
-                // 	let response_from_game = rx.recv().unwrap();
-                // 	println!("battle thread received confirmation here: {}", response_from_game.message);
-
-                // });
-
-                // let res = game_client.udp_channel.rx.recv().unwrap();
-                // let battle_thread_sx = res.sender.expect("Couldnt find sender");
-                // println!("Game thread got this msg: {}", res.message);
-                // let response_back = Package::new(String::from("game thread got the msg! Just confirming.."), Some(game_client.udp_channel.sx.clone()));
-                // battle_thread_sx.send(response_back);
-
-                // match game_client.udp_channel.rx.try_recv() {
-                // 	Ok(pkg_response) => println!("{:?}", pkg_response.message),
-                // 	Err(e) => println!("try_recv function failed: {e:?}"),
-                // }
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Credits".to_string();
@@ -173,7 +147,6 @@ pub(crate) fn multiplayer_button_handler(
     >,
     mut text_query: Query<&mut Text>,
     mut commands: Commands,
-	//mut game_client: ResMut<GameClient>
 ) {
     for (interaction, mut color, children) in &mut interaction_query {
         let mut text = text_query
@@ -184,7 +157,6 @@ pub(crate) fn multiplayer_button_handler(
                 text.sections[0].value = "Multiplayer".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::MultiplayerMenu));
-
             }
             Interaction::Hovered => {
                 text.sections[0].value = "Multiplayer".to_string();
@@ -245,18 +217,23 @@ fn setup_menu(
     // Get an address to bind socket to
     // ::bind() creates a new socket bound to the address, and a NEW BINDING
     // CANNOT BE MADE to the same addr:port thereafter
-    let socket_addr = get_addr();
-    println!("Socket address: {}", socket_addr);
-    let udp_socket = UdpSocket::bind(socket_addr).unwrap();
+    let socket_addresses = get_addr();
+    println!("Choosing socket address from: {:?}", socket_addresses);
+    let udp_socket = UdpSocket::bind(&socket_addresses[..]).unwrap();
+    let socket_addr = udp_socket
+        .local_addr()
+        .expect("Couldn't retrieve local address from socket.");
     // Set our UDP socket not to block since we need to run in frame-by-frame systems
     udp_socket.set_nonblocking(true).unwrap();
-	info!("Successfully bound host to {}", socket_addr);
-    
+    info!("Successfully bound socket to {}", socket_addr);
 
     commands.insert_resource(GameClient {
         // Pass socket info over since we will need to pass the socket
         // around listener/sender systems frequently
-        socket: SocketInfo { socket_addr, udp_socket },
+        socket: SocketInfo {
+            socket_addr,
+            udp_socket,
+        },
         // Default initialize player to client type
         player_type: crate::game_client::PlayerType::Client,
     });
@@ -278,7 +255,7 @@ fn setup_menu(
         })
         .insert(MainMenuBackground);
 
-        commands
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(300.0), Val::Px(65.0)),
@@ -288,8 +265,8 @@ fn setup_menu(
                 justify_content: JustifyContent::Center,
                 // vertically center child text
                 align_items: AlignItems::Center,
-            ..default()
-        },
+                ..default()
+            },
             color: NORMAL_BUTTON.into(),
             ..default()
         })
@@ -305,9 +282,9 @@ fn setup_menu(
         })
         .insert(StartButton)
         .insert(StartMenuUIElement);
-    
-        // MULTIPLAYER BUTTON
-        commands
+
+    // MULTIPLAYER BUTTON
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(325.0), Val::Px(65.0)),
@@ -340,9 +317,9 @@ fn setup_menu(
         })
         .insert(MultiplayerButton)
         .insert(StartMenuUIElement);
-    
-        // CREDITS BUTTON
-        commands
+
+    // CREDITS BUTTON
+    commands
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(225.0), Val::Px(65.0)),

@@ -1,4 +1,3 @@
-use bevy::prelude::warn;
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 //use colored::Colorize;
@@ -210,7 +209,7 @@ pub(crate) fn wfc(
             // board is in a collapsable state or if no valid option is available here.
             // This is the core part of WFC. Collapse will modify board to
             // be in a collapsed state, if possible.
-            let mut attempts = 0usize;
+            let attempts = 0usize;
             while attempts < MAX_REPICK_ATTEMPTS {
                 let solvable = board.collapse(
                     // This choose function picks the tile on the board with the least entropy
@@ -230,11 +229,11 @@ pub(crate) fn wfc(
                     break;
                 }
 
-                attempts += 1;
-                warn!(
-                    "WFC could not collapse. Retrying, attempt {}.",
-                    attempts + 1
-                );
+                // attempts += 1;
+                // warn!(
+                //     "WFC could not collapse. Retrying, attempt {}.",
+                //     attempts + 1
+                // );
             }
 
             // Put the board contents into the result

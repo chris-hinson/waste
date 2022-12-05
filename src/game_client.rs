@@ -1,10 +1,7 @@
-use std::fmt;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use rand::seq::SliceRandom;
+use std::net::{SocketAddr, UdpSocket};
 
-const SIZE: usize = 50;
-
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub(crate) enum PlayerType {
     Host,
     Client,
@@ -27,34 +24,52 @@ pub(crate) struct ClientMarker {}
 pub(crate) struct HostMarker {}
 pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
-
 pub(crate) struct ReadyToSpawnEnemy {}
+pub(crate) struct ReadyToSpawnFriend {}
 
-#[derive(Debug)]
-pub(crate) struct Package {
-    pub(crate) message: String,
-}
+pub(crate) struct EnemyMonsterSpawned {}
 
-impl Package {
-    pub(crate) fn new(message: String) -> Self {
-        Package { message }
-    }
-}
+// #[derive(Debug)]
+// pub(crate) struct Package {
+//     pub(crate) message: String,
+// }
 
-impl fmt::Display for Package {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
+// impl Package {
+//     pub(crate) fn new(message: String) -> Self {
+//         Package { message }
+//     }
+// }
+
+// impl fmt::Display for Package {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "{}", self.message)
+//     }
+// }
 
 /// Choose a random port of the known, normally open UDP ports
 pub(crate) fn get_randomized_port() -> i32 {
-    let port_list = vec![9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
+    let port_list = vec![
+        9800, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090,
+    ];
     *port_list.choose(&mut rand::thread_rng()).unwrap()
 }
 
-pub(crate) fn get_addr() -> SocketAddr {
-    let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-    let socket_addr = SocketAddr::new(ip_addr, get_randomized_port() as u16);
-    socket_addr
+/// Get the local address to bind a socket to
+pub(crate) fn get_addr() -> Vec<SocketAddr> {
+    // let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    // let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
+    // socket_addr
+    vec![
+        SocketAddr::from(([127, 0, 0, 1], 9800)),
+        SocketAddr::from(([127, 0, 0, 1], 8081)),
+        SocketAddr::from(([127, 0, 0, 1], 8082)),
+        SocketAddr::from(([127, 0, 0, 1], 8083)),
+        SocketAddr::from(([127, 0, 0, 1], 8084)),
+        SocketAddr::from(([127, 0, 0, 1], 8085)),
+        SocketAddr::from(([127, 0, 0, 1], 8086)),
+        SocketAddr::from(([127, 0, 0, 1], 8087)),
+        SocketAddr::from(([127, 0, 0, 1], 8088)),
+        SocketAddr::from(([127, 0, 0, 1], 8089)),
+        SocketAddr::from(([127, 0, 0, 1], 8090)),
+    ]
 }
