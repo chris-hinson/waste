@@ -262,6 +262,11 @@ pub(crate) fn recv_packets(
                     commands.insert_resource(ReadyToSpawnEnemy {});
                 } else if action_type == BattleAction::StartTurn {
                     turn.0 = true;
+                    let text = PooledText {
+                        text: format!("Your turn!"),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
                 } else if action_type == BattleAction::FinishTurn {
                     let client_action = decoded_msg.payload[0];
                     host_action_event.send(HostActionEvent(BattleData {
@@ -271,6 +276,11 @@ pub(crate) fn recv_packets(
                         def: 0,
                         ele: 0,
                     }));
+                    let text = PooledText {
+                        text: format!("Your turn!"),
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
                 } else if action_type == BattleAction::PvETurnResult {
                     // Will likely fire event with enough information for client
                     // to update their local stats for themselves, their friend, and
@@ -279,6 +289,14 @@ pub(crate) fn recv_packets(
                     let results_tuple = bincode::deserialize::<(isize, isize, isize)>(&payload)
                         .expect("could not deserialize turn result");
                     turn_result_event.send(PvETurnResultEvent(results_tuple));
+                } else if action_type == BattleAction::ChatMessage {
+                    let payload = decoded_msg.payload;
+                    let chat_msg = String::from_utf8_lossy(&payload).into_owned();
+                    let text = PooledText {
+                        text: chat_msg,
+                        pooled: false,
+                    };
+                    text_buffer.bottom_text.push_back(text);
                 }
             }
             // Error handler
@@ -432,6 +450,12 @@ fn client_action_handler(
         if input.just_pressed(KeyCode::A) {
             // flip the turn flag
             turn.0 = false;
+            // display to client
+            let text = PooledText {
+                text: format!("You attack!"),
+                pooled: false,
+            };
+            text_buffer.bottom_text.push_back(text);
             // send startTurn to client
             // no data is needed, just inform the client
             let msg = Message {
@@ -444,6 +468,19 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
         }
+    }
+
+    if input.pressed(KeyCode::C) && input.just_pressed(KeyCode::H) {
+        let chat_message_bytes = format!("Your friend needs a healing item!").into_bytes();
+        let msg = Message {
+            action: BattleAction::ChatMessage,
+            // payload: [0 as u8].to_vec(),
+            payload: chat_message_bytes,
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
     }
 }
 
@@ -562,6 +599,19 @@ fn host_action_handler(
                 .send(&bincode::serialize(&msg).unwrap());
         }
     }
+
+    if input.pressed(KeyCode::C) && input.just_pressed(KeyCode::H) {
+        let chat_message_bytes = format!("Your friend needs a healing item!").into_bytes();
+        let msg = Message {
+            action: BattleAction::ChatMessage,
+            // payload: [0 as u8].to_vec(),
+            payload: chat_message_bytes,
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
+    }
 }
 
 /// System to finish a turn cycle's handling
@@ -641,6 +691,27 @@ pub(crate) fn host_end_turn_handler(
 
     // boss choose action
     let mut enemy_action = rand::thread_rng().gen_range(0..=3);
+
+    let boss_action_message: String = if enemy_action == 0 {
+        format!("Enemy attacks!")
+    } else if enemy_action == 1 {
+        format!("Enemy defends!")
+    } else if enemy_action == 2 {
+        format!("Enemy elemental!")
+    } else {
+        format!("Enemy special")
+    };
+
+    let boss_message_bytes = boss_action_message.into_bytes();
+    let msg = Message {
+        action: BattleAction::ChatMessage,
+        // payload: [0 as u8].to_vec(),
+        payload: boss_message_bytes,
+    };
+    game_client
+        .socket
+        .udp_socket
+        .send(&bincode::serialize(&msg).unwrap());
 
     // Enemy cannot special if it is out of special moves
     if enemy_action == 3 && game_progress.spec_moves_left[1] == 0 {
