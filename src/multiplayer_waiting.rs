@@ -1,8 +1,8 @@
 use crate::camera::MultWaitingCamera;
 use crate::{
     backgrounds::WIN_W,
-    game_client::{HostNotReady, HostReady},
-    networking::{MultiplayerMode, MultiplayerModeSelected},
+    game_client::{HostNotReady, HostReady, ReadyToSpawnEnemy},
+    networking::{MultiplayerMode, MultiplayerModeSelected, SelectedEnemyMonster},
 };
 use crate::{
     game_client::{GameClient, PlayerType},
@@ -201,7 +201,32 @@ fn host_listen_for_confirmation(
                             commands.insert_resource(NextState(GameState::MultiplayerPvPBattle));
                         }
                         MultiplayerMode::PvE => {
-                            commands.insert_resource(NextState(GameState::MultiplayerPvEBattle));
+                            
+                                // increased health for now
+                                let initial_boss_stats = MonsterStats {
+                                    typing: rand::random(),
+                                    lvl: Level { level: 2 },
+                                    hp: Health {
+                                        max_health: 200,
+                                        health: 200,
+                                    },
+                                    stg: Strength {
+                                        atk: 10,
+                                        crt: 25,
+                                        crt_dmg: 2,
+                                    },
+                                    def: Defense {
+                                        def: 1,
+                                        crt_res: 10,
+                                    },
+                                    moves: Moves { known: 2 },
+                                };
+                                commands
+                                    .spawn()
+                                    .insert_bundle(initial_boss_stats)
+                                    .insert(SelectedEnemyMonster);
+
+                            commands.insert_resource(NextState(GameState::MultiplayerPvEBattle));  
                         }
                     }
 

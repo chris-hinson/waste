@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, Entity};
+use bevy::prelude::{Component};
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
@@ -10,6 +10,8 @@ pub struct BattleEvent(pub BattleAction);
 pub enum BattleAction {
     MonsterStats,
     MonsterType,
+    FriendMonsterType,
+    BossMonsterType,
     Attack,
     Defend,
     Special,
@@ -17,6 +19,10 @@ pub enum BattleAction {
     StartTurn,
     FinishTurn,
     TurnResult,
+    PvETurnResult,
+    InitializeClient,
+    Initialize,
+    Heal
 }
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -26,14 +32,6 @@ pub struct Message {
     pub action: BattleAction,
     // The data sent itself.
     pub payload: Vec<u8>,
-}
-
-// function for initializing a new Message
-impl Message {
-    /// Creates and returns a new Message.
-    pub(crate) fn new(action: BattleAction, payload: Vec<u8>) -> Self {
-        Self { action, payload }
-    }
 }
 
 // Shared networking components and data
@@ -73,15 +71,24 @@ pub(crate) struct MultMonster;
 pub(crate) struct MultPlayerMonster;
 
 #[derive(Component)]
+pub(crate) struct MultFriendMonster;
+
+#[derive(Component)]
 pub(crate) struct MultEnemyMonster;
 
 #[derive(Component)]
 pub(crate) struct SelectedEnemyMonster;
 
+#[derive(Component)]
+pub(crate) struct SelectedFriendMonster;
+
 // Unit structs to help identify the specific UI components for player's or enemy's monster health/level
 // since there may be many Text components
 #[derive(Component)]
 pub(crate) struct MultPlayerHealth;
+
+#[derive(Component)]
+pub(crate) struct MultFriendHealth;
 
 #[derive(Component)]
 pub(crate) struct MultEnemyHealth;
@@ -109,3 +116,6 @@ pub(crate) struct HostActionEvent(pub(crate) BattleData);
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TurnResultEvent(pub(crate) (isize,isize));
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PvETurnResultEvent(pub(crate) (isize,isize,isize));

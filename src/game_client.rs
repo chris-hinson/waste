@@ -25,6 +25,7 @@ pub(crate) struct HostMarker {}
 pub(crate) struct HostNotReady {}
 pub(crate) struct HostReady {}
 pub(crate) struct ReadyToSpawnEnemy {}
+pub(crate) struct ReadyToSpawnFriend {}
 
 pub(crate) struct EnemyMonsterSpawned {}
 

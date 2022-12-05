@@ -1,6 +1,3 @@
-// Do not EVER #![allow(unused)], only allow specific unused which are reasonable
-// for our implementation. If variables are unused then this should fire a warning and you
-// should fix it. Do not encourage poor coding practice!
 #![allow(unused_must_use)]
 #![allow(unused_mut)]
 #![allow(unused_parens)]
@@ -434,7 +431,6 @@ fn client_action_handler(
 
 pub(crate) fn client_end_turn_handler(
     mut commands: Commands,
-    // mut action_event: EventReader<ClientActionEvent>,
     mut results_event: EventReader<TurnResultEvent>,
     mut client_monster_query: Query<
         (&mut Health, &mut Strength, &mut Defense, Entity, &Element),
@@ -944,7 +940,7 @@ pub(crate) fn host_end_turn_handler(
 }
 
 /// Take the type integer received and turn it into an actual Element
-fn convert_num_to_element(num: usize) -> Element {
+pub(crate) fn convert_num_to_element(num: usize) -> Element {
     match num {
         0 => Element::Scav,
         1 => Element::Growth,
