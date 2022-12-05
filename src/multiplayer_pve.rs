@@ -129,7 +129,6 @@ impl Plugin for MultPvEPlugin {
         )
         .init_resource::<CachedData>()
         .init_resource::<CachedAction>()
-        .init_resource::<TradingAvailable>()
         .add_event::<MonsterTypeEvent>()
         .add_event::<HostActionEvent>()
         .add_event::<ClientActionEvent>()
@@ -156,6 +155,8 @@ pub(crate) fn setup_mult_battle(
     game_progress.player_inventory[1] = 4;
     game_progress.turns_left_of_buff[0] = 0;
     game_progress.turns_left_of_buff[1] = 0;
+
+    commands.insert_resource(TradingAvailable(true));
 
     //creates camera for multiplayer battle background
     let camera = Camera2dBundle::default();
@@ -1555,7 +1556,7 @@ pub(crate) fn spawn_boss_monster_client(
     }
 
     if selected_monster_query.is_empty() {
-        error!("No selected monster...?");
+        error!("No selected monster in boss spawner...?");
         return;
     }
 
@@ -1600,7 +1601,7 @@ pub(crate) fn spawn_mult_player_monster(
     }
 
     if selected_monster_query.is_empty() {
-        error!("No selected monster...?");
+        error!("No selected monster in player spawner...?");
         return;
     }
 
@@ -1639,7 +1640,7 @@ pub(crate) fn spawn_mult_friend_monster(
     }
 
     if selected_monster_query.is_empty() {
-        error!("No selected monster...?");
+        error!("No selected monster in friend spawner...?");
         return;
     }
 
@@ -1787,6 +1788,9 @@ fn despawn_mult_battle(
     game_progress.player_inventory[1] = 0;
     game_progress.turns_left_of_buff[0] = 0;
     game_progress.turns_left_of_buff[1] = 0;
+
+    commands.remove_resource::<ReadyToSpawnEnemy>();
+    commands.remove_resource::<ReadyToSpawnFriend>();
 }
 
 /// # Placeholder
