@@ -57,7 +57,10 @@ pub(crate) fn logical_to_rendering(x: isize, y: isize) -> (f32, f32) {
     (x as f32 * WIN_W, y as f32 * WIN_H)
 }
 
-#[derive(Clone)]
+pub(crate) fn rendering_to_logical(x: f32, y: f32) -> (isize, isize) {
+    ((x / WIN_W).trunc() as isize, (y / WIN_H).trunc() as isize)
+}
+
 pub(crate) struct GameProgress {
     /// the level of our player, which is also the level we should spawn the monsters
     pub(crate) current_level: usize,
