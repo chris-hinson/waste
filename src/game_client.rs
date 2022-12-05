@@ -1,5 +1,6 @@
 use rand::seq::SliceRandom;
 use std::net::{SocketAddr, UdpSocket};
+use local_ip_address::local_ip;
 
 #[derive(PartialEq, Clone, Copy)]
 pub(crate) enum PlayerType {
@@ -59,17 +60,18 @@ pub(crate) fn get_addr() -> Vec<SocketAddr> {
     // let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
     // let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
     // socket_addr
+    let my_ip_address = local_ip().unwrap();
     vec![
-        SocketAddr::from(([127, 0, 0, 1], 9800)),
-        SocketAddr::from(([127, 0, 0, 1], 8081)),
-        SocketAddr::from(([127, 0, 0, 1], 8082)),
-        SocketAddr::from(([127, 0, 0, 1], 8083)),
-        SocketAddr::from(([127, 0, 0, 1], 8084)),
-        SocketAddr::from(([127, 0, 0, 1], 8085)),
-        SocketAddr::from(([127, 0, 0, 1], 8086)),
-        SocketAddr::from(([127, 0, 0, 1], 8087)),
-        SocketAddr::from(([127, 0, 0, 1], 8088)),
-        SocketAddr::from(([127, 0, 0, 1], 8089)),
-        SocketAddr::from(([127, 0, 0, 1], 8090)),
+        SocketAddr::from((my_ip_address, 9800)),
+        SocketAddr::from((my_ip_address, 8081)),
+        SocketAddr::from((my_ip_address, 8082)),
+        SocketAddr::from((my_ip_address, 8083)),
+        SocketAddr::from((my_ip_address, 8084)),
+        SocketAddr::from((my_ip_address, 8085)),
+        SocketAddr::from((my_ip_address, 8086)),
+        SocketAddr::from((my_ip_address, 8087)),
+        SocketAddr::from((my_ip_address, 8088)),
+        SocketAddr::from((my_ip_address, 8089)),
+        SocketAddr::from((my_ip_address, 8090)),
     ]
 }
