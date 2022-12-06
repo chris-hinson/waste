@@ -1,4 +1,5 @@
 use crate::player::Player;
+use crate::quests::{Quest, NPC, NPC_PATH};
 use crate::wfc::{wfc, ProcGen};
 use crate::world::{logical_to_rendering, WorldMap};
 use bevy::prelude::*;
@@ -143,6 +144,37 @@ pub(crate) fn init_background(
     world.add_to_world(starting_chunk.clone(), entity, 0, 0);
 
     draw_chunk!(starting_chunk, commands, map_atlas_handle);
+
+    // Spawn a few NPCs at fixed locations
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture: asset_server.load(NPC_PATH),
+            transform: Transform::from_xyz(1000., 1000., 0.),
+            ..default()
+        })
+        .insert(NPC {
+            quest: Quest::random(),
+        });
+
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture: asset_server.load(NPC_PATH),
+            transform: Transform::from_xyz(-200., 200., 0.),
+            ..default()
+        })
+        .insert(NPC {
+            quest: Quest::random(),
+        });
+
+    commands
+        .spawn_bundle(SpriteBundle {
+            texture: asset_server.load(NPC_PATH),
+            transform: Transform::from_xyz(-5000., -5000., 0.),
+            ..default()
+        })
+        .insert(NPC {
+            quest: Quest::random(),
+        });
 }
 
 pub(crate) fn expand_map(

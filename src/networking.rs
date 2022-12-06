@@ -1,4 +1,4 @@
-use bevy::prelude::{Component};
+use bevy::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
@@ -22,7 +22,11 @@ pub enum BattleAction {
     PvETurnResult,
     InitializeClient,
     Initialize,
-    Heal
+    Heal,
+    TradeMonster,
+    TradeHeal,
+    TradeBuff,
+    ChatMessage,
 }
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -115,7 +119,15 @@ pub(crate) struct ClientActionEvent(pub(crate) BattleData);
 pub(crate) struct HostActionEvent(pub(crate) BattleData);
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct TurnResultEvent(pub(crate) (isize,isize));
+pub(crate) struct TurnResultEvent(pub(crate) (isize, isize));
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct PvETurnResultEvent(pub(crate) (isize,isize,isize));
+pub(crate) struct PvETurnResultEvent(pub(crate) (isize, isize, isize));
+
+pub(crate) struct TradingAvailable(pub(crate) bool);
+
+impl Default for TradingAvailable {
+    fn default() -> Self {
+        TradingAvailable(true)
+    }
+}

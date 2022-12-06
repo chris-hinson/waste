@@ -389,6 +389,7 @@ pub(crate) fn host_pvp_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
+                info!("Hosting pvp game...");
                 text.sections[0].value = "Host PVP Game".to_string();
                 *color = PRESSED_BUTTON.into();
 
@@ -529,6 +530,7 @@ pub(crate) fn host_pve_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
+                info!("Hosting pve game...");
                 text.sections[0].value = "Host PVE Game".to_string();
                 *color = PRESSED_BUTTON.into();
 

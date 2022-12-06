@@ -1,7 +1,11 @@
+use std::io;
+
 use crate::backgrounds::{ChestTile, HealingTile, MonsterTile, Tile};
 use crate::monster::{Boss, Defense, Enemy, Health, Level, MonsterStats, Strength};
 use crate::quests::NPC;
-use crate::world::{item_index_to_name, GameProgress, PooledText, TextBuffer};
+use crate::world::{
+    item_index_to_name, rendering_to_logical, GameProgress, PooledText, TextBuffer,
+};
 use crate::GameState;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use iyes_loopless::state::NextState;
@@ -79,7 +83,10 @@ pub(crate) fn move_player(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut player: Query<&mut Transform, (With<Player>, Without<Tile>, Without<MonsterTile>)>,
+    mut player: Query<
+        (&mut Player, &mut Transform),
+        (With<Player>, Without<Tile>, Without<MonsterTile>),
+    >,
     monster_tiles: Query<(Entity, &Transform), (With<MonsterTile>, Without<Player>)>,
     healing_tiles: Query<(Entity, &Transform), (With<HealingTile>, Without<Player>)>,
     chest_tiles: Query<(Entity, &Transform), (With<ChestTile>, Without<Player>)>,
@@ -104,7 +111,7 @@ pub(crate) fn move_player(
 
     // PLAYER_MOVEMENT = pixels/second = pixels/frame * frames/second
     let player_movement = PLAYER_SPEED * time.delta_seconds();
-    let mut pt = player.single_mut();
+    let (mut pd, mut pt) = player.single_mut();
 
     let mut x_vel = 0.;
     let mut y_vel = 0.;
@@ -161,6 +168,19 @@ pub(crate) fn move_player(
                 game_progress.num_boss_defeated,
                 game_progress.quests_active.len()
             ),
+            pooled: false,
+        };
+        text_buffer.bottom_text.push_back(text);
+    }
+
+    // Get current coords
+    if input.just_released(KeyCode::C) {
+        info!(
+            "Coords {} {} | Logical coords {} {}",
+            pt.translation.x, pt.translation.y, pd.current_chunk.0, pd.current_chunk.1
+        );
+        let text = PooledText {
+            text: format!("Coords: {} {}", pt.translation.x, pt.translation.y,),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
