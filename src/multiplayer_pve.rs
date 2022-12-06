@@ -1823,7 +1823,7 @@ pub(crate) fn chat(
             let mut chat_msg = string.to_owned();
             info!("Text input: {}", &chat_msg);
             chat_msg.pop();
-            if chat_msg.eq("/mushroom") {
+            if chat_msg.eq("dan") {
                 let msg = Message {
                     action: BattleAction::EasterEggMessage,
                     payload: format!(
@@ -1835,7 +1835,54 @@ pub(crate) fn chat(
                       `.; ~ ~.  OO:
                       .'  ;-- `.o.'
                      ,'  ; ~~--'~
-                     ;  ;"
+                     ;  ;
+                     "
+                    )
+                    .into_bytes(),
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+                string.clear();
+            } else if chat_msg.eq("gavin") {
+                let msg = Message {
+                    action: BattleAction::EasterEggMessage,
+                    payload: format!(
+                        "   
+                          .+------+ 
+                        .' |    .'| 
+                       +---+--+'  | 
+                       |   |  |   | 
+                       |  ,+--+---+ 
+                       |.'    | .' 
+                       +------+'   
+                       "
+                    )
+                    .into_bytes(),
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+                string.clear();
+            } else if chat_msg.eq("chris") {
+                let msg = Message {
+                    action: BattleAction::EasterEggMessage,
+                    payload: format!(
+                        // "
+                        // _______________________________________
+                        // | The Industrial Revolution and its     |
+                        // | consequences have been a disaster for |
+                        // | the human race                        |
+                        //  ---------------------------------------
+                        // "
+                        //     |   ^__^
+                        //     |__ (oo)|_______
+                        //         (__)|       )---
+                        //             ||----w |
+                        //             ||     ||
+                        // "
                     )
                     .into_bytes(),
                 };
