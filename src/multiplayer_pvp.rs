@@ -234,8 +234,6 @@ fn client_action_handler(
         return;
     }
 
-    // info!("client flag status: {:?}", turn.0);
-
     let (_client_hp, client_stg, client_def, _client_entity, client_element) =
         client_monster_query.single();
 
@@ -259,8 +257,6 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            // client_action_event.send(ClientActionEvent(battle_data.0));
-            // client_cached_action.0 = 0;
         } else if input.just_pressed(KeyCode::D) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
@@ -278,8 +274,6 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            // client_action_event.send(ClientActionEvent(battle_data.0));
-            // client_cached_action.0 = 1;
         } else if input.just_pressed(KeyCode::E) {
             turn.0 = false; // flip TurnFlag to false
             let mut action_and_data: Vec<u8> = Vec::new();
@@ -297,8 +291,6 @@ fn client_action_handler(
                 .udp_socket
                 .send(&bincode::serialize(&msg).unwrap());
 
-            // client_action_event.send(ClientActionEvent(battle_data.0));
-            // client_cached_action.0 = 2;
         } else if input.just_pressed(KeyCode::S) {
             if game_progress.spec_moves_left[0] > 0 {
                 turn.0 = false; // flip TurnFlag to false
@@ -548,8 +540,6 @@ fn host_action_handler(
         error!("Host cannot find monster.");
         return;
     }
-
-    // info!("Host flag status: {:?}", turn.0);
 
     let (_host_hp, mut host_stg, host_def, _host_entity, host_element) = host_monster_query.single_mut();
 
@@ -834,7 +824,6 @@ pub(crate) fn host_end_turn_handler(
         enemy_monster_query.single_mut();
 
     
-    
     // Client buff 
     if data.act == 5 {
         game_progress.turns_left_of_buff[1] = 3;
@@ -1009,17 +998,17 @@ pub(crate) fn setup_mult_battle_stats(
             TextBundle::from_sections([
                 // health header for player's monster
                 TextSection::new(
-                    "Health:",
+                    "HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of player's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::BLACK,
                 }),
             ])
@@ -1043,17 +1032,17 @@ pub(crate) fn setup_mult_battle_stats(
             TextBundle::from_sections([
                 // health header for opponent's monster
                 TextSection::new(
-                    "Health:",
+                    "HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of opponent's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::BLACK,
                 }),
             ])

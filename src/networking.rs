@@ -31,7 +31,6 @@ pub enum BattleAction {
 // Message structs represent the data within the message on a larger sense of scale.
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Message {
-    /// The destination to send the message.
     // The action ID to identify what data was sent
     pub action: BattleAction,
     // The data sent itself.

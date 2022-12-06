@@ -272,10 +272,6 @@ pub fn display_text(
     mut text_buffer: ResMut<TextBuffer>,
 ) {
     // take the text buffer and display it on the screen
-    // let text = text_buffer.bottom_middle.pop_front();
-    // if text.is_none() {
-    //     return;
-    // }
     let display_latest = 725.0;
     for i in 0..text_buffer.bottom_text.len() {
         let mut text = text_buffer.bottom_text.get_mut(i);
@@ -291,14 +287,14 @@ pub fn display_text(
                     TextSection::new(
                         text.as_ref().unwrap().text.clone(),
                         TextStyle {
-                            font: asset_server.load("buttons/joystix monospace.ttf"),
-                            font_size: 30.0,
+                            font: asset_server.load("buttons/PressStart2P.ttf"),
+                            font_size: 28.0,
                             color: Color::BLACK,
                         },
                     ),
                     TextSection::from_style(TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 30.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     }),
                 ])

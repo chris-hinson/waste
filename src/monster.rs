@@ -70,8 +70,6 @@ pub(crate) struct Boss;
 // bundle stores all relevant compnents of monsters
 #[derive(Bundle, Component, Copy, Clone, Serialize, Deserialize)]
 pub(crate) struct MonsterStats {
-    // we need a &str that is texture of our monster
-    // might need name as well
     pub(crate) typing: Element,
     pub(crate) lvl: Level,
     pub(crate) hp: Health,

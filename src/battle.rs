@@ -168,17 +168,17 @@ pub(crate) fn setup_battle_stats(
             TextBundle::from_sections([
                 // health header for player's monster
                 TextSection::new(
-                    "Health:",
+                    "HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of player's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::BLACK,
                 }),
             ])
@@ -202,10 +202,10 @@ pub(crate) fn setup_battle_stats(
             TextBundle::from_sections([
                 // level header for player's monster
                 TextSection::new(
-                    "Level:",
+                    "LEVEL:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
@@ -213,8 +213,8 @@ pub(crate) fn setup_battle_stats(
                 TextSection::new(
                     my_lvl.to_string(),
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
@@ -239,17 +239,17 @@ pub(crate) fn setup_battle_stats(
             TextBundle::from_sections([
                 // health header for enemy's monster
                 TextSection::new(
-                    "Health:",
+                    "HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of enemy's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::BLACK,
                 }),
             ])
@@ -274,10 +274,10 @@ pub(crate) fn setup_battle_stats(
             TextBundle::from_sections([
                 // level header for player's monster
                 TextSection::new(
-                    "Level:",
+                    "LEVEL:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),
@@ -285,8 +285,8 @@ pub(crate) fn setup_battle_stats(
                 TextSection::new(
                     enemy_lvl.to_string(),
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 40.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 28.0,
                         color: Color::BLACK,
                     },
                 ),

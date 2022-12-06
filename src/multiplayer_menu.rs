@@ -66,19 +66,6 @@ impl Plugin for MultMenuPlugin {
     }
 }
 
-// fn is_client(game_client: ResMut<GameClient>) -> bool {
-//     if game_client.player_type == PlayerType::Client {
-//         return true;
-//     }
-//     false
-
-// fn client_ready_for_battle(game_client: ResMut<GameClient>) -> bool {
-//     if game_client.player_type == PlayerType::Client && game_client.ready_for_battle == true {
-//         return true;
-//     }
-//     false
-// }
-
 /// System to listen for UDP messages. The socket is non-blocking intentionally,
 /// so this works by running an "infinite" loop that will continually try to fill a
 /// 2048 byte buffer until the OS tells it that recv would block, and then it will exit the loop
@@ -193,10 +180,10 @@ fn setup_mult(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Host PVP Game",
+                "HOST PVP GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -228,10 +215,10 @@ fn setup_mult(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Join PVP Game",
+                "JOIN PVP GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -263,10 +250,10 @@ fn setup_mult(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Host PVE Game",
+                "HOST PVE GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -298,10 +285,10 @@ fn setup_mult(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Join PVE Game",
+                "JOIN PVE GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -317,8 +304,8 @@ pub(crate) fn mult_options(mut commands: Commands, asset_server: Res<AssetServer
             TextBundle::from_section(
                 "Select multiplayer options below.",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::WHITE,
                 },
             ) // Set the alignment of the Text
@@ -356,7 +343,7 @@ pub(crate) fn host_pvp_button_handler(
         match *interaction {
             Interaction::Clicked => {
                 info!("Hosting pvp game...");
-                text.sections[0].value = "Host PVP Game".to_string();
+                text.sections[0].value = "HOST PVP GAME".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // Having a listener here doesn't make sense. Networking listeners should not be attached to
@@ -395,11 +382,11 @@ pub(crate) fn host_pvp_button_handler(
                 // }
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Host PVP Game".to_string();
+                text.sections[0].value = "HOST PVP GAME".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Host PVP Game".to_string();
+                text.sections[0].value = "HOST PVP GAME".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -421,7 +408,7 @@ pub(crate) fn client_pvp_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Join PVP Game".to_string();
+                text.sections[0].value = "JOIN PVP GAME".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // if player clicks on client button, designate them as the client
@@ -469,11 +456,11 @@ pub(crate) fn client_pvp_button_handler(
                     .expect("Error on send");
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Join PVP Game".to_string();
+                text.sections[0].value = "JOIN PVP GAME".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Join PVP Game".to_string();
+                text.sections[0].value = "JOIN PVP GAME".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -497,7 +484,7 @@ pub(crate) fn host_pve_button_handler(
         match *interaction {
             Interaction::Clicked => {
                 info!("Hosting pve game...");
-                text.sections[0].value = "Host PVE Game".to_string();
+                text.sections[0].value = "HOST PVE GAME".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // Having a listener here doesn't make sense. Networking listeners should not be attached to
@@ -536,11 +523,11 @@ pub(crate) fn host_pve_button_handler(
                 // }
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Host PVE Game".to_string();
+                text.sections[0].value = "HOST PVE GAME".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Host PVE Game".to_string();
+                text.sections[0].value = "HOST PVE GAME".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -561,7 +548,7 @@ pub(crate) fn client_pve_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Join PVE Game".to_string();
+                text.sections[0].value = "JOIN PVE GAME".to_string();
                 *color = PRESSED_BUTTON.into();
 
                 // if player clicks on client button, designate them as the client
@@ -609,11 +596,11 @@ pub(crate) fn client_pve_button_handler(
                     .expect("Error on send");
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Join PVE Game".to_string();
+                text.sections[0].value = "JOIN PVE GAME".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Join PVE Game".to_string();
+                text.sections[0].value = "JOIN PVE GAME".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }

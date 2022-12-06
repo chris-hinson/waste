@@ -64,8 +64,8 @@ pub(crate) fn setup_help(
         .spawn_bundle(TextBundle::from_section(
             "HELP",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 40.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 28.0,
                 color: Color::BLACK,
             },
         ))
@@ -84,8 +84,8 @@ pub(crate) fn setup_help(
         .spawn_bundle(TextBundle::from_section(
             "MAIN CONTROLS",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 35.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 30.0,
                 color: Color::BLACK,
             },
         ))
@@ -102,10 +102,10 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "W: move up, S: move down, A: move left, D: move right\nP: party size, G: game progress, I: inventory\nEsc: pause, Q: quit",
+            "W: move up, S: move down, A: move left, \nD: move right, P: party size, G: game progress, \nI: inventory, Esc: pause, Q: quit",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 30.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 25.0,
                 color: Color::BLACK,
             },
         ))
@@ -124,8 +124,8 @@ pub(crate) fn setup_help(
         .spawn_bundle(TextBundle::from_section(
             "BATTLE CONTROLS",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 35.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 30.0,
                 color: Color::BLACK,
             },
         ))
@@ -144,8 +144,8 @@ pub(crate) fn setup_help(
         .spawn_bundle(TextBundle::from_section(
             "A: attack, E: elemental, D: defend, S: special\n1: heal item, 2: buff item",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 30.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 25.0,
                 color: Color::BLACK,
             },
         ))
@@ -164,8 +164,8 @@ pub(crate) fn setup_help(
         .spawn_bundle(TextBundle::from_section(
             "TRADE CONTROLS",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 35.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 30.0,
                 color: Color::BLACK,
             },
         ))
@@ -182,10 +182,10 @@ pub(crate) fn setup_help(
 
         commands
         .spawn_bundle(TextBundle::from_section(
-            "3: trade heal item, 4: trade buff item, M: trade monster",
+            "3: trade heal item, 4: trade buff item, \nM: trade monster",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 30.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 25.0,
                 color: Color::BLACK,
             },
         ))
