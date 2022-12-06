@@ -1,7 +1,7 @@
 use crate::camera::MultWaitingCamera;
 use crate::{
     backgrounds::WIN_W,
-    game_client::{HostNotReady, HostReady, ReadyToSpawnEnemy},
+    game_client::{HostNotReady, HostReady},
     networking::{MultiplayerMode, MultiplayerModeSelected, SelectedEnemyMonster},
 };
 use crate::{

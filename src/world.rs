@@ -337,4 +337,5 @@ pub struct PooledText {
 #[derive(Debug, Clone, Default)]
 pub struct TextBuffer {
     pub bottom_text: VecDeque<PooledText>,
+    pub easter_egg_ascii: VecDeque<PooledText>,
 }

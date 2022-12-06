@@ -89,7 +89,7 @@ fn udp_message_listener(game_client: ResMut<GameClient>, mut commands: Commands)
         match game_client.socket.udp_socket.recv_from(&mut buf) {
             Ok(result) => {
                 info!("Got into message checker... Read {} bytes", result.0);
-                let val = String::from_utf8((&buf[0..result.0]).to_vec()).unwrap();
+                let val = String::from_utf8(buf[0..result.0].to_vec()).unwrap();
                 info!("{}", val);
                 if val == "TRUE" {
                     commands.insert_resource(NextState(GameState::MultiplayerPvPBattle));

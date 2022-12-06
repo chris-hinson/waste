@@ -2,11 +2,11 @@ use bevy::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 /// Bevy Event wrapper around BattleActions
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct BattleEvent(pub BattleAction);
 
 /// BattleActions as an enum separates the desired result for data sent to apply
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub enum BattleAction {
     MonsterStats,
     MonsterType,
@@ -27,9 +27,10 @@ pub enum BattleAction {
     TradeHeal,
     TradeBuff,
     ChatMessage,
+    EasterEggMessage,
 }
 // Message structs represent the data within the message on a larger sense of scale.
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct Message {
     /// The destination to send the message.
     // The action ID to identify what data was sent
@@ -131,3 +132,6 @@ impl Default for TradingAvailable {
         TradingAvailable(true)
     }
 }
+
+#[derive(Default)]
+pub(crate) struct InputActive(pub(crate) bool);

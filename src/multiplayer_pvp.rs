@@ -17,7 +17,7 @@ use crate::networking::{
 use crate::world::{PooledText, TextBuffer, TypeSystem, GameProgress, SPECIALS_PER_BATTLE};
 use crate::GameState;
 use bevy::{prelude::*};
-use bincode;
+
 use iyes_loopless::prelude::*;
 use rand::Rng;
 use std::{io};
@@ -160,7 +160,7 @@ pub(crate) fn recv_packets(
                     // info!("Payload is: {:?}", deserialized_msg.payload.clone());
                     turn.0 = true;
                     let text = PooledText {
-                        text: format!("Your turn!"),
+                        text: "Your turn!".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -175,7 +175,7 @@ pub(crate) fn recv_packets(
                 } else if action_type == BattleAction::FinishTurn {
                     turn.0 = true;
                     let text = PooledText {
-                        text: format!("Your turn!"),
+                        text: "Your turn!".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -240,7 +240,7 @@ fn client_action_handler(
         client_monster_query.single();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
-    if turn.0 == true {
+    if turn.0 {
         // This is client's turn
         if input.just_pressed(KeyCode::A) {
             turn.0 = false; // flip TurnFlag to false
@@ -319,7 +319,7 @@ fn client_action_handler(
                     .send(&bincode::serialize(&msg).unwrap());
             } else {
                 let text = PooledText {
-                    text: format!("No special moves left."),
+                    text: "No special moves left.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -364,7 +364,7 @@ fn client_action_handler(
                 text_buffer.bottom_text.push_back(text); 
             } else {
                 let text = PooledText {
-                    text: format!("No heal items to use."),
+                    text: "No heal items to use.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -406,7 +406,7 @@ fn client_action_handler(
                 text_buffer.bottom_text.push_back(text); 
             } else {
                 let text = PooledText {
-                    text: format!("No buff items to use."),
+                    text: "No buff items to use.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -445,7 +445,7 @@ pub(crate) fn client_end_turn_handler(
     let mut wrapped_data: Option<(isize, isize)> = None;
     for event in results_event.iter() {
         info!("Got results event");
-        wrapped_data = Some(event.clone().0);
+        wrapped_data = Some((*event).0);
     }
 
     if wrapped_data.is_none() {
@@ -468,7 +468,7 @@ pub(crate) fn client_end_turn_handler(
 
     if client_hp.health <= 0 && enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Draw!"),
+            text: "Draw!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -477,7 +477,7 @@ pub(crate) fn client_end_turn_handler(
         commands.insert_resource(NextState(GameState::Start));
     } else if client_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Player 1 (host) won!"),
+            text: "Player 1 (host) won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -485,7 +485,7 @@ pub(crate) fn client_end_turn_handler(
         commands.insert_resource(NextState(GameState::Start));
     } else if enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Player 2 (client) won!"),
+            text: "Player 2 (client) won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -554,7 +554,7 @@ fn host_action_handler(
     let (_host_hp, mut host_stg, host_def, _host_entity, host_element) = host_monster_query.single_mut();
 
     // turn.0 accesses status of TurnFlag (what's in 0th index)
-    if turn.0 == true {
+    if turn.0 {
         // This is host's turn
         // info!("Host may act");
         if input.just_pressed(KeyCode::A) {
@@ -665,7 +665,7 @@ fn host_action_handler(
                 host_cached_action.0 = 3;
             } else {
                 let text = PooledText {
-                    text: format!("No special moves left."),
+                    text: "No special moves left.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -722,7 +722,7 @@ fn host_action_handler(
                 text_buffer.bottom_text.push_back(text); 
             } else {
                 let text = PooledText {
-                    text: format!("No heal items to use."),
+                    text: "No heal items to use.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -774,7 +774,7 @@ fn host_action_handler(
                 text_buffer.bottom_text.push_back(text); 
             } else {
                 let text = PooledText {
-                    text: format!("No buff items to use."),
+                    text: "No buff items to use.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text); 
@@ -892,7 +892,7 @@ pub(crate) fn host_end_turn_handler(
 
     if host_hp.health <= 0 && enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Draw!"),
+            text: "Draw!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -901,7 +901,7 @@ pub(crate) fn host_end_turn_handler(
         commands.insert_resource(NextState(GameState::Start));
     } else if host_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Player 2 (client) won!"),
+            text: "Player 2 (client) won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -909,7 +909,7 @@ pub(crate) fn host_end_turn_handler(
         commands.insert_resource(NextState(GameState::Start));
     } else if enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("Player 1 (host) won!"),
+            text: "Player 1 (host) won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);

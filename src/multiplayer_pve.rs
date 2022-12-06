@@ -18,10 +18,11 @@ use crate::monster::{
 use crate::multiplayer_pvp::convert_num_to_element;
 use crate::multiplayer_waiting::{is_client, is_host};
 use crate::networking::{
-    BattleAction, BattleData, ClientActionEvent, HostActionEvent, Message, MonsterTypeEvent,
-    MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster, MultFriendHealth,
-    MultFriendMonster, MultMonster, MultPlayerHealth, MultPlayerMonster, PvETurnResultEvent,
-    SelectedEnemyMonster, SelectedFriendMonster, TradingAvailable, MULT_BATTLE_BACKGROUND,
+    BattleAction, BattleData, ClientActionEvent, HostActionEvent, InputActive, Message,
+    MonsterTypeEvent, MultBattleBackground, MultBattleUIElement, MultEnemyHealth, MultEnemyMonster,
+    MultFriendHealth, MultFriendMonster, MultMonster, MultPlayerHealth, MultPlayerMonster,
+    PvETurnResultEvent, SelectedEnemyMonster, SelectedFriendMonster, TradingAvailable,
+    MULT_BATTLE_BACKGROUND,
 };
 use crate::world::{GameProgress, PooledText, TextBuffer, TypeSystem, SPECIALS_PER_BATTLE};
 use crate::GameState;
@@ -82,58 +83,60 @@ pub(crate) struct CachedAction(usize);
 
 impl Plugin for MultPvEPlugin {
     fn build(&self, app: &mut App) {
-        app.add_enter_system_set(
-            GameState::MultiplayerPvEBattle,
-            SystemSet::new()
-                .with_system(setup_mult_battle) // .with_system(send_monster)
-                .with_system(setup_pve_battle_stats)
-                .with_system(init_host_turnflag.run_if(is_host))
-                .with_system(init_client_turnflag.run_if(is_client)),
-        )
-        .add_system_set(
-            ConditionSet::new()
-                // Only run handlers on MultiplayerBattle state
-                .run_in_state(GameState::MultiplayerPvEBattle)
-                .with_system(spawn_mult_player_monster)
-                .with_system(create_boss_monster.run_if(is_host))
-                .with_system(
-                    spawn_boss_monster_client.run_if_resource_exists::<ReadyToSpawnEnemy>(),
-                )
-                .with_system(
-                    spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>(),
-                )
-                .with_system(update_mult_battle_stats)
-                .with_system(
-                    host_action_handler
-                        .run_if_resource_exists::<EnemyMonsterSpawned>()
-                        .run_if_resource_exists::<TurnFlag>()
-                        .run_if(is_host),
-                )
-                .with_system(
-                    host_end_turn_handler
-                        .run_if_resource_exists::<TurnFlag>()
-                        .run_if(is_host),
-                )
-                .with_system(
-                    client_action_handler
-                        .run_if_resource_exists::<TurnFlag>()
-                        .run_if(is_client),
-                )
-                .with_system(
-                    client_end_turn_handler
-                        .run_if_resource_exists::<TurnFlag>()
-                        .run_if(is_client),
-                )
-                .with_system(recv_packets.run_if_resource_exists::<TurnFlag>())
-                .into(),
-        )
-        .init_resource::<CachedData>()
-        .init_resource::<CachedAction>()
-        .add_event::<MonsterTypeEvent>()
-        .add_event::<HostActionEvent>()
-        .add_event::<ClientActionEvent>()
-        .add_event::<PvETurnResultEvent>()
-        .add_exit_system(GameState::MultiplayerPvEBattle, despawn_mult_battle);
+        app.init_resource::<InputActive>()
+            .add_enter_system_set(
+                GameState::MultiplayerPvEBattle,
+                SystemSet::new()
+                    .with_system(setup_mult_battle) // .with_system(send_monster)
+                    .with_system(setup_pve_battle_stats)
+                    .with_system(init_host_turnflag.run_if(is_host))
+                    .with_system(init_client_turnflag.run_if(is_client)),
+            )
+            .add_system_set(
+                ConditionSet::new()
+                    // Only run handlers on MultiplayerBattle state
+                    .run_in_state(GameState::MultiplayerPvEBattle)
+                    .with_system(spawn_mult_player_monster)
+                    .with_system(create_boss_monster.run_if(is_host))
+                    .with_system(
+                        spawn_boss_monster_client.run_if_resource_exists::<ReadyToSpawnEnemy>(),
+                    )
+                    .with_system(
+                        spawn_mult_friend_monster.run_if_resource_exists::<ReadyToSpawnFriend>(),
+                    )
+                    .with_system(update_mult_battle_stats)
+                    .with_system(
+                        host_action_handler
+                            .run_if_resource_exists::<EnemyMonsterSpawned>()
+                            .run_if_resource_exists::<TurnFlag>()
+                            .run_if(is_host),
+                    )
+                    .with_system(
+                        host_end_turn_handler
+                            .run_if_resource_exists::<TurnFlag>()
+                            .run_if(is_host),
+                    )
+                    .with_system(
+                        client_action_handler
+                            .run_if_resource_exists::<TurnFlag>()
+                            .run_if(is_client),
+                    )
+                    .with_system(
+                        client_end_turn_handler
+                            .run_if_resource_exists::<TurnFlag>()
+                            .run_if(is_client),
+                    )
+                    .with_system(recv_packets.run_if_resource_exists::<TurnFlag>())
+                    .with_system(chat)
+                    .into(),
+            )
+            .init_resource::<CachedData>()
+            .init_resource::<CachedAction>()
+            .add_event::<MonsterTypeEvent>()
+            .add_event::<HostActionEvent>()
+            .add_event::<ClientActionEvent>()
+            .add_event::<PvETurnResultEvent>()
+            .add_exit_system(GameState::MultiplayerPvEBattle, despawn_mult_battle);
     }
 }
 
@@ -291,7 +294,7 @@ pub(crate) fn recv_packets(
                     turn.0 = true;
                     trading_available.0 = false;
                     let text = PooledText {
-                        text: format!("Your turn!"),
+                        text: "Your turn!".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -306,7 +309,7 @@ pub(crate) fn recv_packets(
                     }));
                     trading_available.0 = false;
                     let text = PooledText {
-                        text: format!("Your turn!"),
+                        text: "Your turn!".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -329,7 +332,7 @@ pub(crate) fn recv_packets(
                     turn.0 = true;
                     trading_available.0 = false;
                     let text = PooledText {
-                        text: format!("Received a heal item"),
+                        text: "Received a heal item".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -340,7 +343,7 @@ pub(crate) fn recv_packets(
                     // only for monster trading
                     trading_available.0 = false;
                     let text = PooledText {
-                        text: format!("Received a buff item"),
+                        text: "Received a buff item".to_string(),
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
@@ -413,11 +416,21 @@ pub(crate) fn recv_packets(
                 } else if action_type == BattleAction::ChatMessage {
                     let payload = decoded_msg.payload;
                     let chat_msg = String::from_utf8_lossy(&payload).into_owned();
+                    info!("got text: {}", &chat_msg);
                     let text = PooledText {
                         text: chat_msg,
                         pooled: false,
                     };
                     text_buffer.bottom_text.push_back(text);
+                } else if action_type == BattleAction::EasterEggMessage {
+                    let payload = decoded_msg.payload;
+                    let chat_msg = String::from_utf8_lossy(&payload).into_owned();
+                    info!("got text: {}", &chat_msg);
+                    let text = PooledText {
+                        text: chat_msg,
+                        pooled: false,
+                    };
+                    text_buffer.easter_egg_ascii.push_back(text);
                 }
             }
             // Error handler
@@ -577,8 +590,9 @@ fn client_action_handler(
     mut text_buffer: ResMut<TextBuffer>,
     mut game_progress: ResMut<GameProgress>,
     mut trading_available: ResMut<TradingAvailable>,
+    mut input_active: ResMut<InputActive>,
 ) {
-    if turn.0 {
+    if turn.0 && !input_active.0 {
         // This is client's turn
         // info!("Client may act");
         if input.just_pressed(KeyCode::A) {
@@ -590,7 +604,7 @@ fn client_action_handler(
             let msg = Message {
                 action: BattleAction::FinishTurn,
                 // payload: [0 as u8].to_vec(),
-                payload: Vec::from([0 as u8; 1]),
+                payload: Vec::from([0_u8; 1]),
             };
             game_client
                 .socket
@@ -605,7 +619,7 @@ fn client_action_handler(
             let msg = Message {
                 action: BattleAction::FinishTurn,
                 // payload: [0 as u8].to_vec(),
-                payload: Vec::from([2 as u8; 1]),
+                payload: Vec::from([2_u8; 1]),
             };
             game_client
                 .socket
@@ -615,7 +629,7 @@ fn client_action_handler(
             if game_progress.spec_moves_left[0] == 0 {
                 // Cannot make special move
                 let text = PooledText {
-                    text: format!("No specials left..."),
+                    text: "No specials left...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -630,7 +644,7 @@ fn client_action_handler(
             let msg = Message {
                 action: BattleAction::FinishTurn,
                 // payload: [0 as u8].to_vec(),
-                payload: Vec::from([3 as u8; 1]),
+                payload: Vec::from([3_u8; 1]),
             };
             game_client
                 .socket
@@ -656,7 +670,7 @@ fn client_action_handler(
             if game_progress.player_inventory[0] == 0 {
                 // Not allowed to heal
                 let text = PooledText {
-                    text: format!("No heal items..."),
+                    text: "No heal items...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -679,7 +693,7 @@ fn client_action_handler(
 
             let msg = Message {
                 action: BattleAction::FinishTurn,
-                payload: Vec::from([4 as u8; 1]),
+                payload: Vec::from([4_u8; 1]),
             };
             game_client
                 .socket
@@ -689,7 +703,7 @@ fn client_action_handler(
             if game_progress.player_inventory[1] == 0 {
                 // Not allowed to buff
                 let text = PooledText {
-                    text: format!("No buff items..."),
+                    text: "No buff items...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -712,7 +726,7 @@ fn client_action_handler(
 
             let msg = Message {
                 action: BattleAction::FinishTurn,
-                payload: Vec::from([5 as u8; 1]),
+                payload: Vec::from([5_u8; 1]),
             };
             game_client
                 .socket
@@ -723,7 +737,7 @@ fn client_action_handler(
             if game_progress.player_inventory[0] == 0 {
                 // Not allowed to heal
                 let text = PooledText {
-                    text: format!("No heal items to send..."),
+                    text: "No heal items to send...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -734,7 +748,7 @@ fn client_action_handler(
             turn.0 = false;
             trading_available.0 = false;
             let text = PooledText {
-                text: format!("Sent heal item"),
+                text: "Sent heal item".to_string(),
                 pooled: false,
             };
             text_buffer.bottom_text.push_back(text);
@@ -752,7 +766,7 @@ fn client_action_handler(
             if game_progress.player_inventory[1] == 0 {
                 // Not allowed to buff
                 let text = PooledText {
-                    text: format!("No buff items to send..."),
+                    text: "No buff items to send...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -763,7 +777,7 @@ fn client_action_handler(
             turn.0 = false;
             trading_available.0 = false;
             let text = PooledText {
-                text: format!("Sent buff item"),
+                text: "Sent buff item".to_string(),
                 pooled: false,
             };
             text_buffer.bottom_text.push_back(text);
@@ -780,83 +794,81 @@ fn client_action_handler(
     } // end turn check
 
     // Handle sending monster trade
-    if input.just_pressed(KeyCode::M) {
-        if trading_available.0 {
-            // trading monster
-            if client_monster_query.is_empty() || friend_monster_query.is_empty() {
-                return;
-            }
-            // get my monster type
-            let client_old_element = *client_monster_query.single().4;
-            let friend_old_element = *friend_monster_query.single().4;
-
-            // destory my monster
-            let client_old_entity = client_monster_query.single().3;
-            let friend_old_entity = friend_monster_query.single().3;
-            // commands.entity(host_old_entity).despawn_recursive();
-            // commands.entity(friend_old_entity).despawn_recursive();
-
-            let new_type: Element = rand::random();
-
-            // generate a new monster
-            commands
-                .entity(client_old_entity)
-                .remove_bundle::<MonsterStats>()
-                .insert_bundle(MonsterStats {
-                    typing: new_type,
-                    lvl: Level { level: 1 },
-                    hp: Health {
-                        max_health: 100,
-                        health: 100,
-                    },
-                    stg: Strength {
-                        atk: 10,
-                        crt: 25,
-                        crt_dmg: 2,
-                    },
-                    def: Defense {
-                        def: 1,
-                        crt_res: 10,
-                    },
-                    moves: Moves { known: 2 },
-                })
-                .insert(SelectedMonster);
-
-            // make friend's new monster our old one
-            commands
-                .entity(friend_old_entity)
-                .remove_bundle::<MonsterStats>()
-                .insert_bundle(MonsterStats {
-                    typing: client_old_element,
-                    lvl: Level { level: 1 },
-                    hp: Health {
-                        max_health: 100,
-                        health: 100,
-                    },
-                    stg: Strength {
-                        atk: 10,
-                        crt: 25,
-                        crt_dmg: 2,
-                    },
-                    def: Defense {
-                        def: 1,
-                        crt_res: 10,
-                    },
-                    moves: Moves { known: 2 },
-                })
-                .insert(SelectedFriendMonster);
-
-            // send to friend
-            let msg = Message {
-                action: BattleAction::TradeMonster,
-                payload: bincode::serialize(&(client_old_element, new_type))
-                    .expect("Cannot serialize monster type to trade"),
-            };
-            game_client
-                .socket
-                .udp_socket
-                .send(&bincode::serialize(&msg).unwrap());
+    if input.just_pressed(KeyCode::M) && trading_available.0 && !input_active.0 {
+        // trading monster
+        if client_monster_query.is_empty() || friend_monster_query.is_empty() {
+            return;
         }
+        // get my monster type
+        let client_old_element = *client_monster_query.single().4;
+        let friend_old_element = *friend_monster_query.single().4;
+
+        // destory my monster
+        let client_old_entity = client_monster_query.single().3;
+        let friend_old_entity = friend_monster_query.single().3;
+        // commands.entity(host_old_entity).despawn_recursive();
+        // commands.entity(friend_old_entity).despawn_recursive();
+
+        let new_type: Element = rand::random();
+
+        // generate a new monster
+        commands
+            .entity(client_old_entity)
+            .remove_bundle::<MonsterStats>()
+            .insert_bundle(MonsterStats {
+                typing: new_type,
+                lvl: Level { level: 1 },
+                hp: Health {
+                    max_health: 100,
+                    health: 100,
+                },
+                stg: Strength {
+                    atk: 10,
+                    crt: 25,
+                    crt_dmg: 2,
+                },
+                def: Defense {
+                    def: 1,
+                    crt_res: 10,
+                },
+                moves: Moves { known: 2 },
+            })
+            .insert(SelectedMonster);
+
+        // make friend's new monster our old one
+        commands
+            .entity(friend_old_entity)
+            .remove_bundle::<MonsterStats>()
+            .insert_bundle(MonsterStats {
+                typing: client_old_element,
+                lvl: Level { level: 1 },
+                hp: Health {
+                    max_health: 100,
+                    health: 100,
+                },
+                stg: Strength {
+                    atk: 10,
+                    crt: 25,
+                    crt_dmg: 2,
+                },
+                def: Defense {
+                    def: 1,
+                    crt_res: 10,
+                },
+                moves: Moves { known: 2 },
+            })
+            .insert(SelectedFriendMonster);
+
+        // send to friend
+        let msg = Message {
+            action: BattleAction::TradeMonster,
+            payload: bincode::serialize(&(client_old_element, new_type))
+                .expect("Cannot serialize monster type to trade"),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
     }
 }
 
@@ -919,14 +931,14 @@ pub(crate) fn client_end_turn_handler(
 
     if enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("You won!"),
+            text: "You won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
         commands.insert_resource(NextState(GameState::Start));
     } else if client_hp.health <= 0 || friend_hp.health <= 0 {
         let text = PooledText {
-            text: format!("You lost!"),
+            text: "You lost!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -964,8 +976,9 @@ fn host_action_handler(
     mut host_cached_action: ResMut<CachedAction>,
     mut text_buffer: ResMut<TextBuffer>,
     mut trading_available: ResMut<TradingAvailable>,
+    mut input_active: ResMut<InputActive>,
 ) {
-    if turn.0 == true {
+    if turn.0 && !input_active.0 {
         // This is host's turn
         // info!("Host may act");
         if input.just_pressed(KeyCode::A) {
@@ -1018,7 +1031,7 @@ fn host_action_handler(
             if game_progress.spec_moves_left[0] == 0 {
                 // Cannot make special move
                 let text = PooledText {
-                    text: format!("No specials left..."),
+                    text: "No specials left...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -1044,7 +1057,7 @@ fn host_action_handler(
             if game_progress.player_inventory[0] == 0 {
                 // Not allowed to heal
                 let text = PooledText {
-                    text: format!("No heal items..."),
+                    text: "No heal items...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -1078,7 +1091,7 @@ fn host_action_handler(
             if game_progress.player_inventory[1] == 0 {
                 // Not allowed to buff
                 let text = PooledText {
-                    text: format!("No buff items..."),
+                    text: "No buff items...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -1124,7 +1137,7 @@ fn host_action_handler(
             if game_progress.player_inventory[0] == 0 {
                 // Not allowed to heal
                 let text = PooledText {
-                    text: format!("No heal items to send..."),
+                    text: "No heal items to send...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -1136,7 +1149,7 @@ fn host_action_handler(
             turn.0 = false;
             trading_available.0 = false;
             let text = PooledText {
-                text: format!("Sent heal item"),
+                text: "Sent heal item".to_string(),
                 pooled: false,
             };
             text_buffer.bottom_text.push_back(text);
@@ -1154,7 +1167,7 @@ fn host_action_handler(
             if game_progress.player_inventory[1] == 0 {
                 // Not allowed to heal
                 let text = PooledText {
-                    text: format!("No buff items to send..."),
+                    text: "No buff items to send...".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
@@ -1166,7 +1179,7 @@ fn host_action_handler(
             turn.0 = false;
             trading_available.0 = false;
             let text = PooledText {
-                text: format!("Sent buff item"),
+                text: "Sent buff item".to_string(),
                 pooled: false,
             };
             text_buffer.bottom_text.push_back(text);
@@ -1183,83 +1196,81 @@ fn host_action_handler(
     }
 
     // Handle monster trading
-    if input.just_pressed(KeyCode::M) {
-        if trading_available.0 {
-            // trading monster
-            if host_monster_query.is_empty() || friend_monster_query.is_empty() {
-                return;
-            }
-            // get my monster type
-            let host_old_element = *host_monster_query.single().4;
-            let friend_old_element = *friend_monster_query.single().4;
-
-            // destory my monster
-            let host_old_entity = host_monster_query.single().3;
-            let friend_old_entity = friend_monster_query.single().3;
-            // commands.entity(host_old_entity).despawn_recursive();
-            // commands.entity(friend_old_entity).despawn_recursive();
-
-            let new_type: Element = rand::random();
-
-            // generate a new monster
-            commands
-                .entity(host_old_entity)
-                .remove_bundle::<MonsterStats>()
-                .insert_bundle(MonsterStats {
-                    typing: new_type,
-                    lvl: Level { level: 1 },
-                    hp: Health {
-                        max_health: 100,
-                        health: 100,
-                    },
-                    stg: Strength {
-                        atk: 10,
-                        crt: 25,
-                        crt_dmg: 2,
-                    },
-                    def: Defense {
-                        def: 1,
-                        crt_res: 10,
-                    },
-                    moves: Moves { known: 2 },
-                })
-                .insert(SelectedMonster);
-
-            // make friend's new monster our old one
-            commands
-                .entity(friend_old_entity)
-                .remove_bundle::<MonsterStats>()
-                .insert_bundle(MonsterStats {
-                    typing: host_old_element,
-                    lvl: Level { level: 1 },
-                    hp: Health {
-                        max_health: 100,
-                        health: 100,
-                    },
-                    stg: Strength {
-                        atk: 10,
-                        crt: 25,
-                        crt_dmg: 2,
-                    },
-                    def: Defense {
-                        def: 1,
-                        crt_res: 10,
-                    },
-                    moves: Moves { known: 2 },
-                })
-                .insert(SelectedFriendMonster);
-
-            // send to friend
-            let msg = Message {
-                action: BattleAction::TradeMonster,
-                payload: bincode::serialize(&(host_old_element, new_type))
-                    .expect("Cannot serialize monster type to trade"),
-            };
-            game_client
-                .socket
-                .udp_socket
-                .send(&bincode::serialize(&msg).unwrap());
+    if input.just_pressed(KeyCode::M) && trading_available.0 && !input_active.0 {
+        // trading monster
+        if host_monster_query.is_empty() || friend_monster_query.is_empty() {
+            return;
         }
+        // get my monster type
+        let host_old_element = *host_monster_query.single().4;
+        let friend_old_element = *friend_monster_query.single().4;
+
+        // destory my monster
+        let host_old_entity = host_monster_query.single().3;
+        let friend_old_entity = friend_monster_query.single().3;
+        // commands.entity(host_old_entity).despawn_recursive();
+        // commands.entity(friend_old_entity).despawn_recursive();
+
+        let new_type: Element = rand::random();
+
+        // generate a new monster
+        commands
+            .entity(host_old_entity)
+            .remove_bundle::<MonsterStats>()
+            .insert_bundle(MonsterStats {
+                typing: new_type,
+                lvl: Level { level: 1 },
+                hp: Health {
+                    max_health: 100,
+                    health: 100,
+                },
+                stg: Strength {
+                    atk: 10,
+                    crt: 25,
+                    crt_dmg: 2,
+                },
+                def: Defense {
+                    def: 1,
+                    crt_res: 10,
+                },
+                moves: Moves { known: 2 },
+            })
+            .insert(SelectedMonster);
+
+        // make friend's new monster our old one
+        commands
+            .entity(friend_old_entity)
+            .remove_bundle::<MonsterStats>()
+            .insert_bundle(MonsterStats {
+                typing: host_old_element,
+                lvl: Level { level: 1 },
+                hp: Health {
+                    max_health: 100,
+                    health: 100,
+                },
+                stg: Strength {
+                    atk: 10,
+                    crt: 25,
+                    crt_dmg: 2,
+                },
+                def: Defense {
+                    def: 1,
+                    crt_res: 10,
+                },
+                moves: Moves { known: 2 },
+            })
+            .insert(SelectedFriendMonster);
+
+        // send to friend
+        let msg = Message {
+            action: BattleAction::TradeMonster,
+            payload: bincode::serialize(&(host_old_element, new_type))
+                .expect("Cannot serialize monster type to trade"),
+        };
+        game_client
+            .socket
+            .udp_socket
+            .send(&bincode::serialize(&msg).unwrap());
     }
 }
 
@@ -1370,14 +1381,14 @@ pub(crate) fn host_end_turn_handler(
     }
 
     let enemy_act_string = if enemy_action == 0 {
-        format!("Enemy attacks!")
+        "Enemy attacks!".to_string()
     } else if enemy_action == 1 {
-        format!("Enemy defends!")
+        "Enemy defends!".to_string()
     } else if enemy_action == 2 {
-        format!("Enemy elemental!")
+        "Enemy elemental!".to_string()
     } else {
         game_progress.spec_moves_left[1] -= 1;
-        format!("Enemy special!")
+        "Enemy special!".to_string()
     };
 
     let text = PooledText {
@@ -1458,14 +1469,14 @@ pub(crate) fn host_end_turn_handler(
 
     if enemy_hp.health <= 0 {
         let text = PooledText {
-            text: format!("You won!"),
+            text: "You won!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
         commands.insert_resource(NextState(GameState::Start));
     } else if host_hp.health <= 0 || friend_hp.health <= 0 {
         let text = PooledText {
-            text: format!("You lost!"),
+            text: "You lost!".to_string(),
             pooled: false,
         };
         text_buffer.bottom_text.push_back(text);
@@ -1791,6 +1802,65 @@ fn despawn_mult_battle(
 
     commands.remove_resource::<ReadyToSpawnEnemy>();
     commands.remove_resource::<ReadyToSpawnFriend>();
+}
+
+pub(crate) fn chat(
+    mut char_event: EventReader<ReceivedCharacter>,
+    input: Res<Input<KeyCode>>,
+    mut string: Local<String>,
+    mut input_active: ResMut<InputActive>,
+    game_client: Res<GameClient>,
+) {
+    if input_active.0 {
+        for ev in char_event.iter() {
+            // info!("Got char: '{}'", ev.char);
+            string.push(ev.char);
+        }
+
+        if input.just_pressed(KeyCode::Return) {
+            // info!("Text input: {}", *string);
+            input_active.0 = false;
+            let mut chat_msg = string.to_owned();
+            info!("Text input: {}", &chat_msg);
+            chat_msg.pop();
+            if chat_msg.eq("/mushroom") {
+                let msg = Message {
+                    action: BattleAction::EasterEggMessage,
+                    payload: format!(
+                        "
+                      .-'~~~-.
+                    .'o  oOOOo`.
+                   :~~~-.oOo   o`.
+                    `. ~ ~-.  oOOo.
+                      `.; ~ ~.  OO:
+                      .'  ;-- `.o.'
+                     ,'  ; ~~--'~
+                     ;  ;"
+                    )
+                    .into_bytes(),
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+                string.clear();
+            } else {
+                let msg = Message {
+                    action: BattleAction::ChatMessage,
+                    payload: chat_msg.into_bytes(),
+                };
+                game_client
+                    .socket
+                    .udp_socket
+                    .send(&bincode::serialize(&msg).unwrap());
+                string.clear();
+            }
+        }
+    }
+
+    if input.just_pressed(KeyCode::C) {
+        input_active.0 = true;
+    }
 }
 
 /// # Placeholder

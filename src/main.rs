@@ -319,6 +319,49 @@ pub fn display_text(
                 time: Timer::from_seconds(2., true),
             });
     }
+
+    for j in 0..text_buffer.easter_egg_ascii.len() {
+        let mut text = text_buffer.easter_egg_ascii.get_mut(j);
+        if text.as_ref().unwrap().pooled {
+            continue;
+        }
+
+        text.as_mut().unwrap().pooled = true;
+        commands
+            .spawn_bundle(
+                // Create a TextBundle that has a Text with a list of sections.
+                TextBundle::from_sections([
+                    TextSection::new(
+                        text.as_ref().unwrap().text.clone(),
+                        TextStyle {
+                            font: asset_server.load("buttons/joystix monospace.ttf"),
+                            font_size: 30.0,
+                            color: Color::BLACK,
+                        },
+                    ),
+                    TextSection::from_style(TextStyle {
+                        font: asset_server.load("buttons/joystix monospace.ttf"),
+                        font_size: 30.0,
+                        color: Color::BLACK,
+                    }),
+                ])
+                .with_text_alignment(TextAlignment::CENTER)
+                .with_style(Style {
+                    align_self: AlignSelf::FlexEnd,
+                    position_type: PositionType::Absolute,
+                    position: UiRect {
+                        top: Val::Px(100.),
+                        left: Val::Px(10.0),
+                        ..default()
+                    },
+                    ..default()
+                }),
+            )
+            .insert(UIText)
+            .insert(TextTimer {
+                time: Timer::from_seconds(10., true),
+            });
+    }
 }
 
 pub fn despawn_text(
@@ -332,6 +375,7 @@ pub fn despawn_text(
         if timer.time.finished() {
             commands.entity(text_entity).despawn_recursive();
             text_buffer.bottom_text.pop_front();
+            text_buffer.easter_egg_ascii.pop_front();
         }
     }
 }

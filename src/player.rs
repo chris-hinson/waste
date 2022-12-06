@@ -1,10 +1,10 @@
-use std::io;
+
 
 use crate::backgrounds::{ChestTile, HealingTile, MonsterTile, Tile};
 use crate::monster::{Boss, Defense, Enemy, Health, Level, MonsterStats, Strength};
 use crate::quests::NPC;
 use crate::world::{
-    item_index_to_name, rendering_to_logical, GameProgress, PooledText, TextBuffer,
+    item_index_to_name, GameProgress, PooledText, TextBuffer,
 };
 use crate::GameState;
 use bevy::{prelude::*, sprite::collide_aabb::collide};
@@ -111,7 +111,7 @@ pub(crate) fn move_player(
 
     // PLAYER_MOVEMENT = pixels/second = pixels/frame * frames/second
     let player_movement = PLAYER_SPEED * time.delta_seconds();
-    let (mut pd, mut pt) = player.single_mut();
+    let (pd, mut pt) = player.single_mut();
 
     let mut x_vel = 0.;
     let mut y_vel = 0.;
@@ -292,7 +292,7 @@ pub(crate) fn move_player(
                 }
                 game_progress.num_living_monsters = game_progress.num_monsters;
                 let text = PooledText {
-                    text: format!("Monster health restored."),
+                    text: "Monster health restored.".to_string(),
                     pooled: false,
                 };
                 text_buffer.bottom_text.push_back(text);
