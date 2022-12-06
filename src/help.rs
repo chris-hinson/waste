@@ -102,7 +102,7 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "W: move up, S: move down, A: move left, D: move right\nP: party size, G: game progress, I: inventory\nEsc: Pause",
+            "W: move up, S: move down, A: move left, D: move right\nP: party size, G: game progress, I: inventory\nEsc: pause, Q: quit",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
@@ -142,7 +142,7 @@ pub(crate) fn setup_help(
 
     commands
         .spawn_bundle(TextBundle::from_section(
-            "A: attack, E: elemental, D: defend, S: special\n1: heal item, 2: buff item, Q: quit",
+            "A: attack, E: elemental, D: defend, S: special\n1: heal item, 2: buff item",
             TextStyle {
                 font: asset_server.load("buttons/joystix monospace.ttf"),
                 font_size: 30.0,
@@ -152,7 +152,47 @@ pub(crate) fn setup_help(
         .insert(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                bottom: Val::Px(300.0),
+                bottom: Val::Px(325.0),
+                left: Val::Px(10.0),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(Text);
+
+        commands
+        .spawn_bundle(TextBundle::from_section(
+            "TRADE CONTROLS",
+            TextStyle {
+                font: asset_server.load("buttons/joystix monospace.ttf"),
+                font_size: 35.0,
+                color: Color::BLACK,
+            },
+        ))
+        .insert(Style {
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                bottom: Val::Px(200.0),
+                left: Val::Px(500.0),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(Text);
+
+        commands
+        .spawn_bundle(TextBundle::from_section(
+            "3: trade heal item, 4: trade buff item, M: trade monster",
+            TextStyle {
+                font: asset_server.load("buttons/joystix monospace.ttf"),
+                font_size: 30.0,
+                color: Color::BLACK,
+            },
+        ))
+        .insert(Style {
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                bottom: Val::Px(150.0),
                 left: Val::Px(10.0),
                 ..default()
             },
