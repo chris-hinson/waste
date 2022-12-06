@@ -30,23 +30,6 @@ pub(crate) struct ReadyToSpawnFriend {}
 
 pub(crate) struct EnemyMonsterSpawned {}
 
-// #[derive(Debug)]
-// pub(crate) struct Package {
-//     pub(crate) message: String,
-// }
-
-// impl Package {
-//     pub(crate) fn new(message: String) -> Self {
-//         Package { message }
-//     }
-// }
-
-// impl fmt::Display for Package {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(f, "{}", self.message)
-//     }
-// }
-
 /// Choose a random port of the known, normally open UDP ports
 pub(crate) fn get_randomized_port() -> i32 {
     let port_list = vec![
@@ -57,9 +40,6 @@ pub(crate) fn get_randomized_port() -> i32 {
 
 /// Get the local address to bind a socket to
 pub(crate) fn get_addr() -> Vec<SocketAddr> {
-    // let ip_addr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-    // let socket_addr = SocketAddr::new(ip_addr, 0 as u16);
-    // socket_addr
     let my_ip_address = local_ip().unwrap();
     vec![
         SocketAddr::from((my_ip_address, 9800)),

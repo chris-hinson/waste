@@ -444,17 +444,17 @@ pub(crate) fn setup_pve_battle_stats(
             TextBundle::from_sections([
                 // health header for player's monster
                 TextSection::new(
-                    "Your Health:",
+                    "YOUR HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 30.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 25.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of player's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 30.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 25.0,
                     color: Color::BLACK,
                 }),
             ])
@@ -478,17 +478,17 @@ pub(crate) fn setup_pve_battle_stats(
             TextBundle::from_sections([
                 // health header for player's monster
                 TextSection::new(
-                    "Friend Health:",
+                    "FRIEND HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 30.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 25.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of player's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 30.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 25.0,
                     color: Color::BLACK,
                 }),
             ])
@@ -512,17 +512,17 @@ pub(crate) fn setup_pve_battle_stats(
             TextBundle::from_sections([
                 // health header for opponent's monster
                 TextSection::new(
-                    "Boss Health:",
+                    "BOSS HEALTH:",
                     TextStyle {
-                        font: asset_server.load("buttons/joystix monospace.ttf"),
-                        font_size: 30.0,
+                        font: asset_server.load("buttons/PressStart2P.ttf"),
+                        font_size: 25.0,
                         color: Color::BLACK,
                     },
                 ),
                 // health of opponent's monster
                 TextSection::from_style(TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 30.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 25.0,
                     color: Color::BLACK,
                 }),
             ])

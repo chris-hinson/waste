@@ -77,8 +77,8 @@ pub(crate) fn mult_waiting_text(mut commands: Commands, asset_server: Res<AssetS
             TextBundle::from_section(
                 "Waiting for other player...",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: Color::WHITE,
                 },
             ) // Set the alignment of the Text

@@ -73,8 +73,8 @@ pub(crate) fn setup_pause(
         .spawn_bundle(TextBundle::from_section(
             "PAUSED",
             TextStyle {
-                font: asset_server.load("buttons/joystix monospace.ttf"),
-                font_size: 40.0,
+                font: asset_server.load("buttons/PressStart2P.ttf"),
+                font_size: 30.0,
                 color: Color::WHITE,
             },
         ))
@@ -115,8 +115,8 @@ pub(crate) fn setup_pause(
             parent.spawn_bundle(TextBundle::from_section(
                 "QUIT GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 30.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -149,8 +149,8 @@ pub(crate) fn setup_pause(
             parent.spawn_bundle(TextBundle::from_section(
                 "RESUME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 30.0,
                     color: TEXT_COLOR,
                 },
             ));

@@ -92,16 +92,16 @@ pub(crate) fn start_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Start Game".to_string();
+                text.sections[0].value = "START GAME".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::StartPlaying));
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Start Game".to_string();
+                text.sections[0].value = "START GAME".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Start Game".to_string();
+                text.sections[0].value = "START GAME".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -124,16 +124,16 @@ pub(crate) fn credits_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Credits".to_string();
+                text.sections[0].value = "CREDITS".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Credits));
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Credits".to_string();
+                text.sections[0].value = "CREDITS".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Credits".to_string();
+                text.sections[0].value = "CREDITS".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -154,16 +154,16 @@ pub(crate) fn multiplayer_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Multiplayer".to_string();
+                text.sections[0].value = "MULTIPLAYER".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::MultiplayerMenu));
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Multiplayer".to_string();
+                text.sections[0].value = "MULTIPLAYER".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Multiplayer".to_string();
+                text.sections[0].value = "MULTIPLAYER".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -184,16 +184,16 @@ pub(crate) fn help_button_handler(
             .unwrap();
         match *interaction {
             Interaction::Clicked => {
-                text.sections[0].value = "Help".to_string();
+                text.sections[0].value = "HELP".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.insert_resource(NextState(GameState::Help));
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Help".to_string();
+                text.sections[0].value = "HELP".to_string();
                 *color = HOVERED_BUTTON.into();
             }
             Interaction::None => {
-                text.sections[0].value = "Help".to_string();
+                text.sections[0].value = "HELP".to_string();
                 *color = NORMAL_BUTTON.into();
             }
         }
@@ -272,10 +272,10 @@ fn setup_menu(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Start Game",
+                "START GAME",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -307,10 +307,10 @@ fn setup_menu(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Multiplayer",
+                "MULTIPLAYER",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -342,10 +342,10 @@ fn setup_menu(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Credits",
+                "CREDITS",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
@@ -377,10 +377,10 @@ fn setup_menu(
         })
         .with_children(|parent| {
             parent.spawn_bundle(TextBundle::from_section(
-                "Help",
+                "HELP",
                 TextStyle {
-                    font: asset_server.load("buttons/joystix monospace.ttf"),
-                    font_size: 40.0,
+                    font: asset_server.load("buttons/PressStart2P.ttf"),
+                    font_size: 28.0,
                     color: TEXT_COLOR,
                 },
             ));
