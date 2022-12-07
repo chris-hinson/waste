@@ -92,7 +92,7 @@ Defeating 5 bosses will end the game, and roll credits. At this time, the game e
 
 ## Multiplayer
 
-Multiplayer is tw-person, peer-to-peer, and LAN-based, and has two primary modes: Player-versus-Player (PvP) and Player-versus-Enemy (PvE). 
+Multiplayer is two-person, peer-to-peer, and LAN-based, and has two primary modes: Player-versus-Player (PvP) and Player-versus-Enemy (PvE). 
 
 ### Setting up a Game
 To start, one player will have to decide to host a game. In the multiplayer menu, host a game with either the "host pvp game" or "host pve game" buttons. The game terminal will print the address and port which it has bound to (normally, this is your local address and port 9800 or 8081, but is subject to change depending on available ports). The game host should then give this address and port to the other player who wants to connect. The connecting player should click one of the "join ___ game" buttons, corresponding to whichever mode the host selected. They will then be prompted in their terminal to input the address and then port to connect to, and then a connection will be established and the appropriate mode will be initialized on both player's screens.
@@ -131,3 +131,27 @@ This game was developed as a semester project for CS1666 at the University of Pi
 - [Gavin Heinrichs-Majetich](https://github.com/Elsklivet)
 - [Nathan Meyers](https://github.com/NMM103)
 - [Prateek Jukalkar](https://github.com/psdev30)
+
+# References
+
+The development of this game included an iterative process of learning and applying, and we used several resources to both assist implementation (i.e. crates) and learn in the process of making this game. Below is a list of references:
+
+- [Bevy](https://bevyengine.org/)
+- [Bevy Documentation](https://docs.rs/bevy/latest/bevy/)
+- [Rust Documentation](https://doc.rust-lang.org/std/index.html)
+- [Unofficial Bevy Cheatbook](https://bevy-cheatbook.github.io/introduction.html)
+  - All code from this book is [MIT-0 Licensed](https://github.com/bevy-cheatbook/mit-0)
+- [Wave Function Collapse](https://github.com/mxgmn/WaveFunctionCollapse)
+    - [MIT Licensed](licenses/WFC-LICENSE-MIT)
+- [local-ip-address](https://crates.io/crates/local-ip-address) crate and documentation
+  - [MIT Licensed](licenses/LOCAL-IP-LICENSE-MIT)
+- [rand](https://crates.io/crates/rand) crate
+  - [MIT Licensed](licenses/RAND-LICENSE-MIT)
+- [iyes_loopless](https://github.com/IyesGames/iyes_loopless) crate and documentation
+  - [MIT Licensed](licenses/IYES-LOOPLESS-LICENSE-MIT)
+- [serde](https://crates.io/crates/serde) crate and documentation
+  - [MIT Licensed](licenses/SERDE-LICENSE-MIT)
+- [bincode](https://crates.io/crates/bincode) crate and documentation
+  - [MIT Licensed](licenses/BINCODE-LICENSE-MIT)
+- [Press Start 2P Font](https://www.fontspace.com/press-start-2p-font-f11591) font
+  - [SIL Open Font License](https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL), which permits bundling and embedding of the font in this application
